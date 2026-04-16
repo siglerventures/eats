@@ -1185,7 +1185,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.19</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.21</div>
   </div>
 </div>
 
@@ -1437,7 +1437,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getDatabase, ref, get, set, update, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCrW9Lrf7fWVqRxKqsnuPK0tL6UYbd_qds",
@@ -2774,10 +2774,18 @@ async function init() {
 // ─── AUTH GATE ────────────────────────────────────────────
 function signInWithGoogle() {
   document.getElementById('authError').textContent = '';
-  signInWithPopup(auth, provider).catch(e => {
-    console.error('Google sign-in error:', e);
-    document.getElementById('authError').textContent = e.message || 'Google sign-in failed.';
-  });
+  const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+  if (isMobile) {
+    signInWithRedirect(auth, provider).catch(e => {
+      console.error('Google sign-in error:', e);
+      document.getElementById('authError').textContent = e.message || 'Google sign-in failed.';
+    });
+  } else {
+    signInWithPopup(auth, provider).catch(e => {
+      console.error('Google sign-in error:', e);
+      document.getElementById('authError').textContent = e.message || 'Google sign-in failed.';
+    });
+  }
 }
 
 async function signOutUser() {
@@ -3092,14 +3100,31 @@ async function verifyAndMigrateImages() {
 
 
 // ── AUTH STATE ────────────────────────────────────────────
+// Handle redirect result on mobile
+getRedirectResult(auth).then(result => {
+  if (result && result.user) {
+    console.log('Redirect sign-in successful:', result.user.email);
+  }
+}).catch(e => {
+  console.error('Redirect result error:', e);
+  const errEl = document.getElementById('authError');
+  if (errEl) errEl.textContent = e.message || 'Sign-in failed.';
+});
+
+let initialized = false;
+
 onAuthStateChanged(auth, user => {
   if (!user) {
     document.getElementById('auth-gate').style.display = 'flex';
+    initialized = false;
     return;
   }
   document.getElementById('auth-gate').style.display = 'none';
   document.getElementById('authError').textContent = '';
-  init();
+  if (!initialized) {
+    initialized = true;
+    init();
+  }
 });
 
 // Show auth gate on load
@@ -3279,7 +3304,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.19</span>
+  Philinity Eats ©️ <span>Rev 10.21</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
