@@ -1,0 +1,3279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://firebasestorage.googleapis.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://www.gstatic.com; img-src 'self' data: blob: https://images.unsplash.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://i.imgur.com https://upload.wikimedia.org; frame-src https://*.firebaseio.com https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'self'; form-action 'self';">
+<title>Philinity Eats</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0c08;
+    --surface: #1a1510;
+    --surface2: #231d14;
+    --surface3: #2d2518;
+    --amber: #d4860a;
+    --amber-light: #f0a832;
+    --amber-dim: #7a4d08;
+    --gold: #c9a84c;
+    --gold-light: #e8c97a;
+    --text: #f0e6d0;
+    --text-dim: #9a8870;
+    --text-muted: #5a4e3e;
+    --red: #c0392b;
+    --green: #27ae60;
+    --border: #2d2518;
+    --border-amber: #4a3510;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* HEADER */
+  header {
+    background: linear-gradient(180deg, #1a1208 0%, var(--bg) 100%);
+    border-bottom: 1px solid var(--border-amber);
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(12px);
+  }
+
+  .header-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    height: 64px;
+  }
+
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    color: var(--amber-light);
+    white-space: nowrap;
+    letter-spacing: 0.5px;
+  }
+
+  .logo span { color: var(--gold); font-style: italic; }
+
+  .search-wrap {
+    flex: 1;
+    position: relative;
+    max-width: 420px;
+  }
+
+  .search-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    color: var(--text);
+    padding: 9px 14px 9px 38px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .search-wrap input:focus { border-color: var(--amber); }
+  .search-wrap input::placeholder { color: var(--text-muted); }
+
+  .search-icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 15px;
+  }
+
+  .header-actions {
+    display: flex;
+    gap: 10px;
+    margin-left: auto;
+  }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-amber {
+    background: var(--amber);
+    color: #0f0c08;
+  }
+  .btn-amber:hover { background: var(--amber-light); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-dim);
+    border: 1px solid var(--border-amber);
+  }
+  .btn-ghost:hover { border-color: var(--amber); color: var(--text); }
+
+  /* AI CHAT BAR */
+  .ai-bar {
+    background: linear-gradient(135deg, var(--surface) 0%, #1e1709 100%);
+    border-bottom: 1px solid var(--border-amber);
+    padding: 12px 24px;
+  }
+
+  .ai-bar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .ai-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--amber);
+    white-space: nowrap;
+    font-weight: 500;
+  }
+
+  .ai-input-wrap {
+    flex: 1;
+    position: relative;
+  }
+
+  .ai-input-wrap input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--amber-dim);
+    color: var(--text);
+    padding: 9px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .ai-input-wrap input:focus { border-color: var(--amber-light); }
+  .ai-input-wrap input::placeholder { color: var(--text-muted); }
+
+  .ai-chat-thread {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 280px;
+    overflow-y: auto;
+    padding: 4px 0;
+    scroll-behavior: smooth;
+  }
+
+  .chat-bubble {
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-size: 13px;
+    line-height: 1.5;
+    max-width: 90%;
+    animation: fadeIn 0.2s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .chat-bubble.user {
+    background: var(--surface3);
+    color: var(--gold-light);
+    align-self: flex-end;
+    border-bottom-right-radius: 4px;
+  }
+
+  .chat-bubble.ai {
+    background: linear-gradient(135deg, #1e1709, #231d14);
+    border: 1px solid var(--border-amber);
+    color: var(--text);
+    align-self: flex-start;
+    border-bottom-left-radius: 4px;
+  }
+
+  .chat-bubble.success {
+    background: rgba(39,174,96,0.12);
+    border: 1px solid rgba(39,174,96,0.3);
+    color: #4eca7e;
+    align-self: flex-start;
+  }
+
+  .ai-bar-input {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 10px;
+    max-width: 1400px;
+  }
+
+  .ai-thinking {
+    display: none;
+    align-items: center;
+    gap: 8px;
+    color: var(--amber);
+    font-size: 13px;
+    padding: 4px 0;
+    max-width: 1400px;
+  }
+  .ai-thinking.visible { display: flex; }
+
+  .dot-pulse span {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: var(--amber);
+    animation: pulse 1.2s infinite;
+  }
+  .dot-pulse span:nth-child(2) { animation-delay: 0.2s; }
+  .dot-pulse span:nth-child(3) { animation-delay: 0.4s; }
+
+  @keyframes pulse {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40% { opacity: 1; transform: scale(1); }
+  }
+
+  /* FILTERS */
+  .filters {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 64px;
+    z-index: 90;
+  }
+
+  .filters-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-label {
+    font-size: 11px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-right: 4px;
+  }
+
+  .chip {
+    padding: 5px 13px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border-amber);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .chip:hover { border-color: var(--amber); color: var(--text); }
+  .chip.active { background: var(--amber); border-color: var(--amber); color: #0f0c08; }
+
+  .filter-sep {
+    width: 1px;
+    height: 20px;
+    background: var(--border-amber);
+    margin: 0 4px;
+  }
+
+  .status-chip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  /* CITY SECTIONS */
+  .main {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+  }
+
+  .results-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 16px;
+  }
+
+  .city-section { margin-bottom: 32px; }
+
+  .city-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .city-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 20px;
+    color: var(--gold);
+    letter-spacing: 0.3px;
+  }
+
+  .city-count {
+    font-size: 12px;
+    color: var(--text-muted);
+    background: var(--surface2);
+    padding: 2px 9px;
+    border-radius: 10px;
+  }
+
+  .city-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--border-amber), transparent);
+  }
+
+  /* CARDS GRID */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 14px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--amber), transparent);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .card:hover {
+    border-color: var(--border-amber);
+    background: var(--surface2);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+
+  .card:hover::before { opacity: 1; }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .card-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 16px;
+    color: var(--text);
+    line-height: 1.3;
+  }
+
+  .card-badges {
+    display: flex;
+    gap: 5px;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  .badge-status {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
+  .status-tried { background: rgba(39,174,96,0.15); color: #4eca7e; border: 1px solid rgba(39,174,96,0.3); }
+  .status-to-try { background: rgba(212,134,10,0.15); color: var(--amber-light); border: 1px solid rgba(212,134,10,0.3); }
+
+  .stars {
+    font-size: 11px;
+    color: var(--amber);
+    letter-spacing: -1px;
+  }
+
+  .card-cuisine {
+    font-size: 11px;
+    color: var(--amber-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .card-picks {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.5;
+  }
+
+  .card-picks strong {
+    color: var(--gold);
+    font-weight: 500;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .card-server {
+    font-size: 12px;
+    color: var(--amber);
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+  }
+
+  .tag {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 8px;
+    background: var(--surface3);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    text-transform: capitalize;
+  }
+
+
+  .card-img {
+    width: 100%;
+    height: 140px;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: var(--surface2);
+    display: block;
+  }
+
+  .card-img-placeholder {
+    width: 100%;
+    height: 140px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    background: var(--surface2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    color: var(--text-muted);
+  }
+
+  .detail-img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    border-radius: 10px;
+    margin-bottom: 16px;
+  }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    z-index: 200;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 40px 20px;
+    overflow-y: auto;
+    backdrop-filter: blur(4px);
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border-amber);
+    border-radius: 16px;
+    width: 100%;
+    max-width: 600px;
+    padding: 28px;
+    position: relative;
+    animation: slideUp 0.25s ease;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .modal-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    color: var(--text-dim);
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .modal-close:hover { border-color: var(--amber); color: var(--text); }
+
+  .modal-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 24px;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+
+  .modal-subtitle {
+    font-size: 13px;
+    color: var(--amber);
+    margin-bottom: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  .form-group label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    font-weight: 500;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    color: var(--text);
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--amber); }
+
+  .form-group select option { background: var(--surface2); }
+
+  .form-group textarea { min-height: 70px; }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid rgba(192,57,43,0.4);
+  }
+
+  .btn-danger:hover { background: rgba(192,57,43,0.1); }
+
+  /* DETAIL MODAL */
+  .detail-section {
+    margin-bottom: 16px;
+  }
+
+  .detail-section h4 {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--amber);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+
+  .detail-list {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .detail-list li {
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+
+  .detail-notes {
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    border-left: 3px solid var(--amber);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--text-dim);
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .rating-display {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+  }
+
+  .star-btn {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    color: var(--border-amber);
+    transition: color 0.1s;
+    padding: 0;
+  }
+
+  .star-btn.filled { color: var(--amber); }
+
+  /* EMPTY STATE */
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-muted);
+  }
+
+  .empty-state .icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-state h3 { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--text-dim); margin-bottom: 6px; }
+
+  /* TOAST */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface2);
+    border: 1px solid var(--amber);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    z-index: 999;
+    transition: transform 0.3s ease;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border-amber); border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--amber-dim); }
+
+  @media (max-width: 768px) {
+    .ai-label { display: none; }
+    .form-grid { grid-template-columns: 1fr; }
+    .cards-grid { grid-template-columns: 1fr; }
+    header { padding: 0 14px; }
+    .main { padding: 14px 14px 60px; }
+    .filters { padding: 10px 14px; }
+    .ai-bar { padding: 10px 14px; }
+    .logo { font-size: 18px; }
+    .filters-inner { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+    .chip { flex-shrink: 0; padding: 7px 14px; font-size: 13px; min-height: 36px; }
+    .cat-manage-btn { flex-shrink: 0; }
+    .filter-sep { flex-shrink: 0; }
+    .card { padding: 14px; }
+    .card-img { height: 160px; }
+    .modal { padding: 20px 16px; margin: 10px; }
+    .modal-overlay { padding: 10px; }
+    .btn { min-height: 40px; }
+    .ai-bar-inner input { font-size: 16px; }
+    .search-wrap input { font-size: 16px; }
+    .header-inner { gap: 10px; }
+    #starSelect { font-size: 13px; min-height: 36px; flex-shrink: 0; }
+  }
+
+  /* Touch-friendly tap targets */
+  @media (hover: none) {
+    .card:hover { transform: none; }
+    .chip { -webkit-tap-highlight-color: transparent; }
+    .btn { -webkit-tap-highlight-color: transparent; }
+    .gallery-item .remove-photo { display: flex; }
+    .gallery-item .gallery-actions { display: block; }
+  }
+
+
+  .drop-zone {
+    border: 2px dashed var(--border-amber);
+    border-radius: 12px;
+    padding: 24px;
+    text-align: center;
+    transition: all 0.2s;
+    background: var(--surface2);
+    cursor: pointer;
+    min-height: 160px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .drop-zone.drag-over {
+    border-color: var(--amber-light);
+    background: rgba(212,134,10,0.08);
+    transform: scale(1.01);
+  }
+
+  .drop-content {
+    width: 100%;
+  }
+
+
+  /* GALLERY */
+  .gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .gallery-item {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    aspect-ratio: 1;
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+  }
+
+  .gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+
+  .gallery-item .remove-photo {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(192,57,43,0.85);
+    border: none;
+    color: white;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 11px;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+  }
+
+  .gallery-item:hover .remove-photo { display: flex; }
+
+  .gallery-add {
+    border-radius: 8px;
+    aspect-ratio: 1;
+    background: var(--surface2);
+    border: 2px dashed var(--border-amber);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 11px;
+    color: var(--text-muted);
+    gap: 4px;
+  }
+
+  .gallery-add:hover { border-color: var(--amber); color: var(--amber); }
+  .gallery-add span { font-size: 22px; }
+
+  /* DETAIL GALLERY */
+  .detail-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .detail-gallery img {
+    width: 100%;
+    aspect-ratio: 1;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.15s;
+    border: 1px solid var(--border);
+  }
+
+  .detail-gallery img:hover { transform: scale(1.03); }
+
+  /* LIGHTBOX */
+  .lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.92);
+    z-index: 500;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+
+  .lightbox.open { display: flex; }
+
+  .lightbox img {
+    max-width: 100%;
+    max-height: 90vh;
+    object-fit: contain;
+    border-radius: 8px;
+  }
+
+  .lightbox-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    color: var(--text);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+
+  /* CATEGORY MANAGER */
+  .cat-manage-btn {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px dashed var(--amber-dim);
+    background: transparent;
+    color: var(--amber-dim);
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .cat-manage-btn:hover { border-color: var(--amber); color: var(--amber); }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .cat-item {
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    border-radius: 10px;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .cat-item input {
+    background: transparent;
+    border: none;
+    color: var(--text);
+    font-size: 14px;
+    font-family: 'DM Sans', sans-serif;
+    flex: 1;
+    outline: none;
+  }
+
+  .cat-emoji-input {
+    width: 32px;
+    text-align: center;
+    font-size: 18px;
+  }
+
+  .cat-delete {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s;
+  }
+  .cat-delete:hover { color: var(--red); }
+
+  .cat-add-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+    align-items: center;
+  }
+
+
+  /* DRAG DROP FIELDS */
+  .dd-field {
+    margin-bottom: 12px;
+  }
+  .dd-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: block;
+  }
+  .dd-zone {
+    min-height: 40px;
+    border: 1px dashed var(--border-amber);
+    border-radius: 8px;
+    padding: 6px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    transition: all 0.15s;
+    background: var(--surface2);
+  }
+  .dd-zone.drag-over {
+    border-color: var(--amber-light);
+    background: rgba(212,134,10,0.08);
+  }
+  .dd-zone.empty::after {
+    content: 'Drop items here';
+    color: var(--text-muted);
+    font-size: 12px;
+    padding: 4px 8px;
+    font-style: italic;
+  }
+  .dd-tag {
+    background: var(--surface3);
+    border: 1px solid var(--border-amber);
+    color: var(--text-dim);
+    padding: 4px 10px;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: grab;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .dd-tag:hover { border-color: var(--amber); color: var(--text); }
+  .dd-tag.dragging { opacity: 0.4; cursor: grabbing; }
+  .dd-tag .dd-remove {
+    color: var(--text-muted);
+    font-size: 11px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .dd-tag .dd-remove:hover { color: var(--red); }
+  .dd-add-input {
+    background: transparent;
+    border: none;
+    color: var(--text-dim);
+    font-size: 12px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    min-width: 80px;
+    flex: 1;
+    padding: 4px 6px;
+  }
+  .dd-add-input::placeholder { color: var(--text-muted); }
+
+
+  .cat-picker-chip {
+    padding: 4px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid var(--border-amber);
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .cat-picker-chip.selected {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #0f0c08;
+    font-weight: 600;
+  }
+
+
+  /* HIGHLIGHT */
+  .card.highlighted {
+    border-color: var(--amber) !important;
+    box-shadow: 0 0 0 2px var(--amber-dim), 0 8px 24px rgba(212,134,10,0.2) !important;
+  }
+  .card.dimmed {
+    opacity: 0.25;
+    pointer-events: none;
+  }
+  .highlight-bar {
+    background: linear-gradient(90deg, rgba(212,134,10,0.15), transparent);
+    border-left: 3px solid var(--amber);
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--amber);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 6px;
+    border-radius: 4px;
+    display: none;
+  }
+  .highlight-bar.visible { display: flex; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+    letter-spacing: 1px;
+  }
+
+  .footer span { color: var(--amber-dim); }
+
+  /* AUTH GATE */
+  #auth-gate {
+    position: fixed;
+    inset: 0;
+    background: var(--bg);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #auth-gate .auth-box {
+    background: var(--surface);
+    border: 1px solid var(--border-amber);
+    border-radius: 16px;
+    padding: 40px 36px;
+    width: 100%;
+    max-width: 380px;
+    text-align: center;
+  }
+  #auth-gate .auth-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    color: var(--amber-light);
+    margin-bottom: 6px;
+  }
+  #auth-gate .auth-logo span { color: var(--gold); font-style: italic; }
+  #auth-gate .auth-subtitle {
+    font-size: 12px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 28px;
+  }
+  #auth-gate input[type=password] {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    color: var(--text);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    margin-bottom: 14px;
+    text-align: center;
+    letter-spacing: 2px;
+  }
+  #auth-gate input[type=password]:focus { border-color: var(--amber); }
+  #auth-gate .auth-error {
+    color: var(--red);
+    font-size: 12px;
+    margin-top: -8px;
+    margin-bottom: 10px;
+    min-height: 16px;
+  }
+
+</style>
+</head>
+<body>
+<!-- AUTH GATE -->
+<div id="auth-gate">
+  <div class="auth-box">
+    <div class="auth-logo">Philinity <span>Eats</span> 🍽</div>
+    <div class="auth-subtitle">Sign in with Google</div>
+    <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
+    <div class="auth-error" id="authError" style="margin-top:12px"></div>
+    <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.18</div>
+  </div>
+</div>
+
+
+<!-- HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo" onclick="resetHome()" style="cursor:pointer">Philinity <span>Eats</span> 🍽</div>
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search restaurants, dishes, drinks..." oninput="applyFilters()">
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost" onclick="openAddModal()">+ Add</button>
+      <button class="btn btn-ghost" onclick="signOutUser()">Sign Out</button>
+    </div>
+  </div>
+</header>
+
+<!-- AI BAR -->
+<div class="ai-bar">
+  <div class="ai-bar-inner">
+    <div class="ai-label">✨ Ask AI</div>
+    <div class="ai-input-wrap">
+      <input type="text" id="aiInput" placeholder="Ask anything, or: 'Add North End Pizza we like their Hyde House Combo'" onkeydown="if(event.key==='Enter') askAI()">
+    </div>
+    <button class="btn btn-amber" onclick="askAI()">Ask</button>
+    <button class="btn btn-ghost" onclick="clearChat()" title="Clear conversation" style="padding:8px 10px">🗑</button>
+  </div>
+  <div class="highlight-bar" id="highlightBar">
+    <span id="highlightMsg">✨ Showing recommended spots</span>
+    <button onclick="clearHighlight()" style="background:transparent;border:none;color:var(--amber);cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif">✕ Show all</button>
+  </div>
+  <div class="ai-thinking" id="aiThinking">
+    <div class="dot-pulse"><span></span><span></span><span></span></div>
+    <span>Thinking...</span>
+  </div>
+  <div class="ai-chat-thread" id="aiResponse"></div>
+</div>
+
+<!-- FILTERS -->
+<div class="filters">
+  <div class="filters-inner">
+    <span class="filter-label">City</span>
+    <button class="chip active" onclick="setCity('All', this)">All</button>
+    <button class="chip" onclick="setCity('Boise', this)">Boise</button>
+    <button class="chip" onclick="setCity('Eagle', this)">Eagle</button>
+    <button class="chip" onclick="setCity('Nampa', this)">Nampa</button>
+    <button class="chip" onclick="setCity('Caldwell', this)">Caldwell</button>
+    <button class="chip" onclick="setCity('Kuna', this)">Kuna</button>
+
+    <div class="filter-sep"></div>
+    <span class="filter-label">Type</span>
+    <button class="chip active cat-chip" onclick="setCat('All', this)">All</button>
+    <div id="catChips" style="display:contents">
+      <button class="chip cat-chip" onclick="setCat('Fine Dining', this)">🍽 Fine Dining</button>
+      <button class="chip cat-chip" onclick="setCat('Sushi', this)">🍣 Sushi</button>
+      <button class="chip cat-chip" onclick="setCat('Good Restaurants', this)">🍴 Good Eats</button>
+      <button class="chip cat-chip" onclick="setCat('Bar', this)">🍸 Bar</button>
+      <button class="chip cat-chip" onclick="setCat('Coffee', this)">☕ Coffee</button>
+      <button class="chip cat-chip" onclick="setCat('Breakfast', this)">🥚 Breakfast</button>
+      <button class="chip cat-chip" onclick="setCat('Pizza', this)">🍕 Pizza</button>
+      <button class="chip cat-chip" onclick="setCat('Fast Food', this)">🥡 Quick Eats</button>
+      <button class="chip cat-chip" onclick="setCat('Desserts', this)">🧁 Desserts</button>
+      <button class="chip cat-chip" onclick="setCat('Vineyard', this)">🍷 Vineyard</button>
+    </div>
+    <button class="cat-manage-btn" onclick="openCatManager()">⚙️ Edit Categories</button>
+
+    <div class="filter-sep"></div>
+    <select id="starSelect" onchange="setStarFilter(this.value)" style="background:var(--surface2);border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none">
+      <option value="0">⭐ Any Rating</option>
+      <option value="5">⭐⭐⭐⭐⭐ 5 Stars only</option>
+      <option value="4">⭐⭐⭐⭐ 4 Stars only</option>
+      <option value="3">⭐⭐⭐ 3 Stars only</option>
+      <option value="2">⭐⭐ 2 Stars only</option>
+      <option value="1">⭐ 1 Star only</option>
+    </select>
+    <div class="filter-sep"></div>
+    <button class="chip status-chip" id="toTryChip" onclick="toggleToTry()">🔖 To Try</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+  <div class="results-count" id="resultsCount"></div>
+  <div id="content"></div>
+</div>
+
+<!-- ADD/EDIT MODAL -->
+<div class="modal-overlay" id="formModal" onclick="if(event.target===this) closeFormModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeFormModal()">✕</button>
+    <div class="modal-title" id="formTitle">Add Restaurant</div>
+    <div class="modal-subtitle">Philinity Eats</div>
+
+    <div class="form-grid">
+      <div class="form-group full">
+        <label>Restaurant Name</label>
+        <input type="text" id="fName" placeholder="e.g. Barbacoa">
+      </div>
+      <div class="form-group">
+        <label>City</label>
+        <input type="text" id="fCity" placeholder="Boise">
+      </div>
+      <div class="form-group">
+        <label>State</label>
+        <input type="text" id="fState" value="ID">
+      </div>
+      <div class="form-group full">
+        <label>Categories (select multiple)</label>
+        <div id="fCategoryPicker" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;min-height:42px"></div>
+        <input type="hidden" id="fCategory">
+      </div>
+      <div class="form-group">
+        <label>Cuisine</label>
+        <input type="text" id="fCuisine" placeholder="American/Steak">
+      </div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="fStatus">
+          <option value="tried">✅ Tried</option>
+          <option value="to-try">🔖 To Try</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Rating (1-5)</label>
+        <div class="rating-display" id="starRating">
+          <button class="star-btn" onclick="setRating(1)">★</button>
+          <button class="star-btn" onclick="setRating(2)">★</button>
+          <button class="star-btn" onclick="setRating(3)">★</button>
+          <button class="star-btn" onclick="setRating(4)">★</button>
+          <button class="star-btn" onclick="setRating(5)">★</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Ask for (Server)</label>
+        <input type="text" id="fServer" placeholder="Patrick">
+      </div>
+      <div class="form-group full">
+        <div id="dd-fields-container">
+          <!-- Drag-drop fields rendered by JS -->
+        </div>
+        <!-- Hidden inputs for form compatibility -->
+        <input type="hidden" id="fPhilPicks">
+        <input type="hidden" id="fTrinityPicks">
+        <input type="hidden" id="fDrinks">
+        <input type="hidden" id="fApps">
+        <input type="hidden" id="fMains">
+        <input type="hidden" id="fDesserts">
+      </div>
+      <div class="form-group full">
+        <label>Notes / Tips</label>
+        <textarea id="fNotes" placeholder="Table 55 in back corner. No on lamb."></textarea>
+      </div>
+      <div class="form-group full">
+        <label>Tags (comma separated)</label>
+        <input type="text" id="fTags" placeholder="date night, fine dining, seafood">
+      </div>
+      <div class="form-group full">
+        <label>Photo</label>
+        <div id="dropZone" class="drop-zone" 
+          ondragover="event.preventDefault();this.classList.add('drag-over')" 
+          ondragleave="this.classList.remove('drag-over')"
+          ondrop="handleDrop(event)">
+          <div id="dropContent" class="drop-content">
+            <div style="font-size:36px;margin-bottom:8px">📸</div>
+            <div style="font-size:14px;color:var(--text-dim);margin-bottom:6px">Drag & drop, or <strong style="color:var(--amber)">Ctrl+V</strong> to paste</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">or choose an option below</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+              <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 14px">
+                📷 Take Photo
+                <input type="file" id="fImageCamera" accept="image/*" capture="environment" style="display:none" onchange="handleImageUpload(event)">
+              </label>
+              <label class="btn btn-ghost" style="cursor:pointer;font-size:12px;padding:7px 14px">
+                🖼 Choose from Library
+                <input type="file" id="fImageFile" accept="image/*" style="display:none" onchange="handleImageUpload(event)">
+              </label>
+            </div>
+            <div style="margin-top:10px;display:flex;align-items:center;gap:8px">
+              <div style="flex:1;height:1px;background:var(--border-amber)"></div>
+              <span style="font-size:11px;color:var(--text-muted)">or paste URL</span>
+              <div style="flex:1;height:1px;background:var(--border-amber)"></div>
+            </div>
+            <input type="text" id="fImageUrl" placeholder="https://..." 
+              style="margin-top:8px;width:100%;background:var(--surface2);border:1px solid var(--border-amber);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;font-family:'DM Sans',sans-serif;outline:none;box-sizing:border-box"
+              oninput="handleUrlInput(this.value)">
+          </div>
+          <div id="previewContent" style="display:none;width:100%;position:relative">
+            <img id="previewImg" style="width:100%;height:220px;object-fit:cover;border-radius:8px;display:block" src="">
+            <div style="position:absolute;bottom:8px;right:8px;display:flex;gap:6px">
+              <label class="btn btn-ghost" style="cursor:pointer;font-size:11px;padding:5px 10px;background:rgba(15,12,8,0.85)">
+                📷 Replace
+                <input type="file" id="fImageReplace" accept="image/*" capture="environment" style="display:none" onchange="handleImageUpload(event)">
+              </label>
+              <button type="button" onclick="clearImage()" style="background:rgba(192,57,43,0.85);border:none;color:white;padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer">✕ Remove</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+      <div class="form-group full" style="margin-top:14px">
+        <label>Food Photos Gallery (add multiple)</label>
+        <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+          <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 14px">
+            📷 Take Photo
+            <input type="file" id="gImageCamera" accept="image/*" capture="environment" multiple style="display:none" onchange="handleGalleryUpload(event)">
+          </label>
+          <label class="btn btn-ghost" style="cursor:pointer;font-size:12px;padding:7px 14px">
+            🖼 Choose from Library
+            <input type="file" id="gImageFile" accept="image/*" multiple style="display:none" onchange="handleGalleryUpload(event)">
+          </label>
+          <div id="galleryDropZone" class="btn btn-ghost" style="font-size:12px;padding:7px 14px;border-style:dashed;cursor:pointer"
+            ondragover="event.preventDefault();this.style.borderColor='var(--amber-light)'"
+            ondragleave="this.style.borderColor=''"
+            ondrop="handleGalleryDrop(event)">
+            🖱 Drag & Drop here
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--amber);margin-bottom:8px">💡 Tip: Use <strong>Ctrl+G</strong> to paste a screenshot into gallery</div>
+        <div class="gallery" id="galleryEdit"></div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Hover any photo → <strong style="color:var(--amber)">⭐ Set Main</strong> to use as card image.</div>
+      </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-danger" id="deleteBtn" onclick="deleteEntry()" style="display:none; margin-right:auto">🗑 Delete</button>
+      <button class="btn btn-ghost" onclick="closeFormModal()">Cancel</button>
+      <button class="btn btn-amber" onclick="saveEntry()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- DETAIL MODAL -->
+<div class="modal-overlay" id="detailModal" onclick="if(event.target===this) closeDetailModal()">
+  <div class="modal">
+    <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    <div id="detailContent"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="editFromDetail()">✏️ Edit</button>
+      <button class="btn btn-amber" onclick="closeDetailModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
+import { getDatabase, ref, get, set, update, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCrW9Lrf7fWVqRxKqsnuPK0tL6UYbd_qds",
+  authDomain: "philinity-893d2.firebaseapp.com",
+  databaseURL: "https://philinity-893d2-default-rtdb.firebaseio.com",
+  projectId: "philinity-893d2",
+  storageBucket: "philinity-893d2.firebasestorage.app",
+  messagingSenderId: "443020781676",
+  appId: "1:443020781676:web:614ec91c9ba33076eb9049"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+const storage = getStorage(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
+
+const EATS_PATH = 'eats';
+
+// ── DB HELPERS (modular v10) ──────────────────────────────
+const dbRef = (path) => ref(db, path);
+const dbGet = (path) => get(dbRef(path));
+const dbSet = (path, val) => set(dbRef(path), val);
+const dbUpdate = (updates) => update(ref(db, '/'), updates);
+const dbRemove = (path) => remove(dbRef(path));
+const dbOn = (path, cb) => onValue(dbRef(path), cb);
+
+// ── STORAGE HELPERS ───────────────────────────────────────
+async function uploadDataUrlToStorage(dataUrl, path) {
+  const sRef = storageRef(storage, path);
+  const snap = await uploadString(sRef, dataUrl, 'data_url', {
+    contentType: 'image/jpeg',
+    cacheControl: 'public,max-age=31536000'
+  });
+  return await getDownloadURL(snap.ref);
+}
+
+
+// Auth state and EATS_PATH defined in module above
+
+// State
+let allRestaurants = [];
+
+let chatHistory = [];
+let currentCity = 'All';
+let currentCat = 'All';
+let showToTryOnly = false;
+let starFilter = 0;
+let editingId = null;
+let currentRating = 0;
+let currentDetailId = null;
+
+// ─── INITIAL DATA ─────────────────────────────────────────
+
+// ─── FIREBASE ─────────────────────────────────────────────
+// Data loading handled inside init() after auth resolves
+
+// ─── FILTERS ──────────────────────────────────────────────
+function setCity(city, el) {
+  if (city !== 'All' && currentCity === city) {
+    currentCity = 'All';
+    document.querySelectorAll('.filters-inner .chip:not(.cat-chip):not(#toTryChip):not(#starSelect)').forEach(c => c.classList.remove('active'));
+    document.querySelector('.filters-inner .chip:not(.cat-chip):not(#toTryChip)').classList.add('active');
+  } else {
+    currentCity = city;
+    document.querySelectorAll('.filters-inner .chip:not(.cat-chip):not(#toTryChip):not(#starSelect)').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+  }
+  applyFilters();
+}
+
+function setCat(cat, el) {
+  // Toggle off if already selected (except 'All')
+  if (cat !== 'All' && currentCat === cat) {
+    currentCat = 'All';
+    document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+    document.querySelector('.cat-chip').classList.add('active'); // re-activate 'All'
+  } else {
+    currentCat = cat;
+    document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+    if (el) el.classList.add('active');
+  }
+  applyFilters();
+}
+
+function setStarFilter(val) {
+  starFilter = parseInt(val) || 0;
+  applyFilters();
+}
+
+function toggleToTry() {
+  showToTryOnly = !showToTryOnly;
+  document.getElementById('toTryChip').classList.toggle('active', showToTryOnly);
+  applyFilters();
+}
+
+function applyFilters() {
+  const search = document.getElementById('searchInput').value.toLowerCase().trim();
+  let filtered = [...allRestaurants];
+
+  if (currentCity !== 'All') filtered = filtered.filter(r => r.city === currentCity);
+  if (currentCat !== 'All') filtered = filtered.filter(r => {
+    if (Array.isArray(r.category)) return r.category.includes(currentCat);
+    return r.category === currentCat;
+  });
+  if (showToTryOnly) filtered = filtered.filter(r => r.status === 'to-try');
+  if (starFilter > 0) filtered = filtered.filter(r => (r.rating || 0) === starFilter);
+
+  if (search) {
+    filtered = filtered.filter(r => {
+      const haystack = [
+        r.name, r.city, r.cuisine, r.category,
+        ...(r.drinks || []), ...(r.appetizers || []), ...(r.mains || []),
+        ...(r.desserts || []), ...(r.phil_picks || []), ...(r.trinity_picks || []),
+        ...(r.tags || []), r.notes, r.server
+      ].join(' ').toLowerCase();
+      return haystack.includes(search);
+    });
+  }
+
+  renderContent(filtered);
+}
+
+// ─── RENDER ───────────────────────────────────────────────
+function renderContent(restaurants) {
+  const container = document.getElementById('content');
+  document.getElementById('resultsCount').textContent = `${restaurants.length} place${restaurants.length !== 1 ? 's' : ''}`;
+
+  if (restaurants.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="icon">🍽</div><h3>No results found</h3><p>Try adjusting your filters or search</p></div>`;
+    return;
+  }
+
+  // Group by city
+  const byCityOrder = ['Boise', 'Eagle', 'Nampa', 'Caldwell', 'Kuna', 'Wilder'];
+  const byCity = {};
+  restaurants.forEach(r => {
+    if (!byCity[r.city]) byCity[r.city] = [];
+    byCity[r.city].push(r);
+  });
+
+  const cities = [...new Set([...byCityOrder.filter(c => byCity[c]), ...Object.keys(byCity).filter(c => !byCityOrder.includes(c))])];
+
+  let html = '';
+  cities.forEach(city => {
+    const list = byCity[city];
+    if (!list) return;
+    html += `
+      <div class="city-section">
+        <div class="city-header">
+          <div class="city-name">📍 ${escapeHTML(city)}, ID</div>
+          <div class="city-count">${list.length}</div>
+          <div class="city-line"></div>
+        </div>
+        <div class="cards-grid">
+          ${list.map(r => renderCard(r)).join('')}
+        </div>
+      </div>`;
+  });
+
+  container.innerHTML = html;
+}
+
+
+function getCuisineEmoji(cuisine) {
+  const map = {
+    'Sushi': '🍣', 'Japanese': '🍣', 'Pizza': '🍕', 'Mexican': '🌮',
+    'Indian': '🍛', 'Chinese': '🥡', 'Italian': '🍝', 'Seafood': '🦞',
+    'American': '🥩', 'Steak': '🥩', 'French': '🥐', 'Hawaiian': '🌺',
+    'Tiki': '🍹', 'Bar': '🍸', 'Coffee': '☕', 'Breakfast': '🥞',
+    'Winery': '🍷', 'Desserts': '🧁', 'Pastry': '🥐', 'Ramen': '🍜',
+    'Asian': '🥢', 'Fusion': '🍱'
+  };
+  for (const [k, v] of Object.entries(map)) {
+    if (cuisine && cuisine.includes(k)) return v;
+  }
+  return '🍽';
+}
+
+function stripHTML(str) {
+  if (!str) return '';
+  // Remove all HTML tags and dangerous patterns
+  return String(str)
+    .replace(/<[^>]*>/g, '')           // strip all HTML tags
+    .replace(/javascript:/gi, '')       // strip javascript: protocol
+    .replace(/on\w+\s*=/gi, '')        // strip event handlers (onerror=, onclick=, etc)
+    .replace(/atob\s*\(/gi, '')        // strip atob(
+    .replace(/eval\s*\(/gi, '')        // strip eval(
+    .replace(/location\s*=/gi, '')     // strip location=
+    .replace(/document\./gi, '')       // strip document.
+    .replace(/window\./gi, '');        // strip window.
+}
+
+function stripHTMLArray(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(stripHTML).filter(Boolean);
+}
+
+function sanitizeValue(value) {
+  if (Array.isArray(value)) return value.map(sanitizeValue).filter(v => v !== '' && v != null);
+  if (value && typeof value === 'object') {
+    const out = {};
+    Object.keys(value).forEach(k => { out[k] = sanitizeValue(value[k]); });
+    return out;
+  }
+  if (typeof value === 'string') return stripHTML(value);
+  return value;
+}
+
+function sanitizeCategoryObj(cat) {
+  return {
+    emoji: stripHTML((cat && cat.emoji) || ''),
+    name: stripHTML((cat && cat.name) || '')
+  };
+}
+
+function sanitizeRestaurant(r) {
+  const x = sanitizeValue(r || {});
+  x.id = stripHTML(x.id || '');
+  x.name = stripHTML(x.name || '');
+  x.city = stripHTML(x.city || '');
+  x.state = stripHTML(x.state || '');
+  x.cuisine = stripHTML(x.cuisine || '');
+  x.server = stripHTML(x.server || '');
+  x.notes = stripHTML(x.notes || '');
+  x.status = x.status === 'to-try' ? 'to-try' : 'tried';
+  x.category = Array.isArray(x.category) ? x.category.map(stripHTML).filter(Boolean) : stripHTML(x.category || '');
+  x.tags = Array.isArray(x.tags) ? x.tags.map(stripHTML).filter(Boolean) : [];
+  x.drinks = Array.isArray(x.drinks) ? x.drinks.map(stripHTML).filter(Boolean) : [];
+  x.appetizers = Array.isArray(x.appetizers) ? x.appetizers.map(stripHTML).filter(Boolean) : [];
+  x.mains = Array.isArray(x.mains) ? x.mains.map(stripHTML).filter(Boolean) : [];
+  x.desserts = Array.isArray(x.desserts) ? x.desserts.map(stripHTML).filter(Boolean) : [];
+  x.phil_picks = Array.isArray(x.phil_picks) ? x.phil_picks.map(stripHTML).filter(Boolean) : [];
+  x.trinity_picks = Array.isArray(x.trinity_picks) ? x.trinity_picks.map(stripHTML).filter(Boolean) : [];
+  x.imageUrl = isSafeImageUrl(x.imageUrl) ? x.imageUrl : '';
+  x.photos = Array.isArray(x.photos) ? x.photos.filter(isSafeImageUrl) : [];
+  return x;
+}
+
+
+function escapeHTML(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function escapeAttr(str) {
+  return escapeHTML(str).replace(/`/g, '&#96;');
+}
+
+function isSafeImageUrl(url) {
+  if (!url) return false;
+  if (url.startsWith('data:image/')) return true;
+  try {
+    const u = new URL(url);
+    const safe = ['images.unsplash.com','lh3.googleusercontent.com','firebasestorage.googleapis.com',
+                  'storage.googleapis.com','i.imgur.com','upload.wikimedia.org'];
+    return safe.some(d => u.hostname === d || u.hostname.endsWith('.' + d));
+  } catch(e) { return false; }
+}
+
+function getImageUrl(r) {
+  if (isSafeImageUrl(r.imageUrl)) return r.imageUrl;
+  const imagePool = {
+    'sushi': [
+      'https://images.unsplash.com/photo-1579584425555-c3ce17fd4351?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1617196034183-421b4040ed20?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1559410545-0bdcd187e0a6?w=400&h=200&fit=crop',
+    ],
+    'pizza': [
+      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=200&fit=crop',
+    ],
+    'mexican': [
+      'https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1551504734-5ee1c4a1479b?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1592417817098-8fd3d9eb14a5?w=400&h=200&fit=crop',
+    ],
+    'indian': [
+      'https://images.unsplash.com/photo-1585937421612-70a008356fbe?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1603894584373-5ac82b2ae398?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1567188040759-fb8a883dc6d8?w=400&h=200&fit=crop',
+    ],
+    'steak': [
+      'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1558030006-450675393462?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1432139555190-58524dae6a55?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1607116654013-3c4c5b97fc56?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1600891964092-4316c288032e?w=400&h=200&fit=crop',
+    ],
+    'american': [
+      'https://images.unsplash.com/photo-1550547660-d9450f859349?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1466978913421-dad2ebd01d17?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1476224203421-9ac39bcb3b42?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1482049016688-2d3e1b311543?w=400&h=200&fit=crop',
+    ],
+    'seafood': [
+      'https://images.unsplash.com/photo-1559339352-11d035aa65de?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1565680018434-b513d5e5fd47?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1534080564583-6be75777b70a?w=400&h=200&fit=crop',
+    ],
+    'cocktail': [
+      'https://images.unsplash.com/photo-1514362545857-3bc16c4c7d1b?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1551024709-8f23befc6f87?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1536935338788-846bb9981813?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1568644396922-5c3bfae12521?w=400&h=200&fit=crop',
+    ],
+    'coffee': [
+      'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1442512595331-e89e73853f31?w=400&h=200&fit=crop',
+    ],
+    'breakfast': [
+      'https://images.unsplash.com/photo-1533089860892-a7c6f0a88666?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1504754524776-8f4f37790ca0?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1484723091739-30a097e8f929?w=400&h=200&fit=crop',
+    ],
+    'wine': [
+      'https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1474722883778-792e7990302f?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1553361371-9b22f78e8b1d?w=400&h=200&fit=crop',
+    ],
+    'dessert': [
+      'https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1563729784474-d77dbb933a9e?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1578985545062-69928b1d9587?w=400&h=200&fit=crop',
+    ],
+    'ramen': [
+      'https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1557872943-16a5ac26437e?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1591814468924-caf88d1232e1?w=400&h=200&fit=crop',
+    ],
+    'default': [
+      'https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?w=400&h=200&fit=crop',
+      'https://images.unsplash.com/photo-1424847651672-bf20a4b0982b?w=400&h=200&fit=crop',
+    ],
+  };
+
+  let pool = imagePool['american'];
+  const c = (r.cuisine || '').toLowerCase();
+  if (c.includes('sushi') || c.includes('japanese')) pool = imagePool['sushi'];
+  else if (c.includes('pizza')) pool = imagePool['pizza'];
+  else if (c.includes('mexican')) pool = imagePool['mexican'];
+  else if (c.includes('indian')) pool = imagePool['indian'];
+  else if (c.includes('ramen')) pool = imagePool['ramen'];
+  else if (c.includes('seafood')) pool = imagePool['seafood'];
+  else if (c.includes('steak')) pool = imagePool['steak'];
+  else if (c.includes('american') || c.includes('fusion')) pool = imagePool['american'];
+  else if (c.includes('bar') || c.includes('cocktail')) pool = imagePool['cocktail'];
+  else if (c.includes('coffee')) pool = imagePool['coffee'];
+  else if (c.includes('breakfast')) pool = imagePool['breakfast'];
+  else if (c.includes('winery')) pool = imagePool['wine'];
+  else if (c.includes('dessert') || c.includes('pastry')) pool = imagePool['dessert'];
+
+  // Pick from pool using restaurant name as seed for variety
+  const seed = r.name.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+  return pool[seed % pool.length];
+}
+
+function starsHTML(rating) {
+  if (!rating) return '';
+  return '★'.repeat(rating) + '☆'.repeat(5 - rating);
+}
+
+function renderCard(r) {
+  // Sanitize ALL fields before rendering — prevents XSS from Firebase data
+  const safeName = stripHTML(r.name);
+  const safeCuisine = stripHTML(r.cuisine);
+  const safeNotes = stripHTML(r.notes);
+  const safeServer = stripHTML(r.server);
+  const safeTags = stripHTMLArray(r.tags);
+  const picks = stripHTMLArray(r.phil_picks || []).slice(0, 3);
+  const trinityPicks = stripHTMLArray(r.trinity_picks || []).filter(p => p);
+  const statusClass = r.status === 'tried' ? 'status-tried' : 'status-to-try';
+  const statusLabel = r.status === 'tried' ? '✅ Tried' : '🔖 To Try';
+
+  const imgUrl = getImageUrl(r);
+  return `
+    <div class="card" data-id="${escapeAttr(r.id)}" onclick="openDetail(\'${escapeAttr(r.id)}\')">
+      <img class="card-img" src="${escapeAttr(imgUrl)}" alt="${escapeAttr(r.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+      <div class="card-img-placeholder" style="display:none">${getCuisineEmoji(r.cuisine)}</div>
+      <div class="card-top">
+        <div class="card-name">${safeName}</div>
+        <div class="card-badges">
+          <span class="badge-status ${statusClass}">${statusLabel}</span>
+        </div>
+      </div>
+      <div class="card-cuisine">${safeCuisine}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">
+        ${(Array.isArray(r.category) ? r.category : [r.category]).filter(Boolean).map(c => {
+          const cat = categories.find(x => x.name === c);
+          return '<span style="font-size:9px;padding:2px 7px;border-radius:8px;background:var(--surface3);border:1px solid var(--border);color:var(--text-muted)">' + escapeHTML(cat ? (cat.emoji + ' ') : '') + escapeHTML(c) + '</span>';
+        }).join('')}
+      </div>
+      ${r.rating ? `<div class="stars">${starsHTML(r.rating)}</div>` : ''}
+      ${picks.length ? `<div class="card-picks" style="margin-top:8px"><strong>Phil's Picks</strong><br>${picks.join(', ')}</div>` : ''}
+      ${trinityPicks.length ? `<div class="card-picks" style="margin-top:4px"><strong>Trinity's Picks</strong><br>${trinityPicks.join(', ')}</div>` : ''}
+      ${safeServer ? `<div class="card-server">👤 ${safeServer}</div>` : ''}
+      ${safeNotes ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-style:italic;line-height:1.4">${safeNotes.length > 80 ? safeNotes.substring(0,80) + '...' : safeNotes}</div>` : ''}
+      ${r.lastUpdated ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px">Updated ${new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>` : ''}
+      ${safeTags.length ? `<div class="card-tags">${safeTags.slice(0,4).map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+    </div>`;
+}
+
+// ─── DETAIL ───────────────────────────────────────────────
+function openDetail(id) {
+  currentDetailId = id;
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+
+  const section = (title, items) => {
+    if (!items || !items.length) return '';
+    return `<div class="detail-section"><h4>${escapeHTML(title)}</h4><ul class="detail-list">${items.map(i => `<li>${escapeHTML(i)}</li>`).join('')}</ul></div>`;
+  };
+
+  // Sanitize all fields for detail view
+  const dn = stripHTML(r.name);
+  const dc = stripHTML(r.cuisine);
+  const ds = stripHTML(r.server);
+  const dno = stripHTML(r.notes);
+  const ddrinks = stripHTMLArray(r.drinks);
+  const dapps = stripHTMLArray(r.appetizers);
+  const dmains = stripHTMLArray(r.mains);
+  const ddesserts = stripHTMLArray(r.desserts);
+  const dphil = stripHTMLArray(r.phil_picks);
+  const dtrinity = stripHTMLArray(r.trinity_picks);
+  const dtags = stripHTMLArray(r.tags);
+
+  document.getElementById('detailContent').innerHTML = `
+    <img class="detail-img" src="${getImageUrl(r)}" alt="${dn}" onerror="this.style.display='none'">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">
+      <div class="modal-title">${dn}</div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:4px">
+        <span class="badge-status ${r.status === 'tried' ? 'status-tried' : 'status-to-try'}">${r.status === 'tried' ? '✅ Tried' : '🔖 To Try'}</span>
+        ${r.lastUpdated ? `<span style="font-size:10px;color:var(--text)">${new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : ''}
+      </div>
+    </div>
+    <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}</div>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <div id="detailStars" style="font-size:24px;display:flex;gap:2px;cursor:pointer">
+        ${[1,2,3,4,5].map(n => `<span onclick="setDetailRating('${r.id}',${n})" style="color:${(r.rating||0)>=n?'var(--amber)':'var(--border-amber)'};transition:color 0.1s" onmouseover="hoverDetailStars(${n})" onmouseout="resetDetailStars(${r.rating||0})">★</span>`).join('')}
+      </div>
+      <span style="font-size:11px;color:var(--text-muted)">click to rate</span>
+    </div>
+    ${ds ? `<div class="card-server" style="margin-bottom:14px">👤 Ask for <strong>${ds}</strong></div>` : ''}
+    ${section('🥃 Drinks', ddrinks)}
+    ${section('🍽 Appetizers', dapps)}
+    ${section('🥩 Mains', dmains)}
+    ${section('🍮 Desserts', ddesserts)}
+    ${section("Phil's Picks", dphil)}
+    ${section("Trinity's Picks", dtrinity)}
+
+        ${r.photos && r.photos.length ? '<div class="detail-section"><h4>📸 Food Photos</h4><div class="detail-gallery">' + r.photos.filter(isSafeImageUrl).map((p, i) => '<img src="' + escapeAttr(p) + '" alt="Food photo ' + (i+1) + '" onclick="openLightbox(this.src)">').join('') + '</div></div>' : ''}
+    ${dno ? `<div class="detail-section"><h4>📝 Notes</h4><div class="detail-notes">${dno}</div></div>` : ''}
+    ${dtags.length ? `<div class="card-tags" style="margin-top:12px">${dtags.map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
+  `;
+
+  document.getElementById('detailModal').classList.add('open');
+}
+
+function closeDetailModal() {
+  document.getElementById('detailModal').classList.remove('open');
+}
+
+function editFromDetail() {
+  closeDetailModal();
+  openEditModal(currentDetailId);
+}
+
+// ─── FORM ─────────────────────────────────────────────────
+function openAddModal() {
+  editingId = null;
+  currentRating = 0;
+  document.getElementById('formTitle').textContent = 'Add Restaurant';
+  document.getElementById('deleteBtn').style.display = 'none';
+  clearDDData();
+  renderCategoryPicker([]);
+  ['fName','fCity','fState','fCuisine','fStatus','fServer','fNotes','fTags','fImageUrl'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el.tagName === 'SELECT') el.value = el.options[0].value;
+    else el.value = '';
+  });
+  document.getElementById('fState').value = 'ID';
+  clearImage();
+  editingPhotos = [];
+  renderGalleryEdit();
+  updateStars(0);
+  document.getElementById('formModal').classList.add('open');
+}
+
+function openEditModal(id) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  editingId = id;
+  currentRating = r.rating || 0;
+
+  document.getElementById('formTitle').textContent = 'Edit Restaurant';
+  document.getElementById('deleteBtn').style.display = 'block';
+  document.getElementById('fName').value = r.name || '';
+  document.getElementById('fCity').value = r.city || '';
+  document.getElementById('fState').value = r.state || 'ID';
+  const cats = Array.isArray(r.category) ? r.category : (r.category ? r.category.split(',').map(s=>s.trim()) : []);
+  renderCategoryPicker(cats);
+  document.getElementById('fCuisine').value = r.cuisine || '';
+  document.getElementById('fStatus').value = r.status || 'tried';
+  document.getElementById('fServer').value = r.server || '';
+  loadDDData(r);
+  document.getElementById('fNotes').value = r.notes || '';
+  document.getElementById('fTags').value = (r.tags || []).join(', ');
+  editingPhotos = [...(r.photos || [])];
+  renderGalleryEdit();
+  document.getElementById('fImageFile').dataset.base64 = '';
+  if (r.imageUrl) {
+    document.getElementById('fImageUrl').value = !r.imageUrl.startsWith('data:') ? r.imageUrl : '';
+    document.getElementById('previewImg').src = r.imageUrl;
+    document.getElementById('dropContent').style.display = 'none';
+    document.getElementById('previewContent').style.display = 'block';
+  } else {
+    document.getElementById('fImageUrl').value = '';
+    document.getElementById('dropContent').style.display = 'block';
+    document.getElementById('previewContent').style.display = 'none';
+  }
+  updateStars(currentRating);
+  document.getElementById('formModal').classList.add('open');
+}
+
+function closeFormModal() {
+  document.getElementById('formModal').classList.remove('open');
+}
+
+function setRating(n) {
+  currentRating = n;
+  updateStars(n);
+}
+
+function updateStars(n) {
+  document.querySelectorAll('.star-btn').forEach((btn, i) => {
+    btn.classList.toggle('filled', i < n);
+  });
+}
+
+function splitCSV(str) {
+  return str.split(',').map(s => s.trim()).filter(Boolean);
+}
+
+
+function compressImage(dataUrl, callback) {
+  const img = new Image();
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    const MAX = 600;
+    let w = img.width, h = img.height;
+    if (w > h) { if (w > MAX) { h = h * MAX / w; w = MAX; } }
+    else { if (h > MAX) { w = w * MAX / h; h = MAX; } }
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    callback(canvas.toDataURL('image/jpeg', 0.7));
+  };
+  img.src = dataUrl;
+}
+
+function loadImagePreview(dataUrl) {
+  compressImage(dataUrl, (compressed) => {
+    document.getElementById('fImageUrl').value = '';
+    document.getElementById('previewImg').src = compressed;
+    document.getElementById('fImageFile').dataset.base64 = compressed;
+    document.getElementById('dropContent').style.display = 'none';
+    document.getElementById('previewContent').style.display = 'block';
+    const kb = Math.round(compressed.length * 0.75 / 1024);
+    console.log(`Image compressed to ~${kb}KB`);
+  });
+}
+
+async function handleImageUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => loadImagePreview(e.target.result);
+  reader.readAsDataURL(file);
+}
+
+function handleDrop(event) {
+  event.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag-over');
+  const file = event.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = (e) => loadImagePreview(e.target.result);
+  reader.readAsDataURL(file);
+}
+
+function handleUrlInput(url) {
+  if (!url) return;
+  document.getElementById('previewImg').src = url;
+  document.getElementById('fImageFile').dataset.base64 = '';
+  document.getElementById('dropContent').style.display = 'none';
+  document.getElementById('previewContent').style.display = 'block';
+}
+
+function clearImage() {
+  document.getElementById('fImageUrl').value = '';
+  if (document.getElementById('fImageFile')) { document.getElementById('fImageFile').value = ''; }
+  if (document.getElementById('fImageCamera')) { document.getElementById('fImageCamera').value = ''; }
+  document.getElementById('fImageFile').dataset.base64 = '';
+  document.getElementById('previewImg').src = '';
+  document.getElementById('dropContent').style.display = 'block';
+  document.getElementById('previewContent').style.display = 'none';
+}
+
+
+function makeStoragePath(entryId, prefix) {
+  const safeId = String(entryId || 'entry').replace(/[^a-z0-9-_]/gi, '-').toLowerCase();
+  const rand = Math.random().toString(36).slice(2, 8);
+  return `eats/${safeId}/${prefix}-${Date.now()}-${rand}.jpg`;
+}
+
+
+async function persistEntryImages(entryId) {
+  let mainImageUrl = '';
+  const base64Main = document.getElementById('fImageFile').dataset.base64 || '';
+  const typedUrl = (document.getElementById('fImageUrl').value || '').trim();
+  const previewSrc = document.getElementById('previewImg').src || '';
+
+  if (base64Main && base64Main.startsWith('data:image/')) {
+    mainImageUrl = await uploadDataUrlToStorage(base64Main, makeStoragePath(entryId, 'main'));
+  } else if (typedUrl && isSafeImageUrl(typedUrl)) {
+    mainImageUrl = typedUrl;
+  } else if (previewSrc && isSafeImageUrl(previewSrc)) {
+    mainImageUrl = previewSrc;
+  }
+
+  const persistedPhotos = [];
+  for (let i = 0; i < editingPhotos.length; i++) {
+    const photo = editingPhotos[i];
+    if (!photo) continue;
+    if (typeof photo === 'string' && photo.startsWith('data:image/')) {
+      const uploaded = await uploadDataUrlToStorage(photo, makeStoragePath(entryId, `gallery-${i + 1}`));
+      persistedPhotos.push(uploaded);
+      if (!mainImageUrl && previewSrc === photo) mainImageUrl = uploaded;
+    } else if (isSafeImageUrl(photo)) {
+      persistedPhotos.push(photo);
+    }
+  }
+
+  if (mainImageUrl && persistedPhotos.length && !persistedPhotos.includes(mainImageUrl)) {
+    persistedPhotos.unshift(mainImageUrl);
+  }
+
+  return { mainImageUrl, persistedPhotos };
+}
+
+async function saveEntry() {
+  const name = document.getElementById('fName').value.trim();
+  if (!name) { showToast('Restaurant name is required'); return; }
+
+  const entryId = editingId || name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+  const imageState = await persistEntryImages(entryId);
+
+  const entry = {
+    id: entryId,
+    name,
+    city: document.getElementById('fCity').value.trim() || 'Boise',
+    state: document.getElementById('fState').value.trim() || 'ID',
+    category: selectedCategories.length ? selectedCategories : ['Good Restaurants'],
+    cuisine: document.getElementById('fCuisine').value.trim(),
+    status: document.getElementById('fStatus').value,
+    rating: currentRating,
+    server: document.getElementById('fServer').value.trim(),
+    phil_picks: ddData.fPhilPicks || [],
+    trinity_picks: ddData.fTrinityPicks || [],
+    drinks: ddData.fDrinks || [],
+    appetizers: ddData.fApps || [],
+    mains: ddData.fMains || [],
+    desserts: ddData.fDesserts || [],
+    notes: document.getElementById('fNotes').value.trim(),
+    tags: splitCSV(document.getElementById('fTags').value),
+    imageUrl: imageState.mainImageUrl || '',
+    photos: imageState.persistedPhotos,
+  };
+
+  entry.lastUpdated = Date.now();
+  await dbSet(`${EATS_PATH}/${entry.id}`, entry);
+  editingPhotos = [...imageState.persistedPhotos];
+  if (entry.imageUrl) {
+    document.getElementById('previewImg').src = entry.imageUrl;
+    document.getElementById('fImageFile').dataset.base64 = '';
+    document.getElementById('fImageUrl').value = entry.imageUrl;
+  }
+  closeFormModal();
+  showToast(editingId ? '✅ Updated!' : '✅ Added!');
+}
+
+async function deleteEntry() {
+  if (!editingId) return;
+  if (!confirm('Delete this restaurant?')) return;
+  await dbRemove(`${EATS_PATH}/${editingId}`);
+  closeFormModal();
+  showToast('🗑 Deleted');
+}
+
+// ─── AI CHAT ──────────────────────────────────────────────
+async function askAI() {
+  const q = document.getElementById('aiInput').value.trim();
+  if (!q) return;
+  appendUserBubble(q);
+  document.getElementById('aiInput').value = '';
+  appendAIBubble('AI is disabled in this hardened build because browser-side API keys are not secure on GitHub Pages. Use Add/Edit for data changes or move AI behind a server endpoint.', 'ai');
+}
+
+// ─── MULTI CATEGORY PICKER ────────────────────────────────
+let selectedCategories = [];
+
+function renderCategoryPicker(selected) {
+  selectedCategories = Array.isArray(selected) ? [...selected] : (selected ? [selected] : []);
+  const container = document.getElementById('fCategoryPicker');
+  if (!container) return;
+  container.innerHTML = categories.map(c =>
+    (function(c){ const sel = selectedCategories.includes(c.name) ? ' selected' : ''; return '<button type="button" class="cat-picker-chip' + sel + '" onclick="toggleCatPick(this.dataset.name)" data-name="' + escapeAttr(c.name) + '">' + escapeHTML(c.emoji) + ' ' + escapeHTML(c.name) + '</button>'; })(c)
+  ).join('');
+  // Sync hidden input
+  document.getElementById('fCategory').value = selectedCategories.join(',');
+}
+
+function toggleCatPick(name) {
+  if (name && name.target) name = name.target.dataset.name; // handle event
+  const idx = selectedCategories.indexOf(name);
+  if (idx > -1) selectedCategories.splice(idx, 1);
+  else selectedCategories.push(name);
+  renderCategoryPicker(selectedCategories);
+}
+
+// ─── DRAG DROP FIELDS ─────────────────────────────────────
+const DD_FIELDS = [
+  { id: 'fDrinks',       label: '🥃 Drinks',          placeholder: 'Add drink...' },
+  { id: 'fApps',         label: '🍽 Appetizers',       placeholder: 'Add appetizer...' },
+  { id: 'fMains',        label: '🥩 Mains',            placeholder: 'Add main...' },
+  { id: 'fDesserts',     label: '🍮 Desserts',         placeholder: 'Add dessert...' },
+  { id: 'fPhilPicks',    label: "⭐ Phil's Picks",     placeholder: "Add Phil's pick..." },
+  { id: 'fTrinityPicks', label: "💜 Trinity's Picks",  placeholder: "Add Trinity's pick..." },
+];
+
+let ddData = {}; // { fieldId: [items] }
+let dragSrc = null; // { fieldId, index }
+
+function initDDFields() {
+  DD_FIELDS.forEach(f => { if (!ddData[f.id]) ddData[f.id] = []; });
+}
+
+function renderDDFields() {
+  const container = document.getElementById('dd-fields-container');
+  if (!container) return;
+  container.innerHTML = DD_FIELDS.map(f => `
+    <div class="dd-field">
+      <span class="dd-label">${f.label}</span>
+      <div class="dd-zone ${ddData[f.id].length === 0 ? 'empty' : ''}" 
+        id="zone-${f.id}"
+        ondragover="ddDragOver(event, '${f.id}')"
+        ondragleave="ddDragLeave(event, '${f.id}')"
+        ondrop="ddDrop(event, '${f.id}')">
+        ${ddData[f.id].map((item, i) => `
+          <div class="dd-tag" draggable="true"
+            ondragstart="ddDragStart(event, '${f.id}', ${i})"
+            ondragend="ddDragEnd(event)">
+            ${escapeHTML(item)}
+            <span class="dd-remove" onclick="ddRemove('${f.id}', ${i})">✕</span>
+          </div>`).join('')}
+        <input class="dd-add-input" placeholder="${f.placeholder}" 
+          onkeydown="if(event.key==='Enter'||event.key===','||event.key==='Tab'){event.preventDefault();ddAdd('${f.id}',this)}">
+      </div>
+    </div>
+  `).join('');
+  // Sync hidden inputs
+  DD_FIELDS.forEach(f => {
+    const el = document.getElementById(f.id);
+    if (el) el.value = ddData[f.id].join(', ');
+  });
+}
+
+function ddAdd(fieldId, input) {
+  const val = input.value.trim().replace(/,$/, '');
+  if (!val) return;
+  ddData[fieldId].push(val);
+  input.value = '';
+  renderDDFields();
+}
+
+function ddRemove(fieldId, index) {
+  ddData[fieldId].splice(index, 1);
+  renderDDFields();
+}
+
+function ddDragStart(event, fieldId, index) {
+  dragSrc = { fieldId, index };
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', ddData[fieldId][index]);
+  setTimeout(() => event.target.classList.add('dragging'), 0);
+}
+
+function ddDragEnd(event) {
+  event.target.classList.remove('dragging');
+  document.querySelectorAll('.dd-zone').forEach(z => z.classList.remove('drag-over'));
+}
+
+function ddDragOver(event, fieldId) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  document.getElementById('zone-' + fieldId).classList.add('drag-over');
+}
+
+function ddDragLeave(event, fieldId) {
+  document.getElementById('zone-' + fieldId).classList.remove('drag-over');
+}
+
+function ddDrop(event, targetFieldId) {
+  event.preventDefault();
+  document.getElementById('zone-' + targetFieldId).classList.remove('drag-over');
+  if (!dragSrc) return;
+  const item = ddData[dragSrc.fieldId][dragSrc.index];
+  // Remove from source
+  ddData[dragSrc.fieldId].splice(dragSrc.index, 1);
+  // Add to target
+  ddData[targetFieldId].push(item);
+  dragSrc = null;
+  renderDDFields();
+}
+
+function loadDDData(r) {
+  ddData = {
+    fDrinks:       [...(r.drinks || [])],
+    fApps:         [...(r.appetizers || [])],
+    fMains:        [...(r.mains || [])],
+    fDesserts:     [...(r.desserts || [])],
+    fPhilPicks:    [...(r.phil_picks || [])],
+    fTrinityPicks: [...(r.trinity_picks || [])],
+  };
+  renderDDFields();
+}
+
+function clearDDData() {
+  ddData = {};
+  initDDFields();
+  renderDDFields();
+}
+
+// ─── GALLERY ──────────────────────────────────────────────
+let editingPhotos = [];
+
+function renderGalleryEdit() {
+  const container = document.getElementById('galleryEdit');
+  if (!container) return;
+  const mainSrc = document.getElementById('previewImg').src;
+  const items = editingPhotos.map((p, i) => {
+    const isMain = p === document.getElementById('fImageFile').dataset.base64;
+    const mainBadge = isMain ? '<div style="position:absolute;bottom:4px;left:4px;background:var(--amber);color:#0f0c08;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:700">MAIN</div>' : '';
+    return '<div class="gallery-item">' +
+      '<img src="' + p + '" alt="Food photo">' +
+      mainBadge +
+      '<div style="position:absolute;bottom:4px;left:4px;right:26px;display:none" class="gallery-actions">' +
+        '<button onclick="setAsMain(' + i + ')" style="background:rgba(212,134,10,0.9);border:none;color:#0f0c08;font-size:9px;padding:2px 6px;border-radius:8px;cursor:pointer;font-weight:700;width:100%">⭐ Set Main</button>' +
+      '</div>' +
+      '<button class="remove-photo" onclick="removeGalleryPhoto(' + i + ')">✕</button>' +
+    '</div>';
+  }).join('');
+  container.innerHTML = items + '<label class="gallery-add" title="Add food photo"><span>+</span>📷 Add<input type="file" accept="image/*" multiple style="display:none" onchange="handleGalleryUpload(event)"></label>';
+
+  // Show actions on hover
+  container.querySelectorAll('.gallery-item').forEach(item => {
+    item.addEventListener('mouseenter', () => {
+      const actions = item.querySelector('.gallery-actions');
+      if (actions) actions.style.display = 'block';
+    });
+    item.addEventListener('mouseleave', () => {
+      const actions = item.querySelector('.gallery-actions');
+      if (actions) actions.style.display = 'none';
+    });
+  });
+}
+
+function setAsMain(index) {
+  if (index >= editingPhotos.length) return;
+  const photo = editingPhotos[index];
+  // Set as main image — handle both base64 and URLs
+  document.getElementById('previewImg').src = photo;
+  if (photo.startsWith('data:')) {
+    document.getElementById('fImageFile').dataset.base64 = photo;
+    document.getElementById('fImageUrl').value = '';
+  } else {
+    document.getElementById('fImageFile').dataset.base64 = '';
+    document.getElementById('fImageUrl').value = photo;
+  }
+  document.getElementById('dropContent').style.display = 'none';
+  document.getElementById('previewContent').style.display = 'block';
+  showToast('⭐ Set as main photo!');
+  renderGalleryEdit();
+}
+
+function handleGalleryUpload(event) {
+  const files = Array.from(event.target.files);
+  let loaded = 0;
+  files.forEach(file => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      compressImage(e.target.result, (compressed) => {
+        editingPhotos.push(compressed);
+        loaded++;
+        // If no main image set yet, auto-set first upload as main
+        if (!document.getElementById('fImageFile').dataset.base64 && loaded === 1) {
+          setAsMain(editingPhotos.length - 1);
+        } else {
+          renderGalleryEdit();
+        }
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function handleGalleryDrop(event) {
+  event.preventDefault();
+  document.getElementById('galleryDropZone').style.borderColor = '';
+  const file = event.dataTransfer.files[0];
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    compressImage(e.target.result, (compressed) => {
+      editingPhotos.push(compressed);
+      renderGalleryEdit();
+      showToast('📸 Photo added to gallery!');
+    });
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeGalleryPhoto(index) {
+  editingPhotos.splice(index, 1);
+  renderGalleryEdit();
+}
+
+function openLightbox(src) {
+  document.getElementById('lightboxImg').src = src;
+  document.getElementById('lightbox').classList.add('open');
+}
+
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+// Handle paste for gallery too when form is open
+// (already handled by existing paste listener - extend it)
+// ─── PASTE IMAGE SUPPORT ──────────────────────────────────
+document.addEventListener('paste', (event) => {
+  if (!document.getElementById('formModal').classList.contains('open')) return;
+  const items = event.clipboardData?.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      // Check if G key is held = paste to gallery, otherwise paste to main
+      if (window._pasteToGallery) {
+        reader.onload = (e) => {
+          compressImage(e.target.result, (compressed) => {
+            editingPhotos.push(compressed);
+            renderGalleryEdit();
+            showToast('📋 Added to gallery!');
+          });
+        };
+      } else {
+        reader.onload = (e) => loadImagePreview(e.target.result);
+      }
+      reader.readAsDataURL(file);
+      event.preventDefault();
+      showToast(window._pasteToGallery ? '📋 Added to gallery!' : '📋 Image pasted!');
+      break;
+    }
+  }
+});
+
+// Track G key for gallery paste
+document.addEventListener('keydown', (e) => { if (e.key === 'g' || e.key === 'G') window._pasteToGallery = true; });
+document.addEventListener('keyup', (e) => { if (e.key === 'g' || e.key === 'G') window._pasteToGallery = false; });
+
+
+
+
+
+
+async function fetchFoodPhoto(query) {
+  // Use Unsplash source with specific search term
+  const keywords = encodeURIComponent(query + ' food dish');
+  const seed = query.split('').reduce((a,c) => a + c.charCodeAt(0), 0);
+  return `https://images.unsplash.com/photo-${1546833999 + seed % 1000000}-${seed % 99}?w=400&h=200&fit=crop&q=80`;
+}
+
+function appendUserBubble(text) {
+  const thread = document.getElementById('aiResponse');
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble user';
+  bubble.textContent = text;
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function appendAIBubble(text, type) {
+  const thread = document.getElementById('aiResponse');
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble ' + (type || 'ai');
+  bubble.textContent = String(text || '');
+  bubble.style.whiteSpace = 'pre-wrap';
+  thread.appendChild(bubble);
+  thread.scrollTop = thread.scrollHeight;
+}
+
+function clearChat() {
+  chatHistory = [];
+  document.getElementById('aiInput').value = '';
+  document.getElementById('aiResponse').innerHTML = '';
+  document.getElementById('aiThinking').classList.remove('visible');
+  showToast('💬 Chat cleared');
+}
+
+function resetHome() {
+  // Clear search
+  document.getElementById('searchInput').value = '';
+  document.getElementById('aiInput').value = '';
+  
+  document.getElementById('aiThinking').classList.remove('visible');
+  document.getElementById('aiResponse').innerHTML = '';
+  chatHistory = [];
+  clearHighlight();
+
+  // Reset city chips
+  currentCity = 'All';
+  document.querySelectorAll('.filters-inner .chip:not(.cat-chip):not(#toTryChip)').forEach(c => c.classList.remove('active'));
+  document.querySelector('.filters-inner .chip:not(.cat-chip):not(#toTryChip)').classList.add('active');
+
+  // Reset category chips
+  currentCat = 'All';
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('.cat-chip').classList.add('active');
+
+  // Reset to try
+  showToTryOnly = false;
+  starFilter = 0;
+  document.getElementById('starSelect').value = '0';
+  document.getElementById('toTryChip').classList.remove('active');
+
+  applyFilters();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+
+// ─── HIGHLIGHT ────────────────────────────────────────────
+let highlightedIds = [];
+
+function applyHighlight(ids) {
+  highlightedIds = ids;
+  document.querySelectorAll('.card').forEach(card => {
+    const id = card.getAttribute('data-id');
+    if (!id) return;
+    if (ids.includes(id)) {
+      card.classList.add('highlighted');
+      card.classList.remove('dimmed');
+    } else {
+      card.classList.add('dimmed');
+      card.classList.remove('highlighted');
+    }
+  });
+  const bar = document.getElementById('highlightBar');
+  if (bar) {
+    bar.classList.add('visible');
+    document.getElementById('highlightMsg').textContent = '✨ Showing ' + ids.length + ' recommended spot' + (ids.length !== 1 ? 's' : '');
+  }
+  // Scroll to first highlighted card
+  const first = document.querySelector('.card.highlighted');
+  if (first) first.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function clearHighlight() {
+  highlightedIds = [];
+  document.querySelectorAll('.card').forEach(card => {
+    card.classList.remove('highlighted', 'dimmed');
+  });
+  const bar = document.getElementById('highlightBar');
+  if (bar) bar.classList.remove('visible');
+}
+
+// ─── DETAIL STAR RATING ───────────────────────────────────
+function hoverDetailStars(n) {
+  const stars = document.querySelectorAll('#detailStars span');
+  stars.forEach((s, i) => s.style.color = i < n ? 'var(--amber-light)' : 'var(--border-amber)');
+}
+
+function resetDetailStars(rating) {
+  const stars = document.querySelectorAll('#detailStars span');
+  stars.forEach((s, i) => s.style.color = i < rating ? 'var(--amber)' : 'var(--border-amber)');
+}
+
+async function setDetailRating(id, rating) {
+  // Update local cache immediately so re-render shows correct value
+  const r = allRestaurants.find(x => x.id === id);
+  if (r) {
+    r.rating = rating;
+    r.lastUpdated = Date.now();
+  }
+  // Save to Firebase
+  await dbSet(`${EATS_PATH}/${id}/rating`, rating);
+  await dbSet(`${EATS_PATH}/${id}/lastUpdated`, Date.now());
+  // Re-render stars immediately from local cache
+  resetDetailStars(rating);
+  showToast(`⭐ Rated ${rating} star${rating !== 1 ? 's' : ''}!`);
+}
+
+// ─── TOAST ────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+
+// ─── CATEGORIES ───────────────────────────────────────────
+const DEFAULT_CATEGORIES = [
+  { emoji: '🍽', name: 'Fine Dining' },
+  { emoji: '🍣', name: 'Sushi' },
+  { emoji: '🍴', name: 'Good Restaurants' },
+  { emoji: '🍸', name: 'Bar' },
+  { emoji: '☕', name: 'Coffee' },
+  { emoji: '🥚', name: 'Breakfast' },
+  { emoji: '🍕', name: 'Pizza' },
+  { emoji: '🥡', name: 'Fast Food' },
+  { emoji: '🧁', name: 'Desserts' },
+  { emoji: '🍷', name: 'Vineyard' },
+];
+
+let categories = [...DEFAULT_CATEGORIES];
+let editingCategories = [];
+
+async function loadCategories() {
+  try {
+    const snap = await dbGet('config/categories');
+    if (snap.exists() && Array.isArray(snap.val())) {
+      categories = snap.val().map(sanitizeCategoryObj).filter(c => c.name);
+    }
+  } catch(e) {
+    console.warn('Could not load categories from Firebase:', e);
+  }
+  renderCatChips();
+  updateCategoryDropdown();
+}
+
+function renderCatChips() {
+  const container = document.getElementById('catChips');
+  if (!container) return;
+  container.style.display = 'contents'; // let chips flow inline with siblings
+  container.innerHTML = categories.map(c => 
+    '<button class="chip cat-chip" onclick="setCat(\'' + escapeAttr(c.name).replace(/'/g, "\\'") + '\', this)">' + escapeHTML(c.emoji) + ' ' + escapeHTML(c.name) + '</button>'
+  ).join('');
+}
+
+function updateCategoryDropdown() {
+  // Category picker is now rendered dynamically
+  renderCategoryPicker(selectedCategories || []);
+}
+
+function openCatManager() {
+  editingCategories = categories.map(c => ({...c}));
+  renderCatGrid();
+  document.getElementById('catModal').classList.add('open');
+}
+
+function closeCatManager() {
+  document.getElementById('catModal').classList.remove('open');
+}
+
+function renderCatGrid() {
+  const grid = document.getElementById('catGrid');
+  grid.innerHTML = editingCategories.map((c, i) => `
+    <div class="cat-item" draggable="true" data-index="${i}"
+      ondragstart="catDragStart(event, ${i})"
+      ondragover="catDragOver(event)"
+      ondragleave="catDragLeave(event)"
+      ondrop="catDrop(event, ${i})"
+      ondragend="catDragEnd(event)"
+      style="cursor:grab">
+      <span style="color:var(--text-muted);font-size:16px;margin-right:2px;cursor:grab">⠿</span>
+      <input class="cat-emoji-input" type="text" value="${escapeAttr(c.emoji)}" maxlength="2" onchange="editingCategories[${i}].emoji=this.value">
+      <input type="text" value="${escapeAttr(c.name)}" onchange="editingCategories[${i}].name=this.value">
+      <button class="cat-delete" onclick="removeCategory(${i})">✕</button>
+    </div>
+  `).join('');
+}
+
+let catDragSrcIndex = null;
+
+function catDragStart(event, index) {
+  catDragSrcIndex = index;
+  event.dataTransfer.effectAllowed = 'move';
+  setTimeout(() => event.target.style.opacity = '0.4', 0);
+}
+
+function catDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  event.currentTarget.style.borderColor = 'var(--amber-light)';
+}
+
+function catDragLeave(event) {
+  event.currentTarget.style.borderColor = '';
+}
+
+function catDrop(event, targetIndex) {
+  event.preventDefault();
+  event.currentTarget.style.borderColor = '';
+  if (catDragSrcIndex === null || catDragSrcIndex === targetIndex) return;
+  // Reorder
+  const moved = editingCategories.splice(catDragSrcIndex, 1)[0];
+  editingCategories.splice(targetIndex, 0, moved);
+  catDragSrcIndex = null;
+  renderCatGrid();
+}
+
+function catDragEnd(event) {
+  event.target.style.opacity = '';
+  document.querySelectorAll('.cat-item').forEach(el => el.style.borderColor = '');
+  catDragSrcIndex = null;
+}
+
+function addCategory() {
+  const emoji = document.getElementById('newCatEmoji').value.trim() || '🍽';
+  const name = document.getElementById('newCatName').value.trim();
+  if (!name) { showToast('Enter a category name'); return; }
+  editingCategories.push({ emoji, name });
+  document.getElementById('newCatEmoji').value = '';
+  document.getElementById('newCatName').value = '';
+  renderCatGrid();
+}
+
+function removeCategory(index) {
+  editingCategories.splice(index, 1);
+  renderCatGrid();
+}
+
+async function saveCategories() {
+  // Collect latest values from inputs
+  const items = document.querySelectorAll('#catGrid .cat-item');
+  editingCategories = Array.from(items).map((item, i) => ({
+    emoji: item.querySelectorAll('input')[0].value.trim() || '🍽',
+    name: item.querySelectorAll('input')[1].value.trim()
+  })).filter(c => c.name);
+  
+  categories = [...editingCategories];
+  await dbSet('config/categories', categories);
+  renderCatChips();
+  updateCategoryDropdown();
+  closeCatManager();
+  showToast('✅ Categories saved!');
+}
+
+
+async function cleanupUndefined() {
+  const toDelete = allRestaurants.filter(r => !r.name || r.name === 'undefined' || !r.id || r.id === 'undefined');
+  if (toDelete.length === 0) { showToast('✅ No bad entries found!'); return; }
+  if (!confirm(`Delete ${toDelete.length} undefined/corrupt entry(ies)?`)) return;
+  for (const r of toDelete) {
+    await dbRemove(`${EATS_PATH}/${r.id || 'undefined'}`);
+  }
+  showToast(`🧹 Removed ${toDelete.length} bad entry(ies)`);
+}
+
+// ─── INIT — only called after auth resolves ───────────────
+async function init() {
+  try {
+    // Silently clean unsafe imageUrls
+    dbGet(EATS_PATH).then(snap => {
+      if (!snap.exists()) return;
+      const data = snap.val();
+      const cleanups = {};
+      Object.entries(data).forEach(([key, val]) => {
+        if (val && val.imageUrl && !isSafeImageUrl(val.imageUrl)) {
+          cleanups[EATS_PATH + '/' + key + '/imageUrl'] = null;
+        }
+      });
+      if (Object.keys(cleanups).length > 0) dbUpdate(cleanups);
+    });
+
+    // Load categories
+    try {
+      await loadCategories();
+    } catch(e) {
+      console.warn('Category load error:', e);
+      renderCatChips();
+    }
+
+    // Subscribe to restaurant data
+    dbOn(EATS_PATH, snap => {
+      const data = snap.val() || {};
+      allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
+      applyFilters();
+    });
+
+  } catch(e) {
+    console.error('Init failed:', e);
+  }
+}
+
+// ─── AUTH GATE ────────────────────────────────────────────
+function signInWithGoogle() {
+  document.getElementById('authError').textContent = '';
+  signInWithPopup(auth, provider).catch(e => {
+    console.error('Google sign-in error:', e);
+    document.getElementById('authError').textContent = e.message || 'Google sign-in failed.';
+  });
+}
+
+async function signOutUser() {
+  try {
+    await signOut(auth);
+    document.getElementById('auth-gate').style.display = 'flex';
+  } catch (e) {
+    console.error('Sign-out error:', e);
+    showToast('Sign out failed');
+  }
+}
+
+// ── DATA MANAGER ─────────────────────────────────────────
+function openDataModal() {
+  document.getElementById('data-modal-status').innerHTML = '';
+  document.getElementById('restore-filename').textContent = 'No file selected';
+  document.getElementById('import-csv-filename').textContent = 'No file selected';
+  document.getElementById('import-data-filename').textContent = 'No file selected';
+  document.getElementById('dataModal').classList.add('open');
+}
+
+function closeDataModal() {
+  document.getElementById('dataModal').classList.remove('open');
+}
+
+function eatsBackup() {
+  var status = document.getElementById('data-modal-status');
+  if (status) status.innerHTML = '<span style="color:var(--amber)">⏳ Building backup...</span>';
+  dbGet('eats').then(function(snap) {
+    if (!snap.exists()) { showToast('No data to backup'); return; }
+    var data = JSON.stringify(snap.val(), null, 2);
+    var blob = new Blob([data], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    var date = new Date().toISOString().slice(0, 10);
+    a.download = 'philinity-eats-backup-' + date + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    if (status) status.innerHTML = '<span style="color:var(--green)">✅ Backup saved: ' + a.download + '</span>';
+    showToast('✅ Backup saved!');
+  }).catch(function(e) {
+    if (status) status.innerHTML = '<span style="color:var(--red)">❌ Error: ' + e.message + '</span>';
+  });
+}
+
+function eatsExportCSV() {
+  var status = document.getElementById('data-modal-status');
+  if (!allRestaurants.length) { showToast('No data to export'); return; }
+  var cols = ['name','city','state','category','cuisine','status','rating','server','drinks','appetizers','mains','desserts','phil_picks','trinity_picks','notes','tags'];
+  var rows = [cols.join(',')];
+  allRestaurants.forEach(function(r) {
+    rows.push(cols.map(function(c) {
+      var val = r[c];
+      if (Array.isArray(val)) val = val.join('; ');
+      else if (val === undefined || val === null) val = '';
+      val = String(val).replace(/"/g, '""');
+      if (val.indexOf(',') > -1 || val.indexOf('"') > -1 || val.indexOf('\n') > -1) val = '"' + val + '"';
+      return val;
+    }).join(','));
+  });
+  var blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'philinity-eats-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+  if (status) status.innerHTML = '<span style="color:var(--green)">✅ Exported ' + allRestaurants.length + ' restaurants to CSV</span>';
+  showToast('✅ CSV exported!');
+}
+
+function eatsRestore(event) {
+  var file = event && event.target && event.target.files && event.target.files[0];
+  if (!file) return;
+  var fnEl = document.getElementById('restore-filename');
+  if (fnEl) fnEl.textContent = file.name;
+  var status = document.getElementById('data-modal-status');
+  status.innerHTML = '<span style="color:var(--amber)">⏳ Reading file...</span>';
+
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var data = JSON.parse(e.target.result);
+      var count = Object.keys(data).length;
+      if (!confirm('Restore ' + count + ' restaurants from "' + file.name + '"?\n\nThis will overwrite existing data.')) {
+        status.innerHTML = '';
+        return;
+      }
+      status.innerHTML = '<span style="color:var(--amber)">⏳ Restoring ' + count + ' restaurants...</span>';
+      await dbSet('eats', data);
+      status.innerHTML = '<span style="color:var(--green)">✅ Restored ' + count + ' restaurants from ' + file.name + '</span>';
+      showToast('✅ Restored ' + count + ' restaurants!');
+    } catch(err) {
+      status.innerHTML = '<span style="color:var(--red)">❌ Error: ' + err.message + '</span>';
+    }
+  };
+  reader.readAsText(file);
+}
+
+
+function sanitizeImportedRestaurant(row) {
+  if (!row || typeof row !== 'object') return null;
+  var clean = {};
+  clean.id = stripHTML(row.id || '').trim();
+  clean.name = stripHTML(row.name || '').trim();
+  if (!clean.name) return null;
+  if (!clean.id) clean.id = clean.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+  clean.city = stripHTML(row.city || 'Boise').trim() || 'Boise';
+  clean.state = stripHTML(row.state || 'ID').trim() || 'ID';
+  if (Array.isArray(row.category)) clean.category = row.category.map(stripHTML).map(function(s){return s.trim();}).filter(Boolean);
+  else if (row.category) clean.category = [stripHTML(String(row.category)).trim()].filter(Boolean);
+  else clean.category = ['Good Restaurants'];
+  clean.cuisine = stripHTML(row.cuisine || '').trim();
+  clean.status = (row.status === 'to-try') ? 'to-try' : 'tried';
+  clean.rating = Math.max(0, Math.min(5, parseInt(row.rating) || 0));
+  clean.server = stripHTML(row.server || '').trim();
+  clean.drinks = stripHTMLArray(row.drinks || []);
+  clean.appetizers = stripHTMLArray(row.appetizers || []);
+  clean.mains = stripHTMLArray(row.mains || []);
+  clean.desserts = stripHTMLArray(row.desserts || []);
+  clean.phil_picks = stripHTMLArray(row.phil_picks || []);
+  clean.trinity_picks = stripHTMLArray(row.trinity_picks || []);
+  clean.notes = stripHTML(row.notes || '').trim();
+  clean.tags = stripHTMLArray(row.tags || []);
+  clean.imageUrl = isSafeImageUrl(row.imageUrl || '') ? row.imageUrl : '';
+  clean.photos = Array.isArray(row.photos) ? row.photos.filter(function(u){ return typeof u === 'string' && (u.startsWith('data:image/') || isSafeImageUrl(u)); }) : [];
+  clean.lastUpdated = parseInt(row.lastUpdated) || Date.now();
+  return clean;
+}
+
+function eatsImportData(event) {
+  var file = event && event.target && event.target.files && event.target.files[0];
+  if (!file) return;
+  var fnEl = document.getElementById('import-data-filename');
+  if (fnEl) fnEl.textContent = file.name;
+  var status = document.getElementById('data-modal-status');
+  status.innerHTML = '<span style="color:var(--amber)">⏳ Reading JSON...</span>';
+
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var raw = JSON.parse(e.target.result);
+      var rows = Array.isArray(raw) ? raw : Object.values(raw || {});
+      var imported = [];
+      rows.forEach(function(row) {
+        var clean = sanitizeImportedRestaurant(row);
+        if (clean) imported.push(clean);
+      });
+
+      if (!imported.length) { status.innerHTML = '<span style="color:var(--red)">❌ No valid restaurant rows found in JSON</span>'; return; }
+      if (!confirm('Import ' + imported.length + ' restaurants from "' + file.name + '"? This will MERGE with existing data.')) { status.innerHTML = ''; return; }
+
+      status.innerHTML = '<span style="color:var(--amber)">⏳ Merging ' + imported.length + ' restaurants...</span>';
+      var updates = {};
+      imported.forEach(function(r) { updates['eats/' + r.id] = r; });
+      await dbUpdate(updates);
+      status.innerHTML = '<span style="color:var(--green)">✅ Merged ' + imported.length + ' restaurants from ' + file.name + '</span>';
+      showToast('✅ Imported ' + imported.length + ' restaurants!');
+    } catch(err) {
+      status.innerHTML = '<span style="color:var(--red)">❌ Error: ' + err.message + '</span>';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function eatsImportCSV(event) {
+  var file = event && event.target && event.target.files && event.target.files[0];
+  if (!file) return;
+  var fnEl = document.getElementById('import-csv-filename');
+  if (fnEl) fnEl.textContent = file.name;
+  var status = document.getElementById('data-modal-status');
+  status.innerHTML = '<span style="color:var(--amber)">⏳ Reading CSV...</span>';
+
+  var reader = new FileReader();
+  reader.onload = async function(e) {
+    try {
+      var lines = e.target.result.split('\n').filter(function(l) { return l.trim(); });
+      if (lines.length < 2) { status.innerHTML = '<span style="color:var(--red)">❌ CSV must have a header row and at least one data row</span>'; return; }
+
+      var headers = parseCSVLineEats(lines[0]);
+      var imported = [];
+      for (var i = 1; i < lines.length; i++) {
+        var vals = parseCSVLineEats(lines[i]);
+        if (vals.every(function(v) { return !v.trim(); })) continue;
+        var row = {};
+        headers.forEach(function(h, idx) {
+          var key = h.trim().toLowerCase().replace(/[^a-z0-9_]/g, '_');
+          var val = (vals[idx] || '').trim();
+          if (!val) return;
+          // Parse array fields (separated by semicolons)
+          if (['category','drinks','appetizers','mains','desserts','phil_picks','trinity_picks','tags'].indexOf(key) > -1) {
+            row[key] = val.split(';').map(function(s) { return s.trim(); }).filter(Boolean);
+          } else if (key === 'rating') {
+            row[key] = parseInt(val) || 0;
+          } else {
+            row[key] = val;
+          }
+        });
+        if (row.name) {
+          row.id = row.id || row.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+          row.lastUpdated = Date.now();
+          imported.push(row);
+        }
+      }
+
+      if (!imported.length) { status.innerHTML = '<span style="color:var(--red)">❌ No valid rows found in CSV</span>'; return; }
+      if (!confirm('Import ' + imported.length + ' restaurants from "' + file.name + '"? This will MERGE with existing data.')) { status.innerHTML = ''; return; }
+
+      status.innerHTML = '<span style="color:var(--amber)">⏳ Saving ' + imported.length + ' restaurants...</span>';
+      var updates = {};
+      imported.forEach(function(r) { updates['eats/' + r.id] = r; });
+      await dbUpdate(updates);
+      status.innerHTML = '<span style="color:var(--green)">✅ Imported ' + imported.length + ' restaurants from ' + file.name + '</span>';
+      showToast('✅ Imported ' + imported.length + ' restaurants!');
+    } catch(err) {
+      status.innerHTML = '<span style="color:var(--red)">❌ Error: ' + err.message + '</span>';
+    }
+  };
+  reader.readAsText(file);
+}
+
+function parseCSVLineEats(line) {
+  var result = [], current = '', inQuotes = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (ch === '"') { if (inQuotes && line[i+1] === '"') { current += '"'; i++; } else inQuotes = !inQuotes; }
+    else if (ch === ',' && !inQuotes) { result.push(current); current = ''; }
+    else current += ch;
+  }
+  result.push(current);
+  return result;
+}
+
+
+function looksSafeDataImage(dataUrl) {
+  if (typeof dataUrl !== 'string') return false;
+  if (!dataUrl.startsWith('data:image/')) return false;
+  var lower = dataUrl.slice(0, 256).toLowerCase();
+  if (lower.indexOf('<script') > -1 || lower.indexOf('onerror=') > -1 || lower.indexOf('javascript:') > -1 || lower.indexOf('eval(') > -1) return false;
+  return true;
+}
+
+async function verifyAndMigrateImages() {
+  var status = document.getElementById('data-modal-status');
+  status.innerHTML = '<span style="color:var(--amber)">⏳ Scanning images...</span>';
+  try {
+    var snap = await dbGet('eats');
+    if (!snap.exists()) {
+      status.innerHTML = '<span style="color:var(--red)">❌ No restaurant data found</span>';
+      return;
+    }
+    var data = snap.val() || {};
+    var entries = Object.keys(data).map(function(id){ return Object.assign({ id:id }, data[id] || {}); });
+    var candidates = [];
+    var skippedUnsafe = 0;
+    entries.forEach(function(entry) {
+      if (typeof entry.imageUrl === 'string' && entry.imageUrl.startsWith('data:image/')) {
+        if (looksSafeDataImage(entry.imageUrl)) candidates.push({ id: entry.id, field: 'imageUrl', value: entry.imageUrl });
+        else skippedUnsafe++;
+      }
+      if (Array.isArray(entry.photos)) {
+        entry.photos.forEach(function(photo, idx) {
+          if (typeof photo === 'string' && photo.startsWith('data:image/')) {
+            if (looksSafeDataImage(photo)) candidates.push({ id: entry.id, field: 'photos', index: idx, value: photo });
+            else skippedUnsafe++;
+          }
+        });
+      }
+    });
+    if (!candidates.length) {
+      status.innerHTML = '<span style="color:var(--green)">✅ No base64 images need migration' + (skippedUnsafe ? ' · skipped unsafe: ' + skippedUnsafe : '') + '</span>';
+      showToast('✅ No images needed migration');
+      return;
+    }
+    if (!confirm('Migrate ' + candidates.length + ' embedded image(s) to Firebase Storage?\n\nThis keeps your current data and only rewrites image fields to Storage URLs. Unsafe image data will be skipped.')) {
+      status.innerHTML = '';
+      return;
+    }
+
+    var migrated = 0;
+    var failed = 0;
+    var updates = {};
+    for (var i = 0; i < candidates.length; i++) {
+      var item = candidates[i];
+      status.innerHTML = '<span style="color:var(--amber)">⏳ Migrating image ' + (i + 1) + ' of ' + candidates.length + '...</span>';
+      try {
+        var prefix = item.field === 'imageUrl' ? 'main' : ('gallery-' + (item.index + 1));
+        var url = await uploadDataUrlToStorage(item.value, makeStoragePath(item.id, prefix));
+        if (item.field === 'imageUrl') updates['eats/' + item.id + '/imageUrl'] = url;
+        else updates['eats/' + item.id + '/photos/' + item.index] = url;
+        migrated++;
+      } catch (err) {
+        console.error('Image migrate failed for', item.id, item.field, item.index, err);
+        failed++;
+      }
+    }
+    if (Object.keys(updates).length) await dbUpdate(updates);
+    status.innerHTML = '<span style="color:var(--green)">✅ Migrated ' + migrated + ' image(s)</span>' +
+      (failed ? '<br><span style="color:var(--red)">⚠ Failed: ' + failed + '</span>' : '') +
+      (skippedUnsafe ? '<br><span style="color:var(--amber)">🛡 Skipped unsafe: ' + skippedUnsafe + '</span>' : '');
+    showToast('✅ Migrated ' + migrated + ' image(s)');
+  } catch (err) {
+    console.error(err);
+    status.innerHTML = '<span style="color:var(--red)">❌ Error: ' + err.message + '</span>';
+  }
+}
+
+
+
+
+// ── AUTH STATE ────────────────────────────────────────────
+onAuthStateChanged(auth, user => {
+  if (!user) {
+    document.getElementById('auth-gate').style.display = 'flex';
+    return;
+  }
+  document.getElementById('auth-gate').style.display = 'none';
+  document.getElementById('authError').textContent = '';
+  init();
+});
+
+// Show auth gate on load
+document.getElementById('auth-gate').style.display = 'flex';
+
+// Expose functions to global scope for HTML onclick handlers
+window.signInWithGoogle = signInWithGoogle;
+window.signOutUser = signOutUser;
+window.openAddModal = openAddModal;
+window.openCatManager = openCatManager;
+window.closeCatManager = closeCatManager;
+window.saveCategories = saveCategories;
+window.addCategory = addCategory;
+window.removeCategory = removeCategory;
+// openDetail already exported below
+window.closeDetailModal = closeDetailModal;
+window.editFromDetail = editFromDetail;
+window.closeFormModal = closeFormModal;
+window.saveEntry = saveEntry;
+window.deleteEntry = deleteEntry;
+window.openDataModal = openDataModal;
+window.closeDataModal = closeDataModal;
+window.eatsBackup = eatsBackup;
+window.eatsExportCSV = eatsExportCSV;
+window.eatsRestore = eatsRestore;
+window.eatsImportData = eatsImportData;
+window.eatsImportCSV = eatsImportCSV;
+window.verifyAndMigrateImages = verifyAndMigrateImages;
+window.cleanupUndefined = cleanupUndefined;
+window.askAI = askAI;
+window.clearChat = clearChat;
+window.resetHome = resetHome;
+window.setCity = setCity;
+window.setCat = setCat;
+window.setStarFilter = setStarFilter;
+window.toggleToTry = toggleToTry;
+window.applyFilters = applyFilters;
+window.openDetail = openDetail;
+window.closeDetailModal = closeDetailModal;
+window.editFromDetail = editFromDetail;
+window.setRating = setRating;
+window.handleImageUpload = handleImageUpload;
+window.handleDrop = handleDrop;
+window.handleUrlInput = handleUrlInput;
+window.clearImage = clearImage;
+window.handleGalleryUpload = handleGalleryUpload;
+window.handleGalleryDrop = handleGalleryDrop;
+window.removeGalleryPhoto = removeGalleryPhoto;
+window.setAsMain = setAsMain;
+window.openLightbox = openLightbox;
+window.closeLightbox = closeLightbox;
+window.toggleCatPick = toggleCatPick;
+window.ddAdd = ddAdd;
+window.ddRemove = ddRemove;
+window.ddDragStart = ddDragStart;
+window.ddDragEnd = ddDragEnd;
+window.ddDragOver = ddDragOver;
+window.ddDragLeave = ddDragLeave;
+window.ddDrop = ddDrop;
+window.catDragStart = catDragStart;
+window.catDragOver = catDragOver;
+window.catDragLeave = catDragLeave;
+window.catDrop = catDrop;
+window.catDragEnd = catDragEnd;
+window.hoverDetailStars = hoverDetailStars;
+window.resetDetailStars = resetDetailStars;
+window.setDetailRating = setDetailRating;
+window.clearHighlight = clearHighlight;
+</script>
+
+
+<!-- DATA MODAL -->
+<div class="modal-overlay" id="dataModal" onclick="if(event.target===this) closeDataModal()">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" onclick="closeDataModal()">✕</button>
+    <div class="modal-title">📦 Data Manager</div>
+    <div class="modal-subtitle">Backup · Export · Restore · Verify Images</div>
+
+    <div style="display:flex;flex-direction:column;gap:10px">
+
+      <!-- Full JSON Backup -->
+      <div style="background:linear-gradient(135deg,rgba(212,134,10,0.1),rgba(212,134,10,0.05));border:1px solid rgba(212,134,10,0.3);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--amber-light);margin-bottom:3px">📦 Full Backup (JSON)</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">Download all restaurant data as JSON — use to restore later</div>
+        <button onclick="eatsBackup()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">⬇️ Download Backup</button>
+      </div>
+
+      <!-- Export CSV -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">📊 Export as CSV</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">Download all restaurants as a spreadsheet — opens in Excel or Google Sheets</div>
+        <button onclick="eatsExportCSV()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">⬇️ Download CSV</button>
+      </div>
+
+      <!-- Restore from JSON -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">♻️ Restore from Backup</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">Select a philinity-eats-backup-*.json file to restore all restaurants</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 16px">
+            📂 Choose Backup File
+            <input type="file" accept=".json" style="display:none" onchange="eatsRestore(event)">
+          </label>
+          <span id="restore-filename" style="font-size:0.68rem;color:var(--text-muted);font-family:monospace">No file selected</span>
+        </div>
+      </div>
+
+
+      <!-- Verify + Migrate Images -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">🛡 Verify + Migrate Images</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">Scans current Firebase image fields, skips unsafe image data, uploads clean embedded images to Firebase Storage, and rewrites records to Storage URLs</div>
+        <button onclick="verifyAndMigrateImages()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🛡 Verify + Migrate</button>
+      </div>
+      <!-- Import Data JSON Merge -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">📥 Import Data</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">Import a JSON backup as a merge — adds new restaurants and updates matching IDs without wiping all data</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 16px">
+            📂 Choose JSON File
+            <input type="file" accept=".json" style="display:none" onchange="eatsImportData(event)">
+          </label>
+          <span id="import-data-filename" style="font-size:0.68rem;color:var(--text-muted);font-family:monospace">No file selected</span>
+        </div>
+      </div>
+
+      <!-- Import CSV -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">📥 Import from CSV</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">Import restaurants from a CSV file — merges with existing data</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 16px">
+            📂 Choose CSV File
+            <input type="file" accept=".csv" style="display:none" onchange="eatsImportCSV(event)">
+          </label>
+          <span id="import-csv-filename" style="font-size:0.68rem;color:var(--text-muted);font-family:monospace">No file selected</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="data-modal-status" style="margin-top:14px;font-size:0.72rem;color:var(--text-muted);line-height:1.8;font-family:monospace"></div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost" onclick="closeDataModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightboxImg" src="" alt="Food photo">
+</div>
+
+
+<!-- CATEGORY MANAGER MODAL -->
+<div class="modal-overlay" id="catModal" onclick="if(event.target===this) closeCatManager()">
+  <div class="modal" style="max-width:500px">
+    <button class="modal-close" onclick="closeCatManager()">✕</button>
+    <div class="modal-title">Edit Categories</div>
+    <div class="modal-subtitle" style="margin-bottom:4px">Drag to reorder · Click emoji or name to edit</div>
+    <div class="cat-grid" id="catGrid"></div>
+    <div class="cat-add-row">
+      <input type="text" id="newCatEmoji" placeholder="🍕" style="width:48px;text-align:center;font-size:18px;background:var(--surface2);border:1px solid var(--border-amber);color:var(--text);padding:8px;border-radius:8px;font-family:'DM Sans',sans-serif;outline:none">
+      <input type="text" id="newCatName" placeholder="New category name..." style="flex:1;background:var(--surface2);border:1px solid var(--border-amber);color:var(--text);padding:8px 12px;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none">
+      <button class="btn btn-amber" onclick="addCategory()" style="padding:8px 16px">+ Add</button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeCatManager()">Cancel</button>
+      <button class="btn btn-amber" onclick="saveCategories()">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<div class="footer">
+  Philinity Eats ©️ <span>Rev 10.18</span>
+  · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
+  · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
+</div>
+</body>
+</html>

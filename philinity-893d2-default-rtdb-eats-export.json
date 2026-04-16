@@ -1,0 +1,2289 @@
+{
+  "-OqH8oR-R7eugqWroIZV": {
+    "appetizers": [
+      "Octopus",
+      "Guacamole"
+    ],
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "Latin/Steak",
+    "desserts": [
+      "Lollipop Tree with Honey",
+      "Cheesecake Fritter Cream Bites with 4 Sauces",
+      "Deal Closer"
+    ],
+    "drinks": [
+      "Old Fashion",
+      "Lilly",
+      "Chill",
+      "Moscow Mule",
+      "Pineapple Mojito",
+      "Heat",
+      "Lemon Drop"
+    ],
+    "id": "barbacoa",
+    "mains": [
+      "Argentinian Limo Kabobs with Chile Relleno",
+      "Colette Steak and Cajun Shrimp on the Rock",
+      "Carne Asada (family style cuts)"
+    ],
+    "name": "Barbacoa",
+    "notes": "Try sitting in Ocean Private Room. Do family-style cuts.",
+    "phil_picks": [
+      "Old Fashion",
+      "Carne Asada",
+      "Octopus"
+    ],
+    "rating": 5,
+    "server": "Nick D or Marco",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "date night",
+      "fine dining",
+      "group friendly"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA-": {
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "American",
+    "drinks": [
+      "House Old Fashion"
+    ],
+    "id": "owhyee-tavern",
+    "name": "Owhyee Tavern",
+    "notes": "Request Joel as server.",
+    "phil_picks": [
+      "House Old Fashion"
+    ],
+    "rating": 4,
+    "server": "Joel",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "date night"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA0": {
+    "appetizers": [
+      "Polenta Appetizer",
+      "Brie Cheese"
+    ],
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "French/American",
+    "id": "chateau-des-fleurs",
+    "mains": [
+      "Lobster Tail"
+    ],
+    "name": "Chateau des Fleurs",
+    "notes": "Staff: Susan (owner), Gill, Chef Nick, Adam, Connor",
+    "phil_picks": [
+      "Lobster Tail"
+    ],
+    "rating": 5,
+    "server": "Susan (owner)",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "date night",
+      "fine dining"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA1": {
+    "appetizers": [
+      "Brussels Sprouts"
+    ],
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "American",
+    "desserts": [
+      "Bread Pudding (NOT Butter Cake)"
+    ],
+    "drinks": [
+      "Old Fashion"
+    ],
+    "id": "fork",
+    "mains": [
+      "Crispy Chicken Salad"
+    ],
+    "name": "Fork",
+    "notes": "Get Bread Pudding, not the Butter Cake.",
+    "phil_picks": [
+      "Old Fashion",
+      "Crispy Chicken Salad"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "lunch",
+      "dinner"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA2": {
+    "appetizers": [
+      "Tuna Tower"
+    ],
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "Seafood/Steak",
+    "id": "chandlers",
+    "mains": [
+      "Deboat Scallops",
+      "Limousine Salad"
+    ],
+    "name": "Chandlers",
+    "notes": "",
+    "phil_picks": [
+      "Deboat Scallops"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "fine dining",
+      "seafood"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA3": {
+    "appetizers": [
+      "Firecracker Chicken"
+    ],
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "Asian Fusion",
+    "desserts": [
+      "Banana Spring Roll",
+      "Flourless Chocolate Cake"
+    ],
+    "drinks": [
+      "Smokey Toki"
+    ],
+    "id": "ling-and-louie",
+    "mains": [
+      "Mongolian Beef with Fried Rice",
+      "Drunken Noodle with Shrimp",
+      "Honey Walnut Shrimp",
+      "Vegas Roll"
+    ],
+    "name": "Ling & Louie",
+    "notes": "No Dragon Roll. No Spider Roll.",
+    "phil_picks": [
+      "Smokey Toki",
+      "Mongolian Beef"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "asian",
+      "group friendly"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA4": {
+    "appetizers": [
+      "Meatball Appetizer",
+      "Toyusu Crudo"
+    ],
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "American",
+    "desserts": [
+      "Coffee and Donuts"
+    ],
+    "id": "the-lively",
+    "mains": [
+      "Lasagna Verde",
+      "Bone-in Ribeye"
+    ],
+    "name": "The Lively",
+    "notes": "Ask for Jeff!",
+    "phil_picks": [
+      "Bone-in Ribeye",
+      "Meatball Appetizer"
+    ],
+    "rating": 5,
+    "server": "Jeff",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "date night",
+      "fine dining"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA5": {
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "American",
+    "id": "richards",
+    "name": "Richards",
+    "notes": "Rate 3 out of 5.",
+    "rating": 3,
+    "server": "",
+    "state": "ID",
+    "status": "tried"
+  },
+  "-OqH8oR0Y73dyDoDlMA6": {
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "American/Steak",
+    "drinks": [
+      "Hazelnut Old Fashion",
+      "Moscow Mule",
+      "Blueberries Splitz"
+    ],
+    "id": "brickyard",
+    "mains": [
+      "Beef Wellington with Au Gratin Potato (no lamb)",
+      "Chateau Briand with 1lb Potato and Mushrooms"
+    ],
+    "name": "Brickyard",
+    "notes": "Ask for Patrick. No on lamb.",
+    "phil_picks": [
+      "Hazelnut Old Fashion",
+      "Beef Wellington"
+    ],
+    "rating": 5,
+    "server": "Patrick",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "date night",
+      "fine dining"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA7": {
+    "appetizers": [
+      "Tuna",
+      "Baked Brie",
+      "Nachos"
+    ],
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "American",
+    "desserts": [
+      "Creme Brulee with Seasonal Fruit"
+    ],
+    "drinks": [
+      "Midtown",
+      "Peach Basil Smash"
+    ],
+    "id": "cottonwood-grill",
+    "mains": [
+      "Prime Rib with Spinach and Au Gratin Potatoes"
+    ],
+    "name": "Cottonwood Grill",
+    "notes": "Get table 55 in back corner or outside in brick corner. Peach Basil Smash is Trinity's drink.",
+    "phil_picks": [
+      "Midtown",
+      "Prime Rib"
+    ],
+    "rating": 5,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "date night",
+      "fine dining",
+      "outdoor seating"
+    ],
+    "trinity_picks": [
+      "Peach Basil Smash"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA8": {
+    "appetizers": [
+      "Clam Chowder"
+    ],
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "American",
+    "id": "lock-stock-barrel",
+    "mains": [
+      "Prime Rib"
+    ],
+    "name": "Lock Stock & Barrel",
+    "notes": "Salad bar included.",
+    "phil_picks": [
+      "Prime Rib"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "salad bar"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA9": {
+    "appetizers": [
+      "Hawaiian Ahi Nachos"
+    ],
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "Seafood",
+    "drinks": [
+      "Roasted Pear Martini (with fish)",
+      "Spicy Margarita (with steak)",
+      "Old Fashion"
+    ],
+    "id": "anthonys",
+    "mains": [
+      "Halibut",
+      "Crab Fettuccine"
+    ],
+    "name": "Anthony's Restaurant",
+    "notes": "Roasted Pear Martini if ordering fish. Spicy Margarita if ordering steak.",
+    "phil_picks": [
+      "Old Fashion",
+      "Halibut",
+      "Ahi Nachos"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "seafood",
+      "date night"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAA": {
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "Mexican",
+    "drinks": [
+      "Tamarind Ginger with Tajin Rim",
+      "Old Fashioned",
+      "Smokey Margarita"
+    ],
+    "id": "matador",
+    "mains": [
+      "Verde Carnitas"
+    ],
+    "name": "Matador",
+    "notes": "",
+    "phil_picks": [
+      "Old Fashioned",
+      "Verde Carnitas"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "mexican"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAB": {
+    "category": "Good Restaurants",
+    "city": "Boise",
+    "cuisine": "Indian",
+    "id": "tajmahal",
+    "mains": [
+      "Butter Chicken with Rice & Naan",
+      "Goat Biryani"
+    ],
+    "name": "TajMahal",
+    "notes": "",
+    "phil_picks": [
+      "Butter Chicken",
+      "Goat Biryani"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "indian"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAC": {
+    "appetizers": [
+      "Tuna Tartare",
+      "Focaccia Honey Rosemary Bread"
+    ],
+    "category": "Good Restaurants",
+    "city": "Eagle",
+    "cuisine": "American",
+    "drinks": [
+      "Devil You Know Rita",
+      "Going Down South"
+    ],
+    "id": "crave-boise",
+    "mains": [
+      "Pork Shank",
+      "Filet Mignon",
+      "Fish Tacos"
+    ],
+    "name": "Crave",
+    "notes": "Ask Ken about wine pairing dinners.",
+    "phil_picks": [
+      "Devil You Know Rita",
+      "Pork Shank",
+      "Filet Mignon"
+    ],
+    "rating": 5,
+    "server": "Ken (wine pairings)",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "date night",
+      "wine pairing"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAD": {
+    "appetizers": [
+      "House Salads",
+      "Bread Rolls"
+    ],
+    "category": "Good Restaurants",
+    "city": "Boise",
+    "cuisine": "American",
+    "id": "stagecoach",
+    "mains": [
+      "Prime Rib",
+      "Halibut Chunks",
+      "Prawns"
+    ],
+    "name": "Stagecoach",
+    "notes": "No on Old Fashion or Porterhouse. Prime Rib good. Halibut Chunks great.",
+    "phil_picks": [
+      "Halibut Chunks"
+    ],
+    "rating": 3,
+    "server": "JP",
+    "state": "ID",
+    "status": "tried"
+  },
+  "-OqH8oR0Y73dyDoDlMAE": {
+    "category": "Good Restaurants",
+    "city": "Boise",
+    "cuisine": "Mexican",
+    "drinks": [
+      "Jalapeño Margarita"
+    ],
+    "id": "barrigas",
+    "mains": [
+      "Callo De Ternera"
+    ],
+    "name": "Barrigas Mexican",
+    "notes": "",
+    "phil_picks": [
+      "Jalapeño Margarita",
+      "Callo De Ternera"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "mexican"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAF": {
+    "appetizers": [
+      "Mondo Pupu Platter"
+    ],
+    "category": "Good Restaurants",
+    "city": "Boise",
+    "cuisine": "Hawaiian/Tiki",
+    "id": "the-reef",
+    "name": "The Reef",
+    "notes": "",
+    "phil_picks": [
+      "Mondo Pupu Platter"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "hawaiian",
+      "tiki"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAG": {
+    "category": "Good Restaurants",
+    "city": "Boise",
+    "cuisine": "Seafood",
+    "id": "fresh-off-the-hook",
+    "mains": [
+      "Halibut Fish Tacos"
+    ],
+    "name": "Fresh Off the Hook",
+    "notes": "Halibut Fish Tacos are amazing.",
+    "phil_picks": [
+      "Halibut Fish Tacos"
+    ],
+    "rating": 5,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "seafood",
+      "casual"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAH": {
+    "appetizers": [
+      "Steak Bites"
+    ],
+    "category": "Good Restaurants",
+    "city": "Boise",
+    "cuisine": "American/Steak",
+    "id": "jakers",
+    "name": "Jakers",
+    "notes": "Waitress Debra gives discounts. Best at 8pm.",
+    "phil_picks": [
+      "Steak Bites"
+    ],
+    "rating": 4,
+    "server": "Debra",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "steak"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAI": {
+    "appetizers": [
+      "Crab Rangoons"
+    ],
+    "category": "Sushi",
+    "city": "Boise",
+    "cuisine": "Sushi/Japanese",
+    "drinks": [
+      "The Dark Side"
+    ],
+    "id": "dharma",
+    "mains": [
+      "Ureka Roll",
+      "The Lebowski (try next visit)"
+    ],
+    "name": "Dharma",
+    "notes": "Try The Lebowski next visit.",
+    "phil_picks": [
+      "Crab Rangoons",
+      "Ureka Roll",
+      "The Dark Side"
+    ],
+    "rating": 5,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi",
+      "date night"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAJ": {
+    "appetizers": [
+      "Octopus Salad"
+    ],
+    "category": "Sushi",
+    "city": "Boise",
+    "cuisine": "Sushi/Japanese",
+    "id": "yoi-tomo",
+    "mains": [
+      "Angermanagement Hand Roll",
+      "City of Trees Roll",
+      "Mad Max Roll",
+      "Inception Roll",
+      "Dantes Inferno",
+      "Black Panther",
+      "Ten Ten",
+      "Diablo",
+      "Mission Impossible",
+      "French Kiss",
+      "Avengers"
+    ],
+    "name": "Yoi Tomo",
+    "notes": "Try Avengers or Diablo. Hand rolls with eel sauce.",
+    "phil_picks": [
+      "Avengers Roll",
+      "Diablo Roll",
+      "Octopus Salad"
+    ],
+    "rating": 5,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAK": {
+    "category": "Sushi",
+    "city": "Boise",
+    "cuisine": "Sushi/Seafood",
+    "drinks": [
+      "Mango Tango",
+      "Smoking Gun",
+      "Smoke and Mary Margarita",
+      "Jalapeño Cilantro Margarita with Tajin"
+    ],
+    "id": "lucky-fins",
+    "mains": [
+      "Baja Stack Vegas Roll",
+      "Diablo Roll"
+    ],
+    "name": "Lucky Fins",
+    "notes": "Baja Stack per Sierra. Diablo per Brenton.",
+    "phil_picks": [
+      "Smoking Gun"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAL": {
+    "category": "Sushi",
+    "city": "Boise",
+    "cuisine": "Sushi/Japanese",
+    "id": "iou-sushi",
+    "mains": [
+      "Crystal Shrimp",
+      "Sora",
+      "Olo",
+      "Sokehs Rock Maki",
+      "Kaun"
+    ],
+    "name": "IOU Sushi",
+    "notes": "",
+    "phil_picks": [
+      "Crystal Shrimp",
+      "Sokehs Rock Maki"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAM": {
+    "category": "Sushi",
+    "city": "Boise",
+    "cuisine": "Sushi/Japanese",
+    "id": "sushi-joy",
+    "mains": [
+      "Crazy Dragon Roll",
+      "Lobster Tempura"
+    ],
+    "name": "Sushi Joy",
+    "notes": "",
+    "phil_picks": [
+      "Crazy Dragon Roll"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAN": {
+    "category": "Sushi",
+    "city": "Boise",
+    "cuisine": "Sushi/Japanese",
+    "id": "rotery-sushi",
+    "mains": [
+      "Crazy Roll with Tempura Flakes and Honey Wasabi"
+    ],
+    "name": "Rotery Sushi",
+    "notes": "Fairview location.",
+    "phil_picks": [
+      "Crazy Roll"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAO": {
+    "category": "Breakfast",
+    "city": "Boise",
+    "cuisine": "American Breakfast",
+    "id": "moons-kitchen",
+    "name": "Moon's Kitchen",
+    "notes": "8th & Main, 2nd floor Zions.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "breakfast"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAP": {
+    "category": "Breakfast",
+    "city": "Boise",
+    "cuisine": "American Breakfast",
+    "drinks": [
+      "Bottomless Mimosas (Mondays)"
+    ],
+    "id": "huck-house",
+    "name": "Huck House",
+    "notes": "Bottomless mimosas Mondays. Free coffee Tuesdays. 35% off senior Wednesdays.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "breakfast",
+      "mimosas"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAQ": {
+    "category": "Breakfast",
+    "city": "Boise",
+    "cuisine": "Bagels/Deli",
+    "id": "goldstein-bagels",
+    "name": "Goldstein Bagels",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "breakfast",
+      "bagels",
+      "quick"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAR": {
+    "category": "Breakfast",
+    "city": "Boise",
+    "cuisine": "American Breakfast",
+    "id": "goldys",
+    "name": "Goldy's",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "breakfast"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAS": {
+    "category": "Desserts",
+    "city": "Boise",
+    "cuisine": "Italian/Desserts",
+    "desserts": [
+      "3 Dessert Trio with Coffee"
+    ],
+    "drinks": [
+      "Half Price Wine on Tuesdays"
+    ],
+    "id": "grimaldis",
+    "name": "Grimaldi's",
+    "notes": "Half price wine on Tuesday. Lacie is a great waitress.",
+    "phil_picks": [
+      "3 Dessert Trio"
+    ],
+    "rating": 5,
+    "server": "Lacie",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "desserts",
+      "wine",
+      "pizza"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAT": {
+    "category": "Desserts",
+    "city": "Boise",
+    "cuisine": "French Pastry",
+    "id": "janjou-patisserie",
+    "name": "Janjou Pâtisserie",
+    "notes": "",
+    "rating": 5,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "desserts",
+      "bakery",
+      "coffee"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAU": {
+    "category": "Desserts",
+    "city": "Boise",
+    "cuisine": "French Pastry",
+    "drinks": [
+      "Golden Latte"
+    ],
+    "id": "jean-patisserie",
+    "mains": [
+      "Egg Brioche"
+    ],
+    "name": "Jean Pâtisserie",
+    "notes": "To Try: Golden Latte, Egg Brioche.",
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "desserts",
+      "coffee",
+      "to try"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAV": {
+    "category": "Fast Food",
+    "city": "Boise",
+    "cuisine": "Mexican",
+    "id": "cafe-rio",
+    "mains": [
+      "Tortilla Soup",
+      "Tostada Salad"
+    ],
+    "name": "Cafe Rio",
+    "notes": "",
+    "phil_picks": [
+      "Tortilla Soup",
+      "Tostada Salad"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "fast food",
+      "mexican",
+      "quick"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAW": {
+    "category": "Fast Food",
+    "city": "Boise",
+    "cuisine": "Japanese/Ramen",
+    "drinks": [
+      "Nara Milk Tea",
+      "Brown Sugar Tea",
+      "Thai Tea"
+    ],
+    "id": "nara-ramen",
+    "mains": [
+      "Spicy Beef Ramen",
+      "Firecracker"
+    ],
+    "name": "Nara Ramen",
+    "notes": "Phone: 208-336-9301",
+    "phil_picks": [
+      "Spicy Beef Ramen"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "ramen",
+      "asian",
+      "quick"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAX": {
+    "appetizers": [
+      "#3 Egg Rolls"
+    ],
+    "category": "Fast Food",
+    "city": "Boise",
+    "cuisine": "Chinese",
+    "id": "yen-ching",
+    "mains": [
+      "#20 BBQ Pork Chow Mein"
+    ],
+    "name": "Yen Ching",
+    "notes": "Phone: 208-384-0384",
+    "phil_picks": [
+      "#20 BBQ Pork Chow Mein",
+      "#3 Egg Rolls"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "chinese",
+      "asian",
+      "quick"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAY": {
+    "category": "Pizza",
+    "city": "Boise",
+    "cuisine": "Pizza",
+    "id": "front-door-taphouse",
+    "name": "Front Door Taphouse",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "pizza"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAZ": {
+    "category": "Pizza",
+    "city": "Boise",
+    "cuisine": "Pizza",
+    "id": "red-bench-pizza",
+    "name": "Red Bench Pizza",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "pizza"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMA_": {
+    "category": "Pizza",
+    "city": "Boise",
+    "cuisine": "Pizza",
+    "drinks": [
+      "Old Fashion (Happy Hour)"
+    ],
+    "id": "flat-bread-pizza",
+    "name": "Flat Bread Pizza",
+    "notes": "Old Fashion available at happy hour.",
+    "phil_picks": [
+      "Old Fashion Happy Hour"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "pizza",
+      "happy hour"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAa": {
+    "category": "Bar",
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "drinks": [
+      "Oxycon Old Fashion with Agave",
+      "S'mores with Blanton's",
+      "Josephine Baker with Azul",
+      "Amelia Earhart",
+      "Ginger Rogers",
+      "James Cagney with 4 Roses"
+    ],
+    "id": "gatsby",
+    "name": "Gatsby",
+    "notes": "Jean Hollow is a great mocktail.",
+    "phil_picks": [
+      "Oxycon Old Fashion",
+      "S'mores with Blanton's"
+    ],
+    "rating": 5,
+    "server": "Will & Nicole",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails",
+      "speakeasy"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAb": {
+    "category": "Bar",
+    "city": "Boise",
+    "cuisine": "Bar & Food",
+    "drinks": [
+      "Twice the Spice"
+    ],
+    "id": "diablo-and-sons",
+    "name": "Diablo and Sons",
+    "notes": "",
+    "phil_picks": [
+      "Twice the Spice"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "food"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAc": {
+    "category": "Bar",
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "drinks": [
+      "Smoked Old Fashion (Woodford Rye)"
+    ],
+    "id": "the-mode",
+    "name": "The Mode",
+    "notes": "",
+    "phil_picks": [
+      "Smoked Old Fashion"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails",
+      "smoked drinks"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAd": {
+    "category": "Bar",
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "drinks": [
+      "Smoke in the Yard",
+      "Whiskey Sour",
+      "Mariposa"
+    ],
+    "id": "8-horses",
+    "name": "8 Horses",
+    "notes": "",
+    "phil_picks": [
+      "Smoke in the Yard"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails"
+    ],
+    "trinity_picks": [
+      "Whiskey Sour"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAe": {
+    "category": "Coffee",
+    "city": "Boise",
+    "cuisine": "Coffee Shop",
+    "id": "cafferia",
+    "name": "Cafferia",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "coffee"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAf": {
+    "category": "Coffee",
+    "city": "Boise",
+    "cuisine": "Coffee Shop",
+    "id": "neckar-coffee",
+    "name": "Neckar Coffee",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "coffee"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAg": {
+    "category": "Coffee",
+    "city": "Boise",
+    "cuisine": "Coffee Shop",
+    "id": "pine-coffee",
+    "name": "Pine Coffee",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "coffee"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAh": {
+    "category": "Coffee",
+    "city": "Boise",
+    "cuisine": "Coffee Shop",
+    "id": "hidden-coffee",
+    "name": "Hidden Coffee",
+    "notes": "On the to-try list.",
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "coffee",
+      "to try"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAi": {
+    "appetizers": [
+      "Best Calamari"
+    ],
+    "category": "Fine Dining",
+    "city": "Nampa",
+    "cuisine": "American/Steak",
+    "id": "brick29",
+    "mains": [
+      "Ribeye Bistro Style",
+      "Lamb"
+    ],
+    "name": "Brick29",
+    "notes": "No desserts! Bread pudding is just okay.",
+    "phil_picks": [
+      "Ribeye Bistro Style",
+      "Calamari"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "steak",
+      "seafood"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAj": {
+    "category": "Bar",
+    "city": "Nampa",
+    "cuisine": "Cocktail Bar",
+    "drinks": [
+      "Smoked Old Fashioned",
+      "Pain Reliever"
+    ],
+    "id": "craft-lounge-nampa",
+    "name": "Craft Lounge / Crux",
+    "notes": "",
+    "phil_picks": [
+      "Smoked Old Fashioned"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAk": {
+    "category": "Fine Dining",
+    "city": "Caldwell",
+    "cuisine": "American/Steak",
+    "id": "indian-creek-steakhouse",
+    "name": "Indian Creek Steakhouse",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "steak",
+      "fine dining"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAl": {
+    "category": "Good Restaurants",
+    "city": "Kuna",
+    "cuisine": "Mexican",
+    "drinks": [
+      "Dirty Spicy Mescaline",
+      "Flaming Jalapeño Margarita"
+    ],
+    "id": "enrique-kuna",
+    "mains": [
+      "Birria Tacos"
+    ],
+    "name": "Enrique Kuna",
+    "notes": "",
+    "phil_picks": [
+      "Flaming Jalapeño Margarita",
+      "Birria Tacos"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "mexican"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAm": {
+    "appetizers": [
+      "Clams",
+      "Tuna Tartare"
+    ],
+    "category": "Fine Dining",
+    "city": "Eagle",
+    "cuisine": "American/Seafood",
+    "id": "tavern-eagle-island",
+    "name": "Tavern at Eagle Island",
+    "notes": "Great drinks.",
+    "phil_picks": [
+      "Tuna Tartare"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "seafood",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAn": {
+    "category": "Good Restaurants",
+    "city": "Boise",
+    "cuisine": "Indian",
+    "id": "red-fort",
+    "name": "Red Fort Indian Food",
+    "notes": "On the to-try list.",
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "indian",
+      "to try"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAo": {
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "American",
+    "id": "susina",
+    "name": "Susina",
+    "notes": "Dinner & events. https://www.susinaboise.com/",
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "fine dining",
+      "events",
+      "to try"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAp": {
+    "category": "Fine Dining",
+    "city": "Boise",
+    "cuisine": "American",
+    "id": "salt-brush",
+    "name": "Salt Brush",
+    "notes": "On the to-try list.",
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "to try"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAq": {
+    "category": "Good Restaurants",
+    "city": "Boise",
+    "cuisine": "American",
+    "id": "vertical-grow",
+    "name": "Vertical Grow",
+    "notes": "On the to-try list.",
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "to try"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAr": {
+    "category": "Good Restaurants",
+    "city": "Boise",
+    "cuisine": "American",
+    "id": "baraboo",
+    "name": "Baraboo",
+    "notes": "On the to-try list.",
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "to try"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAs": {
+    "category": "Bar",
+    "city": "Boise",
+    "cuisine": "Bar & Lounge",
+    "id": "hap-hap-lounge",
+    "name": "Hap Hap Lounge",
+    "notes": "On the to-try list.",
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "bar",
+      "to try"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAt": {
+    "category": "Good Restaurants",
+    "city": "Eagle",
+    "cuisine": "American",
+    "drinks": [
+      "Pool Party"
+    ],
+    "id": "pig-latin-eagle",
+    "mains": [
+      "Chimichurri Steak"
+    ],
+    "name": "Pig Latin",
+    "notes": "Chef Kevin will give tortillas with steak.",
+    "phil_picks": [
+      "Chimichurri Steak"
+    ],
+    "rating": 4,
+    "server": "Chef Kevin",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "steak",
+      "casual"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAu": {
+    "category": "Vineyard",
+    "city": "Nampa",
+    "cuisine": "Winery",
+    "drinks": [
+      "Sangria"
+    ],
+    "id": "sawtooth-winery",
+    "name": "Sawtooth Winery",
+    "notes": "Members since Oct 2024. Try the Sangria.",
+    "phil_picks": [
+      "Sangria"
+    ],
+    "rating": 5,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "wine",
+      "vineyard",
+      "members"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAv": {
+    "category": "Vineyard",
+    "city": "Caldwell",
+    "cuisine": "Winery",
+    "id": "st-chapelle",
+    "name": "St. Chapelle",
+    "notes": "Members since 2014.",
+    "rating": 5,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "wine",
+      "vineyard",
+      "members"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAw": {
+    "category": [
+      "Fine Dining"
+    ],
+    "city": "Boise",
+    "cuisine": "Italian/Steak",
+    "id": "corso-and-james",
+    "name": "Corso and James",
+    "notes": "On the to-try list.",
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "to try",
+      "fine dining"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAx": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "Hawaiian/Poke",
+    "id": "paddles-up",
+    "name": "Paddles Up",
+    "notes": "Get blue rice as base.",
+    "phil_picks": [
+      "Blue rice base"
+    ],
+    "rating": 0,
+    "server": "",
+    "state": "ID",
+    "status": "to-try",
+    "tags": [
+      "to try",
+      "poke"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAy": {
+    "appetizers": [
+      "Gua Bao Buns"
+    ],
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "Asian",
+    "id": "bao-boi",
+    "mains": [
+      "Kimchi Fried Rice",
+      "Corndog (Fri & Sat only)"
+    ],
+    "name": "Bao Boi",
+    "notes": "Corndog only on Fridays and Saturdays.",
+    "phil_picks": [
+      "Kimchi Fried Rice",
+      "Gua Bao Buns"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "asian",
+      "casual"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMAz": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "American/Bar",
+    "drinks": [
+      "Long Island Ice Tea"
+    ],
+    "id": "bardenay",
+    "name": "Bardenay",
+    "notes": "",
+    "phil_picks": [
+      "Long Island Ice Tea"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB-": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "Basque",
+    "id": "the-basque-market",
+    "mains": [
+      "Paella (Wed & Fri)"
+    ],
+    "name": "The Basque Market",
+    "notes": "Paella available Wednesdays and Fridays.",
+    "phil_picks": [
+      "Paella"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "basque",
+      "casual"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB0": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "Italian",
+    "id": "a-tavola",
+    "name": "A' Tavola",
+    "notes": "Good happy hour. Didn't love Pappardelle.",
+    "rating": 3,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "italian",
+      "happy hour"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB1": {
+    "category": [
+      "Sushi",
+      "Fine Dining"
+    ],
+    "city": "Boise",
+    "cuisine": "Sushi/American",
+    "id": "willow-creek-grill",
+    "mains": [
+      "Green Dragon Roll",
+      "Rattlesnake Roll"
+    ],
+    "name": "Willow Creek Grill",
+    "notes": "",
+    "phil_picks": [
+      "Green Dragon Roll",
+      "Rattlesnake Roll"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB2": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "American",
+    "id": "trillium-restaurant",
+    "mains": [
+      "Pork Shank in a Basket",
+      "Beef Stroganoff"
+    ],
+    "name": "Trillium Restaurant",
+    "notes": "",
+    "phil_picks": [
+      "Pork Shank",
+      "Beef Stroganoff"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "casual"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB3": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "American",
+    "drinks": [
+      "Old Fashion"
+    ],
+    "id": "13th-street-pub",
+    "name": "13th Street Pub & Grill",
+    "notes": "",
+    "phil_picks": [
+      "Old Fashion"
+    ],
+    "rating": 3,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "casual"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB4": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "American",
+    "id": "sandbar",
+    "name": "Sandbar",
+    "notes": "",
+    "rating": 3,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "casual"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB5": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "Indian",
+    "id": "bombai-grill",
+    "name": "Bombai Grill",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "indian"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB6": {
+    "category": [
+      "Fast Food"
+    ],
+    "city": "Boise",
+    "cuisine": "Thai",
+    "id": "pad-thai",
+    "mains": [
+      "Pork Lo Mein Fried Rice"
+    ],
+    "name": "Pad Thai",
+    "notes": "",
+    "phil_picks": [
+      "Pork Lo Mein Fried Rice"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "thai",
+      "asian",
+      "quick"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB7": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "Italian",
+    "id": "lucianos-italian",
+    "name": "Luciano's Italian",
+    "notes": "Off Orchard.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "italian"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB8": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "American",
+    "desserts": [
+      "Bread Pudding"
+    ],
+    "id": "sockeye-36th",
+    "mains": [
+      "Finger Steaks"
+    ],
+    "name": "Sockeye / 36th Street",
+    "notes": "",
+    "phil_picks": [
+      "Finger Steaks"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "casual",
+      "steak"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMB9": {
+    "category": [
+      "Sushi"
+    ],
+    "city": "Boise",
+    "cuisine": "Sushi/Japanese",
+    "id": "fugiama-sushi",
+    "name": "Fugiama Sushi",
+    "notes": "Near the mall.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBA": {
+    "category": [
+      "Sushi"
+    ],
+    "city": "Boise",
+    "cuisine": "Sushi/Japanese",
+    "id": "island-sushi",
+    "name": "Island Sushi",
+    "notes": "Off Fairview.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBB": {
+    "category": [
+      "Sushi"
+    ],
+    "city": "Boise",
+    "cuisine": "Sushi/Japanese",
+    "id": "happy-fish-sushi",
+    "name": "Happy Fish Sushi",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "sushi"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBC": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "id": "water-bear",
+    "name": "Water Bear",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBD": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "id": "thick-as-thieves",
+    "name": "Thick as Thieves",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBE": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Speakeasy",
+    "id": "sweet-104",
+    "name": "Sweet 104",
+    "notes": "Speakeasy.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "speakeasy"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBF": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "id": "devils-den",
+    "name": "Devils Den",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBG": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Bar/Wine",
+    "id": "sturmans",
+    "name": "Sturmans Smoke & Wine",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "wine",
+      "cigars"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBH": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "drinks": [
+      "Spicy Cucumber Sour Glacier 45",
+      "Nectar Moscow Mule 44 North"
+    ],
+    "id": "royal-cocktail-company",
+    "name": "The Royal Cocktail Company",
+    "notes": "No large ice cubes. Hyde Park location.",
+    "phil_picks": [
+      "Spicy Cucumber Sour"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails",
+      "hyde park"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBI": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "id": "the-atlas",
+    "name": "The Atlas",
+    "notes": "Classic drinks.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails",
+      "classic"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBJ": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "drinks": [
+      "Old Fashion"
+    ],
+    "id": "gas-lantern",
+    "name": "Gas Lantern",
+    "notes": "",
+    "phil_picks": [
+      "Old Fashion"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBK": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Meridian",
+    "cuisine": "Cocktail Bar",
+    "id": "roosevelt",
+    "name": "Roosevelt",
+    "notes": "Meridian location.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails",
+      "meridian"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBL": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "id": "lemon-tree-co",
+    "mains": [
+      "Pear & Sausage Sandwich"
+    ],
+    "name": "Lemon Tree Co.",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBM": {
+    "category": [
+      "Bar"
+    ],
+    "city": "Boise",
+    "cuisine": "Cocktail Bar",
+    "id": "tin-alley",
+    "name": "Tin Alley",
+    "notes": "Back of Avery.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "bar",
+      "cocktails"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBN": {
+    "category": [
+      "Fine Dining"
+    ],
+    "city": "Boise",
+    "cuisine": "Mexican/Seafood",
+    "id": "coa-de-hime",
+    "mains": [
+      "Seafood Bowl",
+      "Carne Asada"
+    ],
+    "name": "COA De Hime",
+    "notes": "",
+    "phil_picks": [
+      "Seafood Bowl",
+      "Carne Asada"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "mexican",
+      "seafood"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBO": {
+    "category": [
+      "Breakfast"
+    ],
+    "city": "Boise",
+    "cuisine": "American Breakfast",
+    "id": "waffle-me-up",
+    "name": "Waffle Me Up",
+    "notes": "Next to Capitol.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "breakfast",
+      "waffles"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBP": {
+    "category": [
+      "Breakfast"
+    ],
+    "city": "Boise",
+    "cuisine": "American Breakfast",
+    "id": "trailside-cafe",
+    "name": "Trailside Cafe",
+    "notes": "Off State St.",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "breakfast",
+      "bakery"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBQ": {
+    "category": [
+      "Desserts"
+    ],
+    "city": "Boise",
+    "cuisine": "Donuts/Desserts",
+    "id": "funky-donuts",
+    "name": "Funky Donuts",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "desserts",
+      "donuts"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBR": {
+    "category": [
+      "Desserts",
+      "Good Restaurants"
+    ],
+    "city": "Boise",
+    "cuisine": "American",
+    "desserts": [
+      "Bread Pudding"
+    ],
+    "id": "36th-street-bistro",
+    "name": "36th Street Bistro",
+    "notes": "",
+    "phil_picks": [
+      "Bread Pudding"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "desserts"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBS": {
+    "category": [
+      "Fine Dining"
+    ],
+    "city": "Eagle",
+    "cuisine": "American/Steak",
+    "id": "porterhouse-eagle",
+    "mains": [
+      "BLT"
+    ],
+    "name": "Porterhouse",
+    "notes": "Their BLT is great.",
+    "phil_picks": [
+      "BLT"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "steak",
+      "eagle"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBT": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Meridian",
+    "cuisine": "American",
+    "id": "grants-neighborhood-grill",
+    "name": "Grants Neighborhood Grill",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "meridian",
+      "casual"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBU": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Caldwell",
+    "cuisine": "American",
+    "id": "mano",
+    "name": "Mano",
+    "notes": "",
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "caldwell"
+    ]
+  },
+  "-OqH8oR0Y73dyDoDlMBV": {
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Wilder",
+    "cuisine": "Mexican",
+    "id": "hop-haus",
+    "mains": [
+      "Tacos"
+    ],
+    "name": "Hop Haus",
+    "notes": "Taco place in Wilder.",
+    "phil_picks": [
+      "Tacos"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "wilder",
+      "tacos"
+    ]
+  },
+  "brasserie-four": {
+    "appetizers": [
+      "Escargot"
+    ],
+    "category": [
+      "Good Restaurants"
+    ],
+    "city": "Walla Walla",
+    "cuisine": "French",
+    "id": "brasserie-four",
+    "imageUrl": "",
+    "lastUpdated": 1776061998626,
+    "mains": [
+      "Steak Frites",
+      "French Onion Soup"
+    ],
+    "name": "Brasserie Four",
+    "notes": "Great escargot. French onion soup was ok, steak frites was just ok. Nice atmosphere for outdoor seating.",
+    "phil_picks": [
+      "Escargot"
+    ],
+    "rating": 3,
+    "server": "",
+    "state": "WA",
+    "status": "tried",
+    "tags": [
+      "french",
+      "outdoor seating"
+    ]
+  },
+  "castillo-de-feliciana": {
+    "category": [
+      "Vineyard"
+    ],
+    "city": "Walla Walla",
+    "cuisine": "Winery",
+    "drinks": [
+      "Granger wine"
+    ],
+    "id": "castillo-de-feliciana",
+    "imageUrl": "",
+    "lastUpdated": 1776092962744,
+    "name": "Castillo de Feliciana Vineyard and Winery",
+    "notes": "Great wine. it's a Spanish style place which we really enjoyed their Granger wine",
+    "rating": 5,
+    "server": "",
+    "state": "WA",
+    "status": "tried",
+    "tags": [
+      "wine",
+      "vineyard",
+      "walla walla"
+    ]
+  },
+  "lago-chapala": {
+    "category": [
+      "Mexican",
+      "Good Restaurants",
+      "Bar"
+    ],
+    "city": "McCall",
+    "cuisine": "Mexican",
+    "drinks": [
+      "Cincoro Tequila"
+    ],
+    "id": "lago-chapala",
+    "imageUrl": "",
+    "lastUpdated": 1776130501362,
+    "name": "Lago Chapala",
+    "notes": "Great view of the lake and patio seating in summer. Tequila by Michael Jordan - Cincoro",
+    "phil_picks": [
+      "Cincoro Tequila"
+    ],
+    "rating": 4,
+    "server": "",
+    "state": "ID",
+    "status": "tried",
+    "tags": [
+      "mexican",
+      "lake view",
+      "patio",
+      "summer",
+      "tequila"
+    ]
+  },
+  "tamastslikt-cultural-institute": {
+    "category": [
+      "Visit"
+    ],
+    "city": "Pendletn",
+    "cuisine": "",
+    "id": "tamastslikt-cultural-institute",
+    "imageUrl": "",
+    "lastUpdated": 1776093765210,
+    "name": "Tamastslikt Cultural Institute",
+    "notes": "Supposed to be a very cool Museum \nhttps://www.tamastslikt.org/",
+    "rating": 0,
+    "server": "",
+    "state": "OR",
+    "status": "to-try"
+  }
+}
