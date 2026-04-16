@@ -1185,7 +1185,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.28</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.29</div>
   </div>
 </div>
 
@@ -1468,7 +1468,7 @@ const dbGet = (path) => get(dbRef(path));
 const dbSet = (path, val) => set(dbRef(path), val);
 const dbUpdate = (updates) => update(ref(db, '/'), updates);
 const dbRemove = (path) => remove(dbRef(path));
-const dbOn = (path, cb) => onValue(dbRef(path), cb);
+const dbOn = (path, cb, errCb) => onValue(dbRef(path), cb, errCb || (e => console.error('dbOn error:', e)));
 
 // ── STORAGE HELPERS ───────────────────────────────────────
 async function uploadDataUrlToStorage(dataUrl, path) {
@@ -2734,6 +2734,57 @@ async function cleanupUndefined() {
 // ─── INIT — only called after auth resolves ───────────────
 async function init() {
   try {
+    // Force token refresh to ensure auth is fully settled on mobile
+    const currentUser = auth.currentUser;
+    if (currentUser) {
+      try {
+        await currentUser.getIdToken(true);
+        console.log('Token refreshed for:', currentUser.email);
+      } catch(e) {
+        console.warn('Token refresh failed:', e);
+      }
+    } else {
+      console.warn('No current user in init()');
+      return;
+    }
+
+    // Load categories
+    try {
+      await loadCategories();
+    } catch(e) {
+      console.warn('Category load error:', e);
+      renderCatChips();
+    }
+
+    // One-time fetch first for immediate display
+    try {
+      const snap = await dbGet(EATS_PATH);
+      if (snap.exists()) {
+        const data = snap.val() || {};
+        allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
+        applyFilters();
+        console.log('Loaded', allRestaurants.length, 'restaurants');
+      } else {
+        console.warn('No data at eats path');
+      }
+    } catch(e) {
+      console.error('Initial dbGet failed:', e.code, e.message);
+      showToast('Data load failed: ' + (e.code || e.message));
+    }
+
+    // Real-time listener with error callback
+    dbOn(EATS_PATH, 
+      snap => {
+        const data = snap.val() || {};
+        allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
+        applyFilters();
+      },
+      error => {
+        console.error('dbOn error:', error.code, error.message);
+        showToast('Realtime sync error: ' + (error.code || error.message));
+      }
+    );
+
     // Silently clean unsafe imageUrls
     dbGet(EATS_PATH).then(snap => {
       if (!snap.exists()) return;
@@ -2747,31 +2798,9 @@ async function init() {
       if (Object.keys(cleanups).length > 0) dbUpdate(cleanups);
     });
 
-    // Load categories
-    try {
-      await loadCategories();
-    } catch(e) {
-      console.warn('Category load error:', e);
-      renderCatChips();
-    }
-
-    // Subscribe to restaurant data with mobile-safe approach
-    // First do a one-time get to populate immediately, then subscribe for updates
-    dbGet(EATS_PATH).then(snap => {
-      const data = snap.val() || {};
-      allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
-      applyFilters();
-    }).catch(e => console.error('Initial data load failed:', e));
-
-    // Then subscribe for real-time updates
-    dbOn(EATS_PATH, snap => {
-      const data = snap.val() || {};
-      allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
-      applyFilters();
-    });
-
   } catch(e) {
     console.error('Init failed:', e);
+    showToast('Init failed: ' + e.message);
   }
 }
 
@@ -3293,7 +3322,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.28</span>
+  Philinity Eats ©️ <span>Rev 10.29</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
