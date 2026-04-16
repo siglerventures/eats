@@ -1124,7 +1124,7 @@
     inset: 0;
     background: var(--bg);
     z-index: 9999;
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
   }
@@ -1185,7 +1185,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.23</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.24</div>
   </div>
 </div>
 
@@ -3097,28 +3097,14 @@ async function verifyAndMigrateImages() {
 
 
 // ── AUTH STATE ────────────────────────────────────────────
+// Auth gate is hidden in CSS by default (display:none on #auth-gate removed)
+// onAuthStateChanged is the SINGLE controller of auth gate visibility
 let initialized = false;
 
-// On mobile after redirect, hide auth gate immediately to prevent flicker loop
-// getRedirectResult resolves before onAuthStateChanged on redirect flow
-const isMobileDevice = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-if (isMobileDevice) {
-  // Hide auth gate while we check redirect result
-  document.getElementById('auth-gate').style.display = 'none';
-  getRedirectResult(auth).then(result => {
-    if (!result || !result.user) {
-      // No redirect result — show auth gate
-      document.getElementById('auth-gate').style.display = 'flex';
-    }
-    // If result.user exists, onAuthStateChanged will fire and handle it
-  }).catch(e => {
-    console.error('Redirect result error:', e);
-    document.getElementById('auth-gate').style.display = 'flex';
-    document.getElementById('authError').textContent = e.message || 'Sign-in failed.';
-  });
-} else {
-  document.getElementById('auth-gate').style.display = 'flex';
-}
+// Silently handle redirect result — no gate logic here
+getRedirectResult(auth).catch(e => {
+  console.error('Redirect result error:', e);
+});
 
 onAuthStateChanged(auth, user => {
   if (!user) {
@@ -3308,7 +3294,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.23</span>
+  Philinity Eats ©️ <span>Rev 10.24</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
