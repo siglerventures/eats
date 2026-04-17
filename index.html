@@ -1185,7 +1185,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.34</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.35</div>
   </div>
 </div>
 
@@ -1435,7 +1435,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
-import { getDatabase, ref, get, set, update, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
+import { getDatabase, forceLongPolling, ref, get, set, update, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
@@ -1450,6 +1450,7 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+forceLongPolling();
 const db = getDatabase(app);
 const storage = getStorage(app);
 const auth = getAuth(app);
@@ -1464,7 +1465,7 @@ const dbGet = (path) => get(dbRef(path));
 const dbSet = (path, val) => set(dbRef(path), val);
 const dbUpdate = (updates) => update(ref(db, '/'), updates);
 const dbRemove = (path) => remove(dbRef(path));
-const dbOn = (path, cb) => onValue(dbRef(path), cb);
+const dbOn = (path, cb, errCb) => onValue(dbRef(path), cb, errCb || (e => console.error('dbOn error:', e)));
 
 // ── STORAGE HELPERS ───────────────────────────────────────
 async function uploadDataUrlToStorage(dataUrl, path) {
@@ -2764,6 +2765,9 @@ async function init() {
       const data = snap.val() || {};
       allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
       applyFilters();
+    }, error => {
+      console.error('Realtime db error:', error);
+      showToast('Realtime sync error: ' + (error.code || error.message || 'unknown'));
     });
 
   } catch(e) {
@@ -3285,7 +3289,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.34</span>
+  Philinity Eats ©️ <span>Rev 10.35</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
