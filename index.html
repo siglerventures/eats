@@ -1185,7 +1185,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.36</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.37</div>
   </div>
 </div>
 
@@ -2157,12 +2157,111 @@ async function deleteEntry() {
 }
 
 // ─── AI CHAT ──────────────────────────────────────────────
+let anthropicKey = '';
+
+async function loadAnthropicKey() {
+  if (anthropicKey) return anthropicKey;
+  try {
+    const snap = await dbGet('config/Philinity-Eats');
+    if (snap.exists()) anthropicKey = snap.val();
+  } catch(e) { console.warn('Could not load Anthropic key:', e); }
+  return anthropicKey;
+}
+
 async function askAI() {
   const q = document.getElementById('aiInput').value.trim();
   if (!q) return;
   appendUserBubble(q);
   document.getElementById('aiInput').value = '';
-  appendAIBubble('AI is disabled in this hardened build because browser-side API keys are not secure on GitHub Pages. Use Add/Edit for data changes or move AI behind a server endpoint.', 'ai');
+
+  const key = await loadAnthropicKey();
+  if (!key) {
+    appendAIBubble('AI unavailable — API key not configured.', 'ai');
+    return;
+  }
+
+  document.getElementById('aiThinking').classList.add('visible');
+  chatHistory.push({ role: 'user', content: q });
+
+  // Build restaurant context
+  const context = allRestaurants.slice(0, 80).map(r =>
+    `${r.name} (${r.city}, ${r.cuisine}) — Phil picks: ${(r.phil_picks||[]).join(', ')} | Trinity picks: ${(r.trinity_picks||[]).join(', ')} | Drinks: ${(r.drinks||[]).join(', ')} | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating||'unrated'}`
+  ).join('\n');
+
+  const systemPrompt = `You are the Philinity Eats AI assistant for Phil & Trinity Sigler. You help manage and search their personal restaurant guide in Boise, Idaho and surrounding areas.
+
+Current restaurant data (${allRestaurants.length} places):
+${context}
+
+You can:
+1. Answer questions about restaurants, recommend places, search by cuisine/vibe/occasion
+2. Add new restaurants by responding with JSON in this format:
+{"action":"add","data":{"name":"...","city":"Boise","state":"ID","category":["Fine Dining"],"cuisine":"...","status":"tried","rating":5,"server":"...","phil_picks":["..."],"trinity_picks":["..."],"drinks":["..."],"appetizers":["..."],"mains":["..."],"desserts":["..."],"notes":"...","tags":["..."]}}
+3. Update existing restaurants with: {"action":"update","id":"restaurant-id","data":{...fields to update...}}
+
+Keep responses concise. For recommendations, highlight Phil's picks and server names.`;
+
+  try {
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: systemPrompt,
+        messages: chatHistory
+      })
+    });
+
+    const data = await response.json();
+    document.getElementById('aiThinking').classList.remove('visible');
+
+    if (!response.ok) {
+      appendAIBubble('AI error: ' + (data.error?.message || response.status), 'ai');
+      chatHistory.pop();
+      return;
+    }
+
+    const reply = data.content?.[0]?.text || '';
+    chatHistory.push({ role: 'assistant', content: reply });
+
+    // Check if AI wants to add/update a restaurant
+    const jsonMatch = reply.match(/\{[\s\S]*"action"\s*:\s*"(add|update)"[\s\S]*\}/);
+    if (jsonMatch) {
+      try {
+        const cmd = JSON.parse(jsonMatch[0]);
+        if (cmd.action === 'add' && cmd.data?.name) {
+          const id = cmd.data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+          const entry = { ...cmd.data, id, lastUpdated: Date.now() };
+          await dbSet(`${EATS_PATH}/${id}`, entry);
+          appendAIBubble('✅ Added ' + cmd.data.name + ' to your guide!', 'success');
+        } else if (cmd.action === 'update' && cmd.id) {
+          const updates = {};
+          Object.entries(cmd.data).forEach(([k,v]) => { updates[EATS_PATH + '/' + cmd.id + '/' + k] = v; });
+          updates[EATS_PATH + '/' + cmd.id + '/lastUpdated'] = Date.now();
+          await dbUpdate(updates);
+          appendAIBubble('✅ Updated ' + cmd.id + '!', 'success');
+        }
+      } catch(e) {
+        const text = reply.replace(/\{[\s\S]*\}/, '').trim();
+        if (text) appendAIBubble(text, 'ai');
+      }
+    } else {
+      appendAIBubble(reply, 'ai');
+    }
+
+    // Check for highlight request
+    const highlightMatch = reply.match(/HIGHLIGHT:\s*\[([^\]]+)\]/);
+    if (highlightMatch) {
+      const ids = highlightMatch[1].split(',').map(s => s.trim().replace(/"/g, ''));
+      applyHighlight(ids);
+    }
+
+  } catch(e) {
+    document.getElementById('aiThinking').classList.remove('visible');
+    appendAIBubble('Network error: ' + e.message, 'ai');
+    chatHistory.pop();
+  }
 }
 
 // ─── MULTI CATEGORY PICKER ────────────────────────────────
@@ -3301,7 +3400,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.36</span>
+  Philinity Eats ©️ <span>Rev 10.37</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
