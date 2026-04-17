@@ -1185,7 +1185,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.40</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.41</div>
   </div>
 </div>
 
@@ -2157,28 +2157,13 @@ async function deleteEntry() {
 }
 
 // ─── AI CHAT ──────────────────────────────────────────────
-let anthropicKey = '';
 
-async function loadAnthropicKey() {
-  if (anthropicKey) return anthropicKey;
-  try {
-    const snap = await dbGet('config/Philinity-Eats');
-    if (snap.exists()) anthropicKey = snap.val();
-  } catch(e) { console.warn('Could not load Anthropic key:', e); }
-  return anthropicKey;
-}
 
 async function askAI() {
   const q = document.getElementById('aiInput').value.trim();
   if (!q) return;
   appendUserBubble(q);
   document.getElementById('aiInput').value = '';
-
-  const key = await loadAnthropicKey();
-  if (!key) {
-    appendAIBubble('AI unavailable — API key not configured.', 'ai');
-    return;
-  }
 
   document.getElementById('aiThinking').classList.add('visible');
   chatHistory.push({ role: 'user', content: q });
@@ -2202,10 +2187,23 @@ You can:
 Keep responses concise. For recommendations, highlight Phil's picks and server names.`;
 
   try {
+    const user = auth.currentUser;
+    if (!user) {
+      appendAIBubble('Not signed in. Please refresh and sign in.', 'ai');
+      document.getElementById('aiThinking').classList.remove('visible');
+      chatHistory.pop();
+      return;
+    }
+    const idToken = await user.getIdToken();
+
     const response = await fetch('https://us-central1-philinity-893d2.cloudfunctions.net/askAI', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + idToken
+      },
       body: JSON.stringify({
+        app: 'eats',
         system: systemPrompt,
         messages: chatHistory
       })
@@ -3398,7 +3396,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.40</span>
+  Philinity Eats ©️ <span>Rev 10.41</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
