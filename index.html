@@ -3,6 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://firebasestorage.googleapis.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://www.gstatic.com https://us-central1-philinity-893d2.cloudfunctions.net/askAI; img-src 'self' data: blob: https://images.unsplash.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://i.imgur.com https://upload.wikimedia.org; frame-src https://*.firebaseio.com https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'self'; form-action 'self';">
 <title>Philinity Eats</title>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🍽</text></svg>">
@@ -72,20 +75,37 @@
     flex: 1;
     position: relative;
     max-width: 420px;
+    display: flex;
+    align-items: center;
+    gap: 0;
   }
 
   .search-wrap input {
-    width: 100%;
+    flex: 1;
     background: var(--surface2);
     border: 1px solid var(--border-amber);
+    border-right: none;
     color: var(--text);
     padding: 9px 14px 9px 38px;
-    border-radius: 8px;
+    border-radius: 8px 0 0 8px;
     font-size: 14px;
     font-family: 'DM Sans', sans-serif;
     outline: none;
     transition: border-color 0.2s;
   }
+
+  .search-btn {
+    background: var(--amber);
+    border: none;
+    color: #1a1208;
+    padding: 9px 14px;
+    border-radius: 0 8px 8px 0;
+    font-size: 14px;
+    cursor: pointer;
+    flex-shrink: 0;
+    font-weight: 600;
+  }
+  .search-btn:hover { background: var(--amber-light); }
 
   .search-wrap input:focus { border-color: var(--amber); }
   .search-wrap input::placeholder { color: var(--text-muted); }
@@ -760,7 +780,9 @@
     .modal-overlay { padding: 10px; }
     .btn { min-height: 40px; }
     .ai-bar-inner input { font-size: 16px; }
-    .search-wrap input { font-size: 16px; }
+    .search-wrap { max-width: 100%; }
+    .search-wrap input { font-size: 16px; min-height: 44px; }
+    .search-btn { min-height: 44px; padding: 9px 16px; }
     .header-inner { gap: 10px; }
     #starSelect { font-size: 13px; min-height: 36px; flex-shrink: 0; }
   }
@@ -1185,7 +1207,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.44</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.46</div>
   </div>
 </div>
 
@@ -1196,7 +1218,8 @@
     <div class="logo" onclick="resetHome()" style="cursor:pointer">Philinity <span>Eats</span> 🍽</div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="Search restaurants, dishes, drinks..." oninput="applyFilters()">
+      <input type="text" id="searchInput" placeholder="Search restaurants, dishes, drinks..." oninput="applyFilters()" onkeydown="if(event.key==='Enter')applyFilters()" enterkeyhint="search">
+      <button class="search-btn" onclick="applyFilters()" title="Search">🔍</button>
     </div>
     <div class="header-actions">
       <button class="btn btn-ghost" onclick="openAddModal()">+ Add</button>
@@ -1469,8 +1492,7 @@ const dbGet = (path) => get(dbRef(path));
 const dbSet = (path, val) => set(dbRef(path), val);
 const dbUpdate = (updates) => update(ref(db, '/'), updates);
 const dbRemove = (path) => remove(dbRef(path));
-// Accepts optional error callback — critical for diagnosing mobile auth/rules failures
-const dbOn = (path, cb, errCb) => onValue(dbRef(path), cb, errCb);
+const dbOn = (path, cb) => onValue(dbRef(path), cb);
 
 // ── STORAGE HELPERS ───────────────────────────────────────
 async function uploadDataUrlToStorage(dataUrl, path) {
@@ -2852,51 +2874,38 @@ async function init() {
       renderCatChips();
     }
 
-    // Give mobile auth token a beat to settle before first DB read
+    // Load data — await the first get so mobile has time to settle auth token
+    // Small delay for mobile auth token to fully settle before DB read
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Robust data load — retry up to 3 times with exponential backoff
     const loadData = async () => {
-      const attempts = [0, 1500, 3500]; // ms delays before each attempt
-      for (let i = 0; i < attempts.length; i++) {
-        if (attempts[i] > 0) await new Promise(r => setTimeout(r, attempts[i]));
-        try {
-          const snap = await dbGet(EATS_PATH);
-          const data = snap.val() || {};
-          // Only overwrite if we got real data OR if it's confirmed empty (snap exists)
-          if (snap.exists() || i === attempts.length - 1) {
-            allRestaurants = Object.keys(data)
-              .filter(k => k !== 'categories') // skip categories subpath
-              .map(id => sanitizeRestaurant({ id, ...data[id] }));
+      try {
+        const snap = await dbGet(EATS_PATH);
+        const data = snap.val() || {};
+        allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
+        applyFilters();
+      } catch(e) {
+        console.error('Initial data load failed:', e);
+        // Retry once after 2 seconds for mobile
+        setTimeout(async () => {
+          try {
+            const snap = await dbGet(EATS_PATH);
+            const data = snap.val() || {};
+            allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
             applyFilters();
-            return true;
-          }
-        } catch(e) {
-          console.error('Data load attempt ' + (i + 1) + ' failed:', e);
-          if (i === attempts.length - 1) {
-            // Final failure — show a clear error instead of silently empty
-            const container = document.getElementById('restaurantList') || document.body;
-            if (container && typeof showToast === 'function') {
-              showToast('Could not load data. Pull to refresh.');
-            }
-          }
-        }
+          } catch(e2) { console.error('Retry failed:', e2); }
+        }, 2000);
       }
-      return false;
     };
     await loadData();
 
-    // Subscribe for real-time updates — pass an error callback so rule denials don't silently clobber data
+    // Then subscribe for real-time updates
     dbOn(EATS_PATH, snap => {
       const data = snap.val() || {};
-      allRestaurants = Object.keys(data)
-        .filter(k => k !== 'categories')
-        .map(id => sanitizeRestaurant({ id, ...data[id] }));
+      allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
       applyFilters();
     }, error => {
-      // Don't clobber local state on listener error — just log. Data stays from initial load.
-      console.error('Realtime listener error:', error);
-      if (typeof showToast === 'function') showToast('Live sync paused — data may be stale');
+      console.error('Realtime db error:', error);
     });
 
   } catch(e) {
@@ -3336,7 +3345,7 @@ window.clearHighlight = clearHighlight;
 
 // ── SMART BACK BUTTON STACK ──────────────────────────────
 // Dismisses UI layers on phone back press instead of exiting.
-// Uses history.pushState + popstate — no PWA needed. Matches Task Board v6.2 pattern.
+// Matches Task Board v6.2 pattern.
 (function installBackStack() {
   let exitWarned = false;
   let exitWarnTimer = null;
@@ -3356,15 +3365,23 @@ window.clearHighlight = clearHighlight;
   }
 
   function dismissTopLayer() {
-    // 1. Lightbox (photo zoom) — topmost, always dismiss first
+    // 1. Lightbox (photo zoom) — topmost
     const lightbox = document.getElementById('lightbox');
     if (lightbox && lightbox.classList.contains('open')) {
-      if (typeof closeLightbox === 'function') { closeLightbox(); }
-      else { lightbox.classList.remove('open'); }
+      if (typeof closeLightbox === 'function') closeLightbox();
+      else lightbox.classList.remove('open');
       return true;
     }
 
-    // 2. Form modal (add/edit restaurant)
+    // 2. Data manager modal
+    const dataModal = document.getElementById('dataModal');
+    if (dataModal && dataModal.classList.contains('open')) {
+      if (typeof closeDataModal === 'function') closeDataModal();
+      else dataModal.classList.remove('open');
+      return true;
+    }
+
+    // 3. Form modal (add/edit restaurant)
     const formModal = document.getElementById('formModal');
     if (formModal && formModal.classList.contains('open')) {
       if (typeof closeFormModal === 'function') closeFormModal();
@@ -3372,7 +3389,7 @@ window.clearHighlight = clearHighlight;
       return true;
     }
 
-    // 3. Detail modal (viewing a restaurant)
+    // 4. Detail modal (viewing a restaurant)
     const detailModal = document.getElementById('detailModal');
     if (detailModal && detailModal.classList.contains('open')) {
       if (typeof closeDetailModal === 'function') closeDetailModal();
@@ -3380,7 +3397,7 @@ window.clearHighlight = clearHighlight;
       return true;
     }
 
-    // 4. Category manager modal
+    // 5. Category manager modal
     const catModal = document.getElementById('catModal');
     if (catModal && catModal.classList.contains('open')) {
       if (typeof closeCatManager === 'function') closeCatManager();
@@ -3388,13 +3405,13 @@ window.clearHighlight = clearHighlight;
       return true;
     }
 
-    // 5. AI highlight active (cards are filtered to a specific AI result set)
+    // 6. AI highlight active
     if (typeof highlightedIds !== 'undefined' && Array.isArray(highlightedIds) && highlightedIds.length > 0) {
       if (typeof clearHighlight === 'function') clearHighlight();
       return true;
     }
 
-    // 6. AI chat response visible — clear it
+    // 7. AI chat response visible
     const aiResponse = document.getElementById('aiResponse');
     if (aiResponse && aiResponse.innerHTML && aiResponse.innerHTML.trim().length > 0) {
       aiResponse.innerHTML = '';
@@ -3402,7 +3419,7 @@ window.clearHighlight = clearHighlight;
       return true;
     }
 
-    // 7. Active search — clear it
+    // 8. Active search — clear it
     const searchInput = document.getElementById('searchInput');
     if (searchInput && searchInput.value) {
       searchInput.value = '';
@@ -3410,8 +3427,7 @@ window.clearHighlight = clearHighlight;
       return true;
     }
 
-    // 8. Non-default filters (any city besides "All" or any category besides "All")
-    //    Only use resetHome if user actually has non-default filters active
+    // 9. Non-default filters — reset home
     if (typeof currentCity !== 'undefined' && typeof currentCat !== 'undefined' &&
         (currentCity !== 'All' || currentCat !== 'All')) {
       if (typeof resetHome === 'function') { resetHome(); return true; }
@@ -3551,7 +3567,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.44</span>
+  Philinity Eats ©️ <span>Rev 10.46</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
