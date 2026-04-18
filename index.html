@@ -1185,7 +1185,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.43</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.44</div>
   </div>
 </div>
 
@@ -1458,13 +1458,19 @@ provider.setCustomParameters({ prompt: 'select_account' });
 
 const EATS_PATH = 'eats';
 
+// ── AUTHORIZED USERS ──────────────────────────────────────
+// Only these Google account UIDs are allowed. Any other signed-in user
+// will be shown a clear error and kept at the auth gate.
+const ALLOWED_UIDS = ['CuJigrzCbRfFFsM7uqe0mix46xH3', 'g4stabGPKiWAE23NTw6oUsqawWf1'];
+
 // ── DB HELPERS (modular v10) ──────────────────────────────
 const dbRef = (path) => ref(db, path);
 const dbGet = (path) => get(dbRef(path));
 const dbSet = (path, val) => set(dbRef(path), val);
 const dbUpdate = (updates) => update(ref(db, '/'), updates);
 const dbRemove = (path) => remove(dbRef(path));
-const dbOn = (path, cb) => onValue(dbRef(path), cb);
+// Accepts optional error callback — critical for diagnosing mobile auth/rules failures
+const dbOn = (path, cb, errCb) => onValue(dbRef(path), cb, errCb);
 
 // ── STORAGE HELPERS ───────────────────────────────────────
 async function uploadDataUrlToStorage(dataUrl, path) {
@@ -2846,38 +2852,51 @@ async function init() {
       renderCatChips();
     }
 
-    // Load data — await the first get so mobile has time to settle auth token
-    // Small delay for mobile auth token to fully settle before DB read
+    // Give mobile auth token a beat to settle before first DB read
     await new Promise(resolve => setTimeout(resolve, 500));
 
+    // Robust data load — retry up to 3 times with exponential backoff
     const loadData = async () => {
-      try {
-        const snap = await dbGet(EATS_PATH);
-        const data = snap.val() || {};
-        allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
-        applyFilters();
-      } catch(e) {
-        console.error('Initial data load failed:', e);
-        // Retry once after 2 seconds for mobile
-        setTimeout(async () => {
-          try {
-            const snap = await dbGet(EATS_PATH);
-            const data = snap.val() || {};
-            allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
+      const attempts = [0, 1500, 3500]; // ms delays before each attempt
+      for (let i = 0; i < attempts.length; i++) {
+        if (attempts[i] > 0) await new Promise(r => setTimeout(r, attempts[i]));
+        try {
+          const snap = await dbGet(EATS_PATH);
+          const data = snap.val() || {};
+          // Only overwrite if we got real data OR if it's confirmed empty (snap exists)
+          if (snap.exists() || i === attempts.length - 1) {
+            allRestaurants = Object.keys(data)
+              .filter(k => k !== 'categories') // skip categories subpath
+              .map(id => sanitizeRestaurant({ id, ...data[id] }));
             applyFilters();
-          } catch(e2) { console.error('Retry failed:', e2); }
-        }, 2000);
+            return true;
+          }
+        } catch(e) {
+          console.error('Data load attempt ' + (i + 1) + ' failed:', e);
+          if (i === attempts.length - 1) {
+            // Final failure — show a clear error instead of silently empty
+            const container = document.getElementById('restaurantList') || document.body;
+            if (container && typeof showToast === 'function') {
+              showToast('Could not load data. Pull to refresh.');
+            }
+          }
+        }
       }
+      return false;
     };
     await loadData();
 
-    // Then subscribe for real-time updates
+    // Subscribe for real-time updates — pass an error callback so rule denials don't silently clobber data
     dbOn(EATS_PATH, snap => {
       const data = snap.val() || {};
-      allRestaurants = Object.keys(data).map(id => sanitizeRestaurant({ id, ...data[id] }));
+      allRestaurants = Object.keys(data)
+        .filter(k => k !== 'categories')
+        .map(id => sanitizeRestaurant({ id, ...data[id] }));
       applyFilters();
     }, error => {
-      console.error('Realtime db error:', error);
+      // Don't clobber local state on listener error — just log. Data stays from initial load.
+      console.error('Realtime listener error:', error);
+      if (typeof showToast === 'function') showToast('Live sync paused — data may be stale');
     });
 
   } catch(e) {
@@ -2888,7 +2907,17 @@ async function init() {
 // ─── AUTH GATE ────────────────────────────────────────────
 function signInWithGoogle() {
   document.getElementById('authError').textContent = '';
-  signInWithPopup(auth, provider).catch(e => {
+  signInWithPopup(auth, provider).then(result => {
+    if (result && result.user && !ALLOWED_UIDS.includes(result.user.uid)) {
+      const emailShown = result.user.email ? ' (' + result.user.email + ')' : '';
+      const errEl = document.getElementById('authError');
+      if (errEl) {
+        errEl.innerHTML = '⚠️ This Google account' + emailShown + ' is not authorized for Philinity Eats.<br><br>Please sign in with an authorized account.';
+        errEl.style.display = 'block';
+      }
+      signOut(auth);
+    }
+  }).catch(e => {
     console.error('Google sign-in error:', e);
     document.getElementById('authError').textContent = e.message || 'Google sign-in failed.';
   });
@@ -3214,6 +3243,22 @@ onAuthStateChanged(auth, user => {
     initialized = false;
     return;
   }
+
+  // Check the UID whitelist — if not authorized, force sign-out and show clear error
+  if (!ALLOWED_UIDS.includes(user.uid)) {
+    const errEl = document.getElementById('authError');
+    const emailShown = user.email ? ' (' + user.email + ')' : '';
+    if (errEl) {
+      errEl.innerHTML = '⚠️ This Google account' + emailShown + ' is not authorized for Philinity Eats.<br><br>Please sign out and sign in with an authorized account.';
+      errEl.style.display = 'block';
+    }
+    document.getElementById('auth-gate').style.display = 'flex';
+    initialized = false;
+    signOut(auth).catch(e => console.warn('Forced sign-out failed:', e));
+    return;
+  }
+
+  // Authorized — hide gate and initialize
   document.getElementById('auth-gate').style.display = 'none';
   document.getElementById('authError').textContent = '';
   if (!initialized) {
@@ -3288,6 +3333,113 @@ window.hoverDetailStars = hoverDetailStars;
 window.resetDetailStars = resetDetailStars;
 window.setDetailRating = setDetailRating;
 window.clearHighlight = clearHighlight;
+
+// ── SMART BACK BUTTON STACK ──────────────────────────────
+// Dismisses UI layers on phone back press instead of exiting.
+// Uses history.pushState + popstate — no PWA needed. Matches Task Board v6.2 pattern.
+(function installBackStack() {
+  let exitWarned = false;
+  let exitWarnTimer = null;
+
+  function showBackToast(msg) {
+    let toast = document.getElementById('back-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'back-toast';
+      toast.style.cssText = 'position:fixed;bottom:60px;left:50%;transform:translateX(-50%);background:rgba(26,26,26,0.92);color:#fff;padding:10px 18px;border-radius:20px;font-size:13px;font-weight:500;z-index:9998;box-shadow:0 4px 16px rgba(0,0,0,0.25);pointer-events:none;transition:opacity 0.2s;opacity:0;';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.style.opacity = '1';
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 1800);
+  }
+
+  function dismissTopLayer() {
+    // 1. Lightbox (photo zoom) — topmost, always dismiss first
+    const lightbox = document.getElementById('lightbox');
+    if (lightbox && lightbox.classList.contains('open')) {
+      if (typeof closeLightbox === 'function') { closeLightbox(); }
+      else { lightbox.classList.remove('open'); }
+      return true;
+    }
+
+    // 2. Form modal (add/edit restaurant)
+    const formModal = document.getElementById('formModal');
+    if (formModal && formModal.classList.contains('open')) {
+      if (typeof closeFormModal === 'function') closeFormModal();
+      else formModal.classList.remove('open');
+      return true;
+    }
+
+    // 3. Detail modal (viewing a restaurant)
+    const detailModal = document.getElementById('detailModal');
+    if (detailModal && detailModal.classList.contains('open')) {
+      if (typeof closeDetailModal === 'function') closeDetailModal();
+      else detailModal.classList.remove('open');
+      return true;
+    }
+
+    // 4. Category manager modal
+    const catModal = document.getElementById('catModal');
+    if (catModal && catModal.classList.contains('open')) {
+      if (typeof closeCatManager === 'function') closeCatManager();
+      else catModal.classList.remove('open');
+      return true;
+    }
+
+    // 5. AI highlight active (cards are filtered to a specific AI result set)
+    if (typeof highlightedIds !== 'undefined' && Array.isArray(highlightedIds) && highlightedIds.length > 0) {
+      if (typeof clearHighlight === 'function') clearHighlight();
+      return true;
+    }
+
+    // 6. AI chat response visible — clear it
+    const aiResponse = document.getElementById('aiResponse');
+    if (aiResponse && aiResponse.innerHTML && aiResponse.innerHTML.trim().length > 0) {
+      aiResponse.innerHTML = '';
+      if (typeof chatHistory !== 'undefined') chatHistory = [];
+      return true;
+    }
+
+    // 7. Active search — clear it
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput && searchInput.value) {
+      searchInput.value = '';
+      if (typeof applyFilters === 'function') applyFilters();
+      return true;
+    }
+
+    // 8. Non-default filters (any city besides "All" or any category besides "All")
+    //    Only use resetHome if user actually has non-default filters active
+    if (typeof currentCity !== 'undefined' && typeof currentCat !== 'undefined' &&
+        (currentCity !== 'All' || currentCat !== 'All')) {
+      if (typeof resetHome === 'function') { resetHome(); return true; }
+    }
+
+    return false;
+  }
+
+  function seedHistory() {
+    try { history.pushState({ eats: 1 }, ''); } catch(_) {}
+  }
+  seedHistory();
+
+  window.addEventListener('popstate', (e) => {
+    const dismissed = dismissTopLayer();
+    if (dismissed) {
+      seedHistory();
+      return;
+    }
+    if (!exitWarned) {
+      exitWarned = true;
+      showBackToast('Tap back again to exit');
+      seedHistory();
+      clearTimeout(exitWarnTimer);
+      exitWarnTimer = setTimeout(() => { exitWarned = false; }, 2500);
+    }
+  });
+})();
 </script>
 
 
@@ -3399,7 +3551,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.43</span>
+  Philinity Eats ©️ <span>Rev 10.44</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
