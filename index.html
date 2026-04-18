@@ -71,10 +71,23 @@
 
   .logo span { color: var(--gold); font-style: italic; }
 
+  .search-bar {
+    background: linear-gradient(135deg, var(--surface) 0%, #1e1709 100%);
+    border-bottom: 1px solid var(--border-amber);
+    padding: 10px 24px;
+  }
+
+  .search-bar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
   .search-wrap {
     flex: 1;
     position: relative;
-    max-width: 420px;
     display: flex;
     align-items: center;
     gap: 0;
@@ -86,7 +99,7 @@
     border: 1px solid var(--border-amber);
     border-right: none;
     color: var(--text);
-    padding: 9px 14px 9px 38px;
+    padding: 10px 14px 10px 38px;
     border-radius: 8px 0 0 8px;
     font-size: 14px;
     font-family: 'DM Sans', sans-serif;
@@ -98,12 +111,13 @@
     background: var(--amber);
     border: none;
     color: #1a1208;
-    padding: 9px 14px;
+    padding: 10px 20px;
     border-radius: 0 8px 8px 0;
     font-size: 14px;
     cursor: pointer;
     flex-shrink: 0;
     font-weight: 600;
+    white-space: nowrap;
   }
   .search-btn:hover { background: var(--amber-light); }
 
@@ -780,9 +794,9 @@
     .modal-overlay { padding: 10px; }
     .btn { min-height: 40px; }
     .ai-bar-inner input { font-size: 16px; }
-    .search-wrap { max-width: 100%; }
+    .search-bar { padding: 10px 14px; }
     .search-wrap input { font-size: 16px; min-height: 44px; }
-    .search-btn { min-height: 44px; padding: 9px 16px; }
+    .search-btn { min-height: 44px; padding: 10px 16px; }
     .header-inner { gap: 10px; }
     #starSelect { font-size: 13px; min-height: 36px; flex-shrink: 0; }
   }
@@ -1207,7 +1221,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.46</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.47</div>
   </div>
 </div>
 
@@ -1216,17 +1230,23 @@
 <header>
   <div class="header-inner">
     <div class="logo" onclick="resetHome()" style="cursor:pointer">Philinity <span>Eats</span> 🍽</div>
-    <div class="search-wrap">
-      <span class="search-icon">🔍</span>
-      <input type="text" id="searchInput" placeholder="Search restaurants, dishes, drinks..." oninput="applyFilters()" onkeydown="if(event.key==='Enter')applyFilters()" enterkeyhint="search">
-      <button class="search-btn" onclick="applyFilters()" title="Search">🔍</button>
-    </div>
     <div class="header-actions">
       <button class="btn btn-ghost" onclick="openAddModal()">+ Add</button>
       <button class="btn btn-ghost" onclick="signOutUser()">Sign Out</button>
     </div>
   </div>
 </header>
+
+<!-- SEARCH BAR -->
+<div class="search-bar">
+  <div class="search-bar-inner">
+    <div class="search-wrap">
+      <span class="search-icon">🔍</span>
+      <input type="text" id="searchInput" placeholder="Search restaurants, dishes, drinks..." oninput="applyFilters()" onkeydown="if(event.key==='Enter')applyFilters()" enterkeyhint="search">
+      <button class="search-btn" onclick="applyFilters()" title="Search">Search</button>
+    </div>
+  </div>
+</div>
 
 <!-- AI BAR -->
 <div class="ai-bar">
@@ -3567,7 +3587,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.46</span>
+  Philinity Eats ©️ <span>Rev 10.47</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
