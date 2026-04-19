@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.65</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.66</div>
   </div>
 </div>
 
@@ -1680,6 +1680,12 @@ function applyFilters() {
 }
 
 // ─── RENDER ───────────────────────────────────────────────
+// ── INFINITE SCROLL ───────────────────────────────────────
+const PAGE_SIZE = 20;
+let currentRestaurantList = [];  // full filtered+sorted list
+let renderedCount = 0;
+let scrollObserver = null;
+
 function renderContent(restaurants) {
   const container = document.getElementById('content');
   document.getElementById('resultsCount').textContent = `${restaurants.length} place${restaurants.length !== 1 ? 's' : ''}`;
@@ -1687,37 +1693,90 @@ function renderContent(restaurants) {
 
   if (restaurants.length === 0) {
     container.innerHTML = `<div class="empty-state"><div class="icon">🍽</div><h3>No results found</h3><p>Try adjusting your filters or search</p></div>`;
+    currentRestaurantList = [];
+    renderedCount = 0;
     return;
   }
 
-  // Group by city
+  // Store full list, reset rendered count
+  currentRestaurantList = restaurants;
+  renderedCount = 0;
+  container.innerHTML = '';
+
+  // Disconnect existing observer
+  if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
+
+  // Render first page
+  renderNextPage();
+}
+
+function renderNextPage() {
+  const container = document.getElementById('content');
   const byCityOrder = ['Boise', 'Eagle', 'Nampa', 'Caldwell', 'Kuna', 'Wilder'];
+
+  // Get next batch
+  const batch = currentRestaurantList.slice(renderedCount, renderedCount + PAGE_SIZE);
+  if (batch.length === 0) return;
+  renderedCount += batch.length;
+
+  // Group batch by city
   const byCity = {};
-  restaurants.forEach(r => {
+  batch.forEach(r => {
     if (!byCity[r.city]) byCity[r.city] = [];
     byCity[r.city].push(r);
   });
 
   const cities = [...new Set([...byCityOrder.filter(c => byCity[c]), ...Object.keys(byCity).filter(c => !byCityOrder.includes(c))])];
 
-  let html = '';
   cities.forEach(city => {
     const list = byCity[city];
     if (!list) return;
-    html += `
-      <div class="city-section">
+
+    // Find existing city section or create new one
+    let citySection = container.querySelector(`[data-city="${CSS.escape(city)}"]`);
+    if (!citySection) {
+      citySection = document.createElement('div');
+      citySection.className = 'city-section';
+      citySection.dataset.city = city;
+      citySection.innerHTML = `
         <div class="city-header">
           <div class="city-name">🌆 ${escapeHTML(city)}, ID</div>
-          <div class="city-count">${list.length}</div>
+          <div class="city-count city-count-${CSS.escape(city)}">${currentRestaurantList.filter(r => r.city === city).length}</div>
           <div class="city-line"></div>
         </div>
-        <div class="cards-grid">
-          ${list.map(r => renderCard(r)).join('')}
-        </div>
-      </div>`;
+        <div class="cards-grid" id="grid-${CSS.escape(city)}"></div>`;
+      container.appendChild(citySection);
+    }
+
+    const grid = citySection.querySelector('.cards-grid');
+    list.forEach(r => {
+      const div = document.createElement('div');
+      div.innerHTML = renderCard(r);
+      grid.appendChild(div.firstElementChild);
+    });
   });
 
-  container.innerHTML = html;
+  // Remove old sentinel
+  const old = document.getElementById('scroll-sentinel');
+  if (old) old.remove();
+
+  // If more to load, add sentinel for IntersectionObserver
+  if (renderedCount < currentRestaurantList.length) {
+    const sentinel = document.createElement('div');
+    sentinel.id = 'scroll-sentinel';
+    sentinel.style.cssText = 'height:40px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;';
+    sentinel.textContent = `Showing ${renderedCount} of ${currentRestaurantList.length} places...`;
+    container.appendChild(sentinel);
+
+    scrollObserver = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) {
+        scrollObserver.disconnect();
+        scrollObserver = null;
+        renderNextPage();
+      }
+    }, { rootMargin: '200px' });
+    scrollObserver.observe(sentinel);
+  }
 }
 
 
@@ -3895,7 +3954,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.65</span>
+  Philinity Eats ©️ <span>Rev 10.66</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
