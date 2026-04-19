@@ -109,6 +109,37 @@
   .sort-pill:hover { border-color: var(--amber); color: var(--text); }
   .sort-pill.active { background: var(--amber); border-color: var(--amber); color: #0f0c08; font-weight: 600; }
 
+  .sort-panel-divider {
+    height: 1px;
+    background: var(--border-amber);
+    margin: 8px 0;
+  }
+
+  .sort-panel-label {
+    font-size: 12px;
+    color: var(--amber);
+    font-weight: 500;
+    white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    min-width: 60px;
+  }
+
+  .city-select {
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    color: var(--text);
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: 'DM Sans', sans-serif;
+    cursor: pointer;
+    outline: none;
+    flex: 1;
+    max-width: 200px;
+  }
+  .city-select:focus { border-color: var(--amber); }
+
   .search-bar-inner {
     max-width: 1400px;
     margin: 0 auto;
@@ -1257,7 +1288,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.60</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.61</div>
   </div>
 </div>
 
@@ -1287,6 +1318,13 @@
       <button class="sort-pill" id="sort-totry" onclick="setSort('totry')">🔖 To Try First</button>
       <button class="sort-pill" id="sort-az" onclick="setSort('az')">🔤 A–Z</button>
     </div>
+    <div class="sort-panel-divider"></div>
+    <div class="sort-panel-inner" style="align-items:center;">
+      <span class="sort-panel-label">🌆 City</span>
+      <select id="citySelect" onchange="setCityFromSelect(this.value)" class="city-select">
+        <option value="All">All Cities</option>
+      </select>
+    </div>
   </div>
 </div>
 
@@ -1312,15 +1350,6 @@
 <!-- FILTERS -->
 <div class="filters">
   <div class="filters-inner">
-    <span class="filter-label">City</span>
-    <button class="chip active" onclick="setCity('All', this)">All</button>
-    <button class="chip" onclick="setCity('Boise', this)">Boise</button>
-    <button class="chip" onclick="setCity('Eagle', this)">Eagle</button>
-    <button class="chip" onclick="setCity('Nampa', this)">Nampa</button>
-    <button class="chip" onclick="setCity('Caldwell', this)">Caldwell</button>
-    <button class="chip" onclick="setCity('Kuna', this)">Kuna</button>
-
-    <div class="filter-sep"></div>
     <span class="filter-label">Type</span>
     <button class="chip active cat-chip" onclick="setCat('All', this)">All</button>
     <div id="catChips" style="display:contents">
@@ -1585,16 +1614,11 @@ let currentDetailId = null;
 // Data loading handled inside init() after auth resolves
 
 // ─── FILTERS ──────────────────────────────────────────────
-function setCity(city, el) {
-  if (city !== 'All' && currentCity === city) {
-    currentCity = 'All';
-    document.querySelectorAll('.filters-inner .chip:not(.cat-chip):not(#toTryChip):not(#starSelect)').forEach(c => c.classList.remove('active'));
-    document.querySelector('.filters-inner .chip:not(.cat-chip):not(#toTryChip)').classList.add('active');
-  } else {
-    currentCity = city;
-    document.querySelectorAll('.filters-inner .chip:not(.cat-chip):not(#toTryChip):not(#starSelect)').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-  }
+function setCity(city) {
+  currentCity = city;
+  const sel = document.getElementById('citySelect');
+  if (sel) sel.value = city;
+  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || city !== 'All');
   applyFilters();
 }
 
@@ -1655,6 +1679,7 @@ function applyFilters() {
 function renderContent(restaurants) {
   const container = document.getElementById('content');
   document.getElementById('resultsCount').textContent = `${restaurants.length} place${restaurants.length !== 1 ? 's' : ''}`;
+  buildCityDropdown();
 
   if (restaurants.length === 0) {
     container.innerHTML = `<div class="empty-state"><div class="icon">🍽</div><h3>No results found</h3><p>Try adjusting your filters or search</p></div>`;
@@ -2680,10 +2705,10 @@ function resetHome() {
   chatHistory = [];
   clearHighlight();
 
-  // Reset city chips
+  // Reset city dropdown
   currentCity = 'All';
-  document.querySelectorAll('.filters-inner .chip:not(.cat-chip):not(#toTryChip)').forEach(c => c.classList.remove('active'));
-  document.querySelector('.filters-inner .chip:not(.cat-chip):not(#toTryChip)').classList.add('active');
+  const citySelectEl = document.getElementById('citySelect');
+  if (citySelectEl) citySelectEl.value = 'All';
 
   // Reset category chips
   currentCat = 'All';
@@ -3472,6 +3497,8 @@ window.setStarFilter = setStarFilter;
 window.toggleToTry = toggleToTry;
 window.applyFilters = applyFilters;
 window.toggleSortPanel = toggleSortPanel;
+window.setCityFromSelect = setCityFromSelect;
+window.buildCityDropdown = buildCityDropdown;
 window.setSort = setSort;
 window.openDetail = openDetail;
 window.closeDetailModal = closeDetailModal;
@@ -3515,6 +3542,24 @@ function toggleSortPanel() {
   const open = panel.style.display === 'none';
   panel.style.display = open ? 'block' : 'none';
   btn.classList.toggle('active', open);
+}
+
+function setCityFromSelect(city) {
+  currentCity = city;
+  // Update sort btn dot if city is also filtered
+  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || city !== 'All');
+  applyFilters();
+}
+
+function buildCityDropdown() {
+  const cities = [...new Set(allRestaurants.map(r => r.city).filter(Boolean))].sort();
+  const sel = document.getElementById('citySelect');
+  if (!sel) return;
+  const current = sel.value;
+  sel.innerHTML = '<option value="All">All Cities</option>' +
+    cities.map(c => `<option value="${c}" ${c === current ? 'selected' : ''}>${c}</option>`).join('');
+  // Restore selection
+  if (currentCity !== 'All' && cities.includes(currentCity)) sel.value = currentCity;
 }
 
 function setSort(mode) {
@@ -3749,7 +3794,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.60</span>
+  Philinity Eats ©️ <span>Rev 10.61</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
