@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.67</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.68</div>
   </div>
 </div>
 
@@ -1604,7 +1604,7 @@ async function uploadDataUrlToStorage(dataUrl, path) {
 let allRestaurants = [];
 
 let chatHistory = [];
-let currentCity = 'All';
+let currentCity = 'Boise';
 let currentCat = 'All';
 let showToTryOnly = false;
 let starFilter = 0;
@@ -2770,10 +2770,10 @@ function resetHome() {
   chatHistory = [];
   clearHighlight();
 
-  // Reset city dropdown
-  currentCity = 'All';
+  // Reset city dropdown to Boise default
+  currentCity = 'Boise';
   const citySelectEl = document.getElementById('citySelect');
-  if (citySelectEl) citySelectEl.value = 'All';
+  if (citySelectEl) citySelectEl.value = 'Boise';
 
   // Reset category chips
   currentCat = 'All';
@@ -3683,11 +3683,8 @@ function buildCityDropdown() {
   const cities = [...new Set(allRestaurants.map(r => r.city).filter(Boolean))].sort();
   const sel = document.getElementById('citySelect');
   if (!sel) return;
-  const current = sel.value;
   sel.innerHTML = '<option value="All">All Cities</option>' +
-    cities.map(c => `<option value="${c}" ${c === current ? 'selected' : ''}>${c}</option>`).join('');
-  // Restore selection
-  if (currentCity !== 'All' && cities.includes(currentCity)) sel.value = currentCity;
+    cities.map(c => `<option value="${c}" ${c === currentCity ? 'selected' : ''}>${c}</option>`).join('');
 }
 
 function setSort(mode) {
@@ -3956,7 +3953,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.67</span>
+  Philinity Eats ©️ <span>Rev 10.68</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
