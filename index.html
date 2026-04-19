@@ -1224,7 +1224,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.57</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.58</div>
   </div>
 </div>
 
@@ -1235,7 +1235,6 @@
     <div class="logo" onclick="resetHome()" style="cursor:pointer">Philinity <span>Eats</span> 🍽</div>
     <div class="header-actions">
       <button class="btn btn-ghost" onclick="openAddModal()">+ Add</button>
-      <button class="btn btn-ghost" onclick="signOutUser()">Sign Out</button>
     </div>
   </div>
 </header>
@@ -3041,8 +3040,6 @@ async function signOutUser() {
 function openDataModal() {
   document.getElementById('data-modal-status').innerHTML = '';
   document.getElementById('restore-filename').textContent = 'No file selected';
-  document.getElementById('import-csv-filename').textContent = 'No file selected';
-  document.getElementById('import-data-filename').textContent = 'No file selected';
   document.getElementById('dataModal').classList.add('open');
 }
 
@@ -3575,67 +3572,34 @@ window.clearHighlight = clearHighlight;
   <div class="modal" style="max-width:520px">
     <button class="modal-close" onclick="closeDataModal()">✕</button>
     <div class="modal-title">📦 Data Manager</div>
-    <div class="modal-subtitle">Backup · Export · Restore · Verify Images</div>
+    <div class="modal-subtitle">Backup · Export · Restore</div>
 
     <div style="display:flex;flex-direction:column;gap:10px">
 
       <!-- Full JSON Backup -->
       <div style="background:linear-gradient(135deg,rgba(212,134,10,0.1),rgba(212,134,10,0.05));border:1px solid rgba(212,134,10,0.3);border-radius:10px;padding:16px">
         <div style="font-size:0.88rem;font-weight:500;color:var(--amber-light);margin-bottom:3px">📦 Full Backup (JSON)</div>
-        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">Download all restaurant data as JSON — use to restore later</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">Download all restaurants, categories, and settings</div>
         <button onclick="eatsBackup()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">⬇️ Download Backup</button>
       </div>
 
       <!-- Export CSV -->
       <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
-        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">📊 Export as CSV</div>
-        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">Download all restaurants as a spreadsheet — opens in Excel or Google Sheets</div>
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">📊 Export Restaurants as CSV</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">All restaurants — opens in Excel or Google Sheets</div>
         <button onclick="eatsExportCSV()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">⬇️ Download CSV</button>
       </div>
 
       <!-- Restore from JSON -->
       <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
         <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">♻️ Restore from Backup</div>
-        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">Select a philinity-eats-backup-*.json file to restore all restaurants</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">Select a philinity-eats-backup-*.json file to restore</div>
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
           <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 16px">
             📂 Choose Backup File
             <input type="file" accept=".json" style="display:none" onchange="eatsRestore(event)">
           </label>
           <span id="restore-filename" style="font-size:0.68rem;color:var(--text-muted);font-family:monospace">No file selected</span>
-        </div>
-      </div>
-
-
-      <!-- Verify + Migrate Images -->
-      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
-        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">🛡 Verify + Migrate Images</div>
-        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">Scans current Firebase image fields, skips unsafe image data, uploads clean embedded images to Firebase Storage, and rewrites records to Storage URLs</div>
-        <button onclick="verifyAndMigrateImages()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🛡 Verify + Migrate</button>
-      </div>
-      <!-- Import Data JSON Merge -->
-      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
-        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">📥 Import Data</div>
-        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">Import a JSON backup as a merge — adds new restaurants and updates matching IDs without wiping all data</div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 16px">
-            📂 Choose JSON File
-            <input type="file" accept=".json" style="display:none" onchange="eatsImportData(event)">
-          </label>
-          <span id="import-data-filename" style="font-size:0.68rem;color:var(--text-muted);font-family:monospace">No file selected</span>
-        </div>
-      </div>
-
-      <!-- Import CSV -->
-      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
-        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">📥 Import from CSV</div>
-        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">Import restaurants from a CSV file — merges with existing data</div>
-        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-          <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 16px">
-            📂 Choose CSV File
-            <input type="file" accept=".csv" style="display:none" onchange="eatsImportCSV(event)">
-          </label>
-          <span id="import-csv-filename" style="font-size:0.68rem;color:var(--text-muted);font-family:monospace">No file selected</span>
         </div>
       </div>
 
@@ -3678,9 +3642,9 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.57</span>
+  Philinity Eats ©️ <span>Rev 10.58</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
-  · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
+  · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
 </body>
 </html>
