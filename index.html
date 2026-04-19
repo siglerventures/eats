@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.70-DEBUG</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.71</div>
   </div>
 </div>
 
@@ -1714,13 +1714,9 @@ function renderNextPage() {
   const container = document.getElementById('content');
   const byCityOrder = ['Boise', 'Eagle', 'Nampa', 'Caldwell', 'Kuna', 'Wilder'];
 
-  // [DEBUG 10.70] Log every entry to renderNextPage
-  console.log('[SCROLL] renderNextPage called. renderedCount=' + renderedCount + ' total=' + currentRestaurantList.length);
-
   // Get next flat batch across ALL cities
   const batch = currentRestaurantList.slice(renderedCount, renderedCount + PAGE_SIZE);
-  console.log('[SCROLL] batch.length=' + batch.length + ' (should be 12 or less)');
-  if (batch.length === 0) { console.log('[SCROLL] batch empty, returning'); return; }
+  if (batch.length === 0) return;
   renderedCount += batch.length;
 
   // Group this batch by city
@@ -1762,8 +1758,6 @@ function renderNextPage() {
     });
   });
 
-  console.log('[SCROLL] after render. renderedCount=' + renderedCount + ' DOM cards=' + container.querySelectorAll('.card').length);
-
   // Remove old sentinel
   const oldSentinel = document.getElementById('scroll-sentinel');
   if (oldSentinel) oldSentinel.remove();
@@ -1776,22 +1770,27 @@ function renderNextPage() {
     sentinel.textContent = `↓ ${renderedCount} of ${currentRestaurantList.length} — scroll for more`;
     container.appendChild(sentinel);
 
-    // Log sentinel position relative to viewport
-    const rect = sentinel.getBoundingClientRect();
-    console.log('[SCROLL] sentinel placed. top=' + Math.round(rect.top) + ' viewportH=' + window.innerHeight + ' (if top > viewportH, sentinel is BELOW fold and observer should NOT fire yet)');
+    // Record initial scroll position — only load next page if user has actually scrolled
+    const scrollAtSentinelPlacement = window.scrollY;
 
     scrollObserver = new IntersectionObserver((entries) => {
-      console.log('[SCROLL] observer fired. isIntersecting=' + entries[0].isIntersecting + ' ratio=' + entries[0].intersectionRatio.toFixed(3));
-      if (entries[0].isIntersecting) {
-        scrollObserver.disconnect();
-        scrollObserver = null;
-        renderNextPage();
-      }
-    }, { rootMargin: '0px' });
+      const entry = entries[0];
+      // Guards against false positives:
+      // 1. Must actually be intersecting
+      if (!entry.isIntersecting) return;
+      // 2. Must have non-zero intersection (detached elements report ratio=0 but isIntersecting=true sometimes)
+      if (entry.intersectionRatio === 0) return;
+      // 3. Sentinel must still be in DOM (not mid-remove)
+      const liveSentinel = document.getElementById('scroll-sentinel');
+      if (!liveSentinel || liveSentinel !== entry.target) return;
+      // 4. User must have actually scrolled since sentinel was placed
+      // This prevents layout-reflow false positives during rapid re-renders
+      if (window.scrollY <= scrollAtSentinelPlacement + 10) return;
+      scrollObserver.disconnect();
+      scrollObserver = null;
+      renderNextPage();
+    }, { rootMargin: '0px', threshold: 0.01 });
     scrollObserver.observe(sentinel);
-    console.log('[SCROLL] observer attached to sentinel');
-  } else {
-    console.log('[SCROLL] all rendered — no sentinel');
   }
 }
 
@@ -3967,7 +3966,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.70-DEBUG</span>
+  Philinity Eats ©️ <span>Rev 10.71</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
