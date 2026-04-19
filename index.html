@@ -9,8 +9,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://accounts.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://firebasestorage.googleapis.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://www.gstatic.com https://us-central1-philinity-893d2.cloudfunctions.net/askAI; img-src 'self' data: blob: https://images.unsplash.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://i.imgur.com https://upload.wikimedia.org; frame-src https://*.firebaseio.com https://*.firebaseapp.com https://accounts.google.com https://apis.google.com; object-src 'none'; base-uri 'self'; form-action 'self';">
 <title>Philinity Eats</title>
 <!-- Favicon (inline SVG — no canvas, no JS timing issues) -->
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='52'>🍽</text></svg>">
-<link rel="apple-touch-icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='38' fill='%230f0c08'/><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='140'>🍽</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽</text></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍽</text></svg>">
 <meta name="theme-color" content="#0f0c08">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1231,7 +1231,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.55</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.56</div>
   </div>
 </div>
 
@@ -3685,7 +3685,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.55</span>
+  Philinity Eats ©️ <span>Rev 10.56</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
