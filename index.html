@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.72</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.73</div>
   </div>
 </div>
 
@@ -1319,6 +1319,13 @@
       <button class="sort-pill" id="sort-rating" onclick="setSort('rating')">⭐ Highest Rated</button>
       <button class="sort-pill" id="sort-totry" onclick="setSort('totry')">🔖 To Try First</button>
       <button class="sort-pill" id="sort-az" onclick="setSort('az')">🔤 A–Z</button>
+    </div>
+    <div class="sort-panel-divider"></div>
+    <div class="sort-panel-inner" style="align-items:center;gap:8px;flex-wrap:wrap;">
+      <span class="sort-panel-label">📋 Type</span>
+      <button class="sort-pill active" id="type-all" onclick="setEntryType('all')">All</button>
+      <button class="sort-pill" id="type-restaurant" onclick="setEntryType('restaurant')">🍽 Restaurants</button>
+      <button class="sort-pill" id="type-tasting" onclick="setEntryType('tasting')">🍷 Tastings</button>
     </div>
     <div class="sort-panel-divider"></div>
     <div class="sort-panel-inner" style="align-items:center;gap:8px;">
@@ -1394,12 +1401,19 @@
 <div class="modal-overlay" id="formModal" onclick="if(event.target===this) closeFormModal()">
   <div class="modal">
     <button class="modal-close" onclick="closeFormModal()">✕</button>
-    <div class="modal-title" id="formTitle">Add Restaurant</div>
+    <div class="modal-title" id="formTitle">Add Entry</div>
     <div class="modal-subtitle">Philinity Eats</div>
+
+    <!-- Entry Type Toggle -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;">
+      <button id="fTypeRestaurant" class="sort-pill active" onclick="setFormEntryType('restaurant')" style="flex:1;justify-content:center;">🍽 Restaurant</button>
+      <button id="fTypeTasting" class="sort-pill" onclick="setFormEntryType('tasting')" style="flex:1;justify-content:center;">🍷 Tasting</button>
+    </div>
+    <input type="hidden" id="fEntryType" value="restaurant">
 
     <div class="form-grid">
       <div class="form-group full">
-        <label>Restaurant Name</label>
+        <label id="fNameLabel">Restaurant Name</label>
         <input type="text" id="fName" placeholder="e.g. Barbacoa">
       </div>
       <div class="form-group">
@@ -1415,9 +1429,26 @@
         <div id="fCategoryPicker" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;min-height:42px"></div>
         <input type="hidden" id="fCategory">
       </div>
-      <div class="form-group">
+      <div class="form-group" id="fCuisineGroup">
         <label>Cuisine</label>
         <input type="text" id="fCuisine" placeholder="American/Steak">
+      </div>
+      <!-- Tasting-specific fields (hidden for restaurants) -->
+      <div class="form-group" id="fVarietalGroup" style="display:none;">
+        <label>Varietal / Type</label>
+        <input type="text" id="fVarietal" placeholder="e.g. Cabernet Sauvignon">
+      </div>
+      <div class="form-group" id="fVintageGroup" style="display:none;">
+        <label>Vintage / Year</label>
+        <input type="text" id="fVintage" placeholder="e.g. 2021">
+      </div>
+      <div class="form-group full" id="fProducerGroup" style="display:none;">
+        <label>Producer / Winery / Distillery</label>
+        <input type="text" id="fProducer" placeholder="e.g. Caymus Vineyards">
+      </div>
+      <div class="form-group full" id="fWhereHadGroup" style="display:none;">
+        <label>Where Had It</label>
+        <input type="text" id="fWhereHad" placeholder="e.g. Chandlers, Boise">
       </div>
       <div class="form-group">
         <label>Status</label>
@@ -1622,7 +1653,7 @@ function setCity(city) {
   currentCity = city;
   const sel = document.getElementById('citySelect');
   if (sel) sel.value = city;
-  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || city !== 'All');
+  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || currentEntryType !== 'all' || city !== 'Boise');
   applyFilters();
 }
 
@@ -1656,6 +1687,7 @@ function applyFilters() {
   let filtered = [...allRestaurants];
 
   if (currentCity !== 'All') filtered = filtered.filter(r => r.city === currentCity);
+  if (currentEntryType !== 'all') filtered = filtered.filter(r => r.entry_type === currentEntryType);
   if (currentCat !== 'All') filtered = filtered.filter(r => {
     if (Array.isArray(r.category)) return r.category.includes(currentCat);
     return r.category === currentCat;
@@ -1837,6 +1869,12 @@ function sanitizeRestaurant(r) {
   x.server = stripHTML(x.server || '');
   x.notes = stripHTML(x.notes || '');
   x.status = x.status === 'to-try' ? 'to-try' : 'tried';
+  x.entry_type = x.entry_type === 'tasting' ? 'tasting' : 'restaurant';
+  x.varietal = stripHTML(x.varietal || '');
+  x.vintage = stripHTML(x.vintage || '');
+  x.producer = stripHTML(x.producer || '');
+  x.region = stripHTML(x.region || '');
+  x.where_had = stripHTML(x.where_had || '');
   x.category = Array.isArray(x.category) ? x.category.map(stripHTML).filter(Boolean) : stripHTML(x.category || '');
   x.tags = Array.isArray(x.tags) ? x.tags.map(stripHTML).filter(Boolean) : [];
   x.drinks = Array.isArray(x.drinks) ? x.drinks.map(stripHTML).filter(Boolean) : [];
@@ -2010,6 +2048,7 @@ function renderCard(r) {
       <div class="card-top">
         <div class="card-name">${safeName}</div>
         <div class="card-badges">
+          ${r.entry_type === 'tasting' ? '<span style="background:rgba(139,90,180,0.2);border:1px solid rgba(139,90,180,0.5);color:#c084fc;font-size:9px;padding:2px 7px;border-radius:6px;font-weight:600;letter-spacing:0.5px;">🍷 Tasting</span>' : ''}
           <span class="badge-status ${statusClass}">${statusLabel}</span>
         </div>
       </div>
@@ -2099,7 +2138,8 @@ function editFromDetail() {
 function openAddModal() {
   editingId = null;
   currentRating = 0;
-  document.getElementById('formTitle').textContent = 'Add Restaurant';
+  document.getElementById('formTitle').textContent = 'Add Entry';
+  setFormEntryType('restaurant');
   document.getElementById('deleteBtn').style.display = 'none';
   clearDDData();
   renderCategoryPicker([]);
@@ -2122,7 +2162,8 @@ function openEditModal(id) {
   editingId = id;
   currentRating = r.rating || 0;
 
-  document.getElementById('formTitle').textContent = 'Edit Restaurant';
+  document.getElementById('formTitle').textContent = 'Edit Entry';
+  setFormEntryType(r.entry_type || 'restaurant');
   document.getElementById('deleteBtn').style.display = 'block';
   document.getElementById('fName').value = r.name || '';
   document.getElementById('fCity').value = r.city || '';
@@ -2130,6 +2171,10 @@ function openEditModal(id) {
   const cats = Array.isArray(r.category) ? r.category : (r.category ? r.category.split(',').map(s=>s.trim()) : []);
   renderCategoryPicker(cats);
   document.getElementById('fCuisine').value = r.cuisine || '';
+  document.getElementById('fVarietal').value = r.varietal || '';
+  document.getElementById('fVintage').value = r.vintage || '';
+  document.getElementById('fProducer').value = r.producer || '';
+  document.getElementById('fWhereHad').value = r.where_had || '';
   document.getElementById('fStatus').value = r.status || 'tried';
   document.getElementById('fServer').value = r.server || '';
   loadDDData(r);
@@ -2288,11 +2333,16 @@ async function saveEntry() {
 
   const entry = {
     id: entryId,
+    entry_type: document.getElementById('fEntryType').value || 'restaurant',
     name,
     city: document.getElementById('fCity').value.trim() || 'Boise',
     state: document.getElementById('fState').value.trim() || 'ID',
     category: selectedCategories.length ? selectedCategories : ['Good Restaurants'],
     cuisine: document.getElementById('fCuisine').value.trim(),
+    varietal: document.getElementById('fVarietal').value.trim(),
+    vintage: document.getElementById('fVintage').value.trim(),
+    producer: document.getElementById('fProducer').value.trim(),
+    where_had: document.getElementById('fWhereHad').value.trim(),
     status: document.getElementById('fStatus').value,
     rating: currentRating,
     server: document.getElementById('fServer').value.trim(),
@@ -3618,6 +3668,8 @@ window.openEditCityModal = openEditCityModal;
 window.closeEditCityModal = closeEditCityModal;
 window.confirmEditCity = confirmEditCity;
 window.setSort = setSort;
+window.setEntryType = setEntryType;
+window.setFormEntryType = setFormEntryType;
 window.openDetail = openDetail;
 window.closeDetailModal = closeDetailModal;
 window.editFromDetail = editFromDetail;
@@ -3653,6 +3705,33 @@ window.clearHighlight = clearHighlight;
 
 // ── SORT ──────────────────────────────────────────────────
 let currentSort = 'recent';
+let currentEntryType = 'all';
+
+function setEntryType(type) {
+  currentEntryType = type;
+  ['all','restaurant','tasting'].forEach(t => {
+    document.getElementById('type-' + t)?.classList.toggle('active', t === type);
+  });
+  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || currentEntryType !== 'all' || currentCity !== 'Boise');
+  const panel = document.getElementById('sortPanel');
+  if (panel) panel.style.display = 'none';
+  applyFilters();
+}
+
+function setFormEntryType(type) {
+  document.getElementById('fEntryType').value = type;
+  document.getElementById('fTypeRestaurant').classList.toggle('active', type === 'restaurant');
+  document.getElementById('fTypeTasting').classList.toggle('active', type === 'tasting');
+  // Show/hide fields
+  const isTasting = type === 'tasting';
+  document.getElementById('fNameLabel').textContent = isTasting ? 'Item Name' : 'Restaurant Name';
+  document.getElementById('fName').placeholder = isTasting ? 'e.g. Kumamoto Oysters' : 'e.g. Barbacoa';
+  document.getElementById('fCuisineGroup').style.display = isTasting ? 'none' : '';
+  document.getElementById('fVarietalGroup').style.display = isTasting ? '' : 'none';
+  document.getElementById('fVintageGroup').style.display = isTasting ? '' : 'none';
+  document.getElementById('fProducerGroup').style.display = isTasting ? '' : 'none';
+  document.getElementById('fWhereHadGroup').style.display = isTasting ? '' : 'none';
+}
 
 function toggleSortPanel() {
   const panel = document.getElementById('sortPanel');
@@ -3665,7 +3744,7 @@ function toggleSortPanel() {
 function setCityFromSelect(city) {
   currentCity = city;
   // Update sort btn dot if city is also filtered
-  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || city !== 'All');
+  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || currentEntryType !== 'all' || city !== 'Boise');
   // Close the sort panel
   const panel = document.getElementById('sortPanel');
   if (panel) panel.style.display = 'none';
@@ -3946,7 +4025,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.72</span>
+  Philinity Eats ©️ <span>Rev 10.73</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
