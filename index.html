@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.71</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.72</div>
   </div>
 </div>
 
@@ -1684,7 +1684,6 @@ function applyFilters() {
 const PAGE_SIZE = 12;
 let currentRestaurantList = [];  // full filtered+sorted list
 let renderedCount = 0;
-let scrollObserver = null;
 
 function renderContent(restaurants) {
   const container = document.getElementById('content');
@@ -1702,9 +1701,6 @@ function renderContent(restaurants) {
   currentRestaurantList = restaurants;
   renderedCount = 0;
   container.innerHTML = '';
-
-  // Disconnect existing observer
-  if (scrollObserver) { scrollObserver.disconnect(); scrollObserver = null; }
 
   // Render first page
   renderNextPage();
@@ -1758,39 +1754,23 @@ function renderNextPage() {
     });
   });
 
-  // Remove old sentinel
-  const oldSentinel = document.getElementById('scroll-sentinel');
-  if (oldSentinel) oldSentinel.remove();
+  // Remove old Load More button
+  const oldBtn = document.getElementById('load-more-btn');
+  if (oldBtn) oldBtn.remove();
 
-  // If more to load, add sentinel
+  // If more to load, add Load More button
   if (renderedCount < currentRestaurantList.length) {
-    const sentinel = document.createElement('div');
-    sentinel.id = 'scroll-sentinel';
-    sentinel.style.cssText = 'height:40px;display:flex;align-items:center;justify-content:center;color:var(--text-muted);font-size:12px;letter-spacing:0.5px;';
-    sentinel.textContent = `↓ ${renderedCount} of ${currentRestaurantList.length} — scroll for more`;
-    container.appendChild(sentinel);
-
-    // Record initial scroll position — only load next page if user has actually scrolled
-    const scrollAtSentinelPlacement = window.scrollY;
-
-    scrollObserver = new IntersectionObserver((entries) => {
-      const entry = entries[0];
-      // Guards against false positives:
-      // 1. Must actually be intersecting
-      if (!entry.isIntersecting) return;
-      // 2. Must have non-zero intersection (detached elements report ratio=0 but isIntersecting=true sometimes)
-      if (entry.intersectionRatio === 0) return;
-      // 3. Sentinel must still be in DOM (not mid-remove)
-      const liveSentinel = document.getElementById('scroll-sentinel');
-      if (!liveSentinel || liveSentinel !== entry.target) return;
-      // 4. User must have actually scrolled since sentinel was placed
-      // This prevents layout-reflow false positives during rapid re-renders
-      if (window.scrollY <= scrollAtSentinelPlacement + 10) return;
-      scrollObserver.disconnect();
-      scrollObserver = null;
-      renderNextPage();
-    }, { rootMargin: '0px', threshold: 0.01 });
-    scrollObserver.observe(sentinel);
+    const remaining = currentRestaurantList.length - renderedCount;
+    const nextBatch = Math.min(PAGE_SIZE, remaining);
+    const btn = document.createElement('button');
+    btn.id = 'load-more-btn';
+    btn.type = 'button';
+    btn.textContent = `↓ Load ${nextBatch} more  (${renderedCount} of ${currentRestaurantList.length} shown)`;
+    btn.style.cssText = 'display:block;margin:24px auto;padding:12px 28px;background:var(--surface2);border:1px solid var(--amber-dim);color:var(--amber-light);border-radius:24px;font-size:13px;font-family:\'DM Sans\',sans-serif;letter-spacing:0.5px;cursor:pointer;transition:all 0.15s;min-height:44px;';
+    btn.onmouseover = () => { btn.style.borderColor = 'var(--amber)'; btn.style.background = 'var(--surface3)'; };
+    btn.onmouseout = () => { btn.style.borderColor = 'var(--amber-dim)'; btn.style.background = 'var(--surface2)'; };
+    btn.onclick = () => renderNextPage();
+    container.appendChild(btn);
   }
 }
 
@@ -3966,7 +3946,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.71</span>
+  Philinity Eats ©️ <span>Rev 10.72</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
