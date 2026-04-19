@@ -1235,7 +1235,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.52</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.54</div>
   </div>
 </div>
 
@@ -2880,6 +2880,70 @@ async function cleanupUndefined() {
   showToast(`🧹 Removed ${toDelete.length} bad entry(ies)`);
 }
 
+// ─── DATA LOADER ───────────────────────────────────────────
+// Refactored so we can re-call on visibility changes and reconnects.
+// Bot 1's diagnosis: mobile Chrome kills the onValue listener when the PWA
+// is backgrounded. When user returns, listener is dead and data appears empty.
+// Fix: re-fetch and re-subscribe every time the app becomes visible again.
+let dataListenerActive = false;
+let currentDataUnsubscribe = null;
+
+async function loadDataOnce() {
+  try {
+    const snap = await dbGet(EATS_PATH);
+    const val = snap.val();
+    // Guard: null snapshot during transient issues — keep existing data
+    if (val === null || val === undefined) {
+      console.warn('[Eats] loadDataOnce got null — keeping existing ' + allRestaurants.length + ' restaurants');
+      return false;
+    }
+    const keys = Object.keys(val).filter(k => k !== 'categories');
+    // Guard: empty keys when we had data — keep existing
+    if (keys.length === 0 && allRestaurants.length > 0) {
+      console.warn('[Eats] loadDataOnce got 0 keys but had ' + allRestaurants.length + ' — keeping');
+      return false;
+    }
+    allRestaurants = keys.map(id => sanitizeRestaurant({ id, ...val[id] }));
+    applyFilters();
+    console.log('[Eats] Loaded ' + allRestaurants.length + ' restaurants');
+    return true;
+  } catch(e) {
+    console.error('[Eats] loadDataOnce failed:', e);
+    return false;
+  }
+}
+
+function subscribeRealtime() {
+  // Tear down any existing listener before re-subscribing
+  if (currentDataUnsubscribe) {
+    try { currentDataUnsubscribe(); } catch(_) {}
+    currentDataUnsubscribe = null;
+  }
+  // onValue returns an unsubscribe function — use modular SDK call directly
+  // to capture it (dbOn wrapper doesn't return it)
+  const dataPathRef = dbRef(EATS_PATH);
+  currentDataUnsubscribe = onValue(dataPathRef, snap => {
+    const val = snap.val();
+    // Guard: null snapshot during reconnect — keep existing data
+    if (val === null || val === undefined) {
+      console.warn('[Eats] Realtime listener got null — keeping existing data');
+      return;
+    }
+    const keys = Object.keys(val).filter(k => k !== 'categories');
+    // Guard: empty data when we already had some — keep existing
+    if (keys.length === 0 && allRestaurants.length > 0) {
+      console.warn('[Eats] Realtime listener got empty data — keeping existing');
+      return;
+    }
+    allRestaurants = keys.map(id => sanitizeRestaurant({ id, ...val[id] }));
+    applyFilters();
+  }, error => {
+    console.error('[Eats] Realtime listener error:', error);
+    dataListenerActive = false;
+  });
+  dataListenerActive = true;
+}
+
 // ─── INIT — only called after auth resolves ───────────────
 async function init() {
   try {
@@ -2904,38 +2968,50 @@ async function init() {
       renderCatChips();
     }
 
-    // Load data — await the first get so mobile has time to settle auth token
     // Small delay for mobile auth token to fully settle before DB read
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    const loadData = async () => {
-      try {
-        const snap = await dbGet(EATS_PATH);
-        const data = snap.val() || {};
-        allRestaurants = Object.keys(data).filter(k => k !== 'categories').map(id => sanitizeRestaurant({ id, ...data[id] }));
-        applyFilters();
-      } catch(e) {
-        console.error('Initial data load failed:', e);
-        // Retry once after 2 seconds for mobile
-        setTimeout(async () => {
-          try {
-            const snap = await dbGet(EATS_PATH);
-            const data = snap.val() || {};
-            allRestaurants = Object.keys(data).filter(k => k !== 'categories').map(id => sanitizeRestaurant({ id, ...data[id] }));
-            applyFilters();
-          } catch(e2) { console.error('Retry failed:', e2); }
-        }, 2000);
-      }
-    };
-    await loadData();
+    // Initial data load
+    const ok = await loadDataOnce();
+    if (!ok) {
+      // Retry once after 2 seconds for slow mobile
+      setTimeout(() => loadDataOnce(), 2000);
+    }
 
-    // Then subscribe for real-time updates
-    dbOn(EATS_PATH, snap => {
-      const data = snap.val() || {};
-      allRestaurants = Object.keys(data).filter(k => k !== 'categories').map(id => sanitizeRestaurant({ id, ...data[id] }));
-      applyFilters();
-    }, error => {
-      console.error('Realtime db error:', error);
+    // Subscribe for real-time updates
+    subscribeRealtime();
+
+    // ─── FIX: Mobile lifecycle handlers ──────────────────
+    // When PWA returns to foreground, listener may be dead.
+    // Re-fetch data + re-subscribe. This is the REAL fix for
+    // "data disappears after phone sleeps" issue.
+    document.addEventListener('visibilitychange', async () => {
+      if (document.visibilityState === 'visible' && auth.currentUser) {
+        console.log('[Eats] App visible — refreshing data');
+        await loadDataOnce();
+        subscribeRealtime();
+      }
+    });
+
+    // Network came back — reconnect
+    window.addEventListener('online', async () => {
+      if (auth.currentUser) {
+        console.log('[Eats] Back online — refreshing data');
+        await loadDataOnce();
+        subscribeRealtime();
+      }
+    });
+
+    // Page focus (some mobile browsers don't fire visibilitychange reliably)
+    window.addEventListener('focus', async () => {
+      if (auth.currentUser) {
+        const now = Date.now();
+        // Debounce — don't thrash if focus fires repeatedly
+        if (!window._lastFocusRefresh || now - window._lastFocusRefresh > 5000) {
+          window._lastFocusRefresh = now;
+          await loadDataOnce();
+        }
+      }
     });
 
   } catch(e) {
@@ -3597,7 +3673,7 @@ window.clearHighlight = clearHighlight;
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.52</span>
+  Philinity Eats ©️ <span>Rev 10.54</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="cleanupUndefined()">🧹 Cleanup</span>
 </div>
