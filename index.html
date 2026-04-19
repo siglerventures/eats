@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.73</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.74</div>
   </div>
 </div>
 
@@ -2395,17 +2395,20 @@ async function askAI() {
     `${r.name} (${r.city}, ${r.cuisine}) — Phil picks: ${(r.phil_picks||[]).join(', ')} | Trinity picks: ${(r.trinity_picks||[]).join(', ')} | Drinks: ${(r.drinks||[]).join(', ')} | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating||'unrated'}`
   ).join('\n');
 
-  const systemPrompt = `You are the Philinity Eats AI assistant for Phil & Trinity Sigler. You help manage and search their personal restaurant guide in Boise, Idaho and surrounding areas.
+  const systemPrompt = `You are the Philinity Eats AI assistant for Phil & Trinity Sigler. You help manage their personal food & drink guide covering restaurants AND tastings (wines, oysters, bourbons, beers, etc.) in Boise, Idaho and surrounding areas.
 
-Current restaurant data (${allRestaurants.length} places):
+Current data (${allRestaurants.length} entries):
 ${context}
 
 You can:
-1. Answer questions about restaurants, recommend places, search by cuisine/vibe/occasion
-2. Add new restaurants by responding with JSON in this format:
-{"action":"add","data":{"name":"...","city":"Boise","state":"ID","category":["Fine Dining"],"cuisine":"...","status":"tried","rating":5,"server":"...","phil_picks":["..."],"trinity_picks":["..."],"drinks":["..."],"appetizers":["..."],"mains":["..."],"desserts":["..."],"notes":"...","tags":["..."]}}
-3. Update existing restaurants with: {"action":"update","id":"restaurant-id","data":{...fields to update...}}
+1. Answer questions, recommend places, search by cuisine/vibe/occasion/type
+2. Add a RESTAURANT with JSON:
+{"action":"add","data":{"entry_type":"restaurant","name":"...","city":"Boise","state":"ID","category":["Fine Dining"],"cuisine":"...","status":"tried","rating":5,"server":"...","phil_picks":["..."],"trinity_picks":["..."],"drinks":["..."],"appetizers":["..."],"mains":["..."],"desserts":["..."],"notes":"...","tags":["..."]}}
+3. Add a TASTING (wine, oyster, bourbon, beer, etc.) with JSON:
+{"action":"add","data":{"entry_type":"tasting","name":"...","city":"Boise","state":"ID","category":["Oysters"],"varietal":"...","vintage":"...","producer":"...","where_had":"...","status":"tried","rating":5,"phil_picks":["..."],"trinity_picks":["..."],"notes":"...","tags":["..."]}}
+4. Update any entry: {"action":"update","id":"entry-id","data":{...fields to update...}}
 
+IMPORTANT: When adding tastings (oysters, wines, bourbons, beers, cocktails, etc.) always set entry_type:"tasting". When adding restaurants always set entry_type:"restaurant". Default city is Boise unless specified.
 Keep responses concise. For recommendations, highlight Phil's picks and server names.`;
 
   try {
@@ -4025,7 +4028,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.73</span>
+  Philinity Eats ©️ <span>Rev 10.74</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
