@@ -1288,7 +1288,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.62</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.63</div>
   </div>
 </div>
 
@@ -1319,11 +1319,13 @@
       <button class="sort-pill" id="sort-az" onclick="setSort('az')">🔤 A–Z</button>
     </div>
     <div class="sort-panel-divider"></div>
-    <div class="sort-panel-inner" style="align-items:center;">
+    <div class="sort-panel-inner" style="align-items:center;gap:8px;">
       <span class="sort-panel-label">🌆 City</span>
       <select id="citySelect" onchange="setCityFromSelect(this.value)" class="city-select">
         <option value="All">All Cities</option>
       </select>
+      <button class="icon-btn" onclick="openAddCityModal()" title="Add City" style="font-size:18px;min-width:36px;min-height:36px;">➕</button>
+      <button class="icon-btn" onclick="openEditCityModal()" title="Edit City" style="font-size:18px;min-width:36px;min-height:36px;">✏️</button>
     </div>
   </div>
 </div>
@@ -3497,8 +3499,68 @@ window.setStarFilter = setStarFilter;
 window.toggleToTry = toggleToTry;
 window.applyFilters = applyFilters;
 window.toggleSortPanel = toggleSortPanel;
+
+// ── CITY MANAGEMENT ───────────────────────────────────────
+function openAddCityModal() {
+  document.getElementById('newCityInput').value = '';
+  document.getElementById('addCityModal').classList.add('open');
+}
+function closeAddCityModal() {
+  document.getElementById('addCityModal').classList.remove('open');
+}
+function confirmAddCity() {
+  const name = document.getElementById('newCityInput').value.trim();
+  if (!name) return;
+  // Set as current city filter so user sees it immediately
+  // City will appear in dropdown once a restaurant is added with this city
+  currentCity = name;
+  const sel = document.getElementById('citySelect');
+  if (sel) {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    sel.appendChild(opt);
+    sel.value = name;
+  }
+  closeAddCityModal();
+  applyFilters();
+  showToast(`🌆 City "${name}" ready — add a restaurant to make it permanent`);
+}
+
+function openEditCityModal() {
+  const sel = document.getElementById('editCitySelect');
+  const cities = [...new Set(allRestaurants.map(r => r.city).filter(Boolean))].sort();
+  sel.innerHTML = cities.map(c => `<option value="${c}">${c}</option>`).join('');
+  document.getElementById('editCityInput').value = '';
+  document.getElementById('editCityStatus').textContent = '';
+  document.getElementById('editCityModal').classList.add('open');
+}
+function closeEditCityModal() {
+  document.getElementById('editCityModal').classList.remove('open');
+}
+async function confirmEditCity() {
+  const oldCity = document.getElementById('editCitySelect').value;
+  const newCity = document.getElementById('editCityInput').value.trim();
+  if (!newCity || newCity === oldCity) return;
+  const affected = allRestaurants.filter(r => r.city === oldCity);
+  if (!confirm(`Rename "${oldCity}" to "${newCity}" across ${affected.length} restaurant(s)?`)) return;
+  document.getElementById('editCityStatus').textContent = `⏳ Updating ${affected.length} restaurants...`;
+  const updates = {};
+  affected.forEach(r => { updates[EATS_PATH + '/' + r.id + '/city'] = newCity; });
+  await dbUpdate(updates);
+  document.getElementById('editCityStatus').textContent = `✅ Done! ${affected.length} restaurants updated.`;
+  setTimeout(closeEditCityModal, 1200);
+  showToast(`✅ Renamed "${oldCity}" → "${newCity}"`);
+}
+
 window.setCityFromSelect = setCityFromSelect;
 window.buildCityDropdown = buildCityDropdown;
+window.openAddCityModal = openAddCityModal;
+window.closeAddCityModal = closeAddCityModal;
+window.confirmAddCity = confirmAddCity;
+window.openEditCityModal = openEditCityModal;
+window.closeEditCityModal = closeEditCityModal;
+window.confirmEditCity = confirmEditCity;
 window.setSort = setSort;
 window.openDetail = openDetail;
 window.closeDetailModal = closeDetailModal;
@@ -3795,9 +3857,43 @@ function sortRestaurants(arr) {
   </div>
 </div>
 
+<!-- ADD CITY MODAL -->
+<div class="modal-overlay" id="addCityModal" onclick="if(event.target===this) closeAddCityModal()">
+  <div class="modal" style="max-width:380px;">
+    <button class="modal-close" onclick="closeAddCityModal()">✕</button>
+    <div class="modal-title">➕ Add City</div>
+    <div class="modal-subtitle">New city will appear after adding a restaurant with that city</div>
+    <label style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:16px;">City Name</label>
+    <input type="text" id="newCityInput" placeholder="e.g. Moscow" style="width:100%;background:var(--surface2);border:1px solid var(--border-amber);color:var(--text);padding:10px 12px;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeAddCityModal()">Cancel</button>
+      <button class="btn btn-amber" onclick="confirmAddCity()">Add City</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT CITY MODAL -->
+<div class="modal-overlay" id="editCityModal" onclick="if(event.target===this) closeEditCityModal()">
+  <div class="modal" style="max-width:420px;">
+    <button class="modal-close" onclick="closeEditCityModal()">✕</button>
+    <div class="modal-title">✏️ Edit City</div>
+    <div class="modal-subtitle">Rename a city across all restaurants</div>
+    <label style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);display:block;margin-bottom:6px;margin-top:16px;">Current City</label>
+    <select id="editCitySelect" class="city-select" style="width:100%;max-width:100%;margin-bottom:14px;">
+    </select>
+    <label style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);display:block;margin-bottom:6px;">New Name</label>
+    <input type="text" id="editCityInput" placeholder="New city name..." style="width:100%;background:var(--surface2);border:1px solid var(--border-amber);color:var(--text);padding:10px 12px;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;">
+    <div id="editCityStatus" style="font-size:12px;color:var(--amber);margin-top:8px;min-height:16px;"></div>
+    <div class="modal-actions" style="margin-top:16px;">
+      <button class="btn btn-ghost" onclick="closeEditCityModal()">Cancel</button>
+      <button class="btn btn-amber" onclick="confirmEditCity()">Rename</button>
+    </div>
+  </div>
+</div>
+
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.62</span>
+  Philinity Eats ©️ <span>Rev 10.63</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
