@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.77</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.78</div>
   </div>
 </div>
 
@@ -1691,7 +1691,14 @@ function applyFilters() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
   let filtered = [...allRestaurants];
 
-  if (currentCity !== 'All') filtered = filtered.filter(r => r.city === currentCity);
+  // City filter — when search is active, tastings bypass the city filter
+  // (a tasting in Walla Walla should still be findable while browsing Boise)
+  if (currentCity !== 'All') {
+    filtered = filtered.filter(r => {
+      if (search && r.entry_type === 'tasting') return true;
+      return r.city === currentCity;
+    });
+  }
   if (currentEntryType !== 'all') filtered = filtered.filter(r => r.entry_type === currentEntryType);
   if (currentCat !== 'All') filtered = filtered.filter(r => {
     if (Array.isArray(r.category)) return r.category.includes(currentCat);
@@ -1703,10 +1710,12 @@ function applyFilters() {
   if (search) {
     filtered = filtered.filter(r => {
       const haystack = [
-        r.name, r.city, r.cuisine, r.category,
+        r.name, r.city, r.state, r.cuisine, r.category,
         ...(r.drinks || []), ...(r.appetizers || []), ...(r.mains || []),
         ...(r.desserts || []), ...(r.phil_picks || []), ...(r.trinity_picks || []),
-        ...(r.tags || []), r.notes, r.server
+        ...(r.tags || []), r.notes, r.server,
+        // Tasting-specific fields — so searching "cabernet" or "silver oak" finds wines
+        r.varietal, r.vintage, r.producer, r.where_had, r.region, r.entry_type
       ].join(' ').toLowerCase();
       return haystack.includes(search);
     });
@@ -4059,7 +4068,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.77</span>
+  Philinity Eats ©️ <span>Rev 10.78</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
