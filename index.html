@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.76</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.77</div>
   </div>
 </div>
 
@@ -1361,6 +1361,11 @@
 <!-- FILTERS -->
 <div class="filters">
   <div class="filters-inner">
+    <span class="filter-label">🌆 City</span>
+    <select id="citySelectBar" onchange="setCityFromSelect(this.value)" class="city-select" style="max-width:140px;padding:4px 10px;font-size:12px;min-height:32px;">
+      <option value="Boise">Boise</option>
+    </select>
+    <div class="filter-sep"></div>
     <span class="filter-label">Type</span>
     <button class="chip active cat-chip" onclick="setCat('All', this)">All</button>
     <div id="catChips" style="display:contents">
@@ -2836,6 +2841,8 @@ function resetHome() {
   currentCity = 'Boise';
   const citySelectEl = document.getElementById('citySelect');
   if (citySelectEl) citySelectEl.value = 'Boise';
+  const citySelectBarEl = document.getElementById('citySelectBar');
+  if (citySelectBarEl) citySelectBarEl.value = 'Boise';
 
   // Reset category chips
   currentCat = 'All';
@@ -3772,10 +3779,18 @@ function setCityFromSelect(city) {
 
 function buildCityDropdown() {
   const cities = [...new Set(allRestaurants.map(r => r.city).filter(Boolean))].sort();
+  // Update sort panel dropdown
   const sel = document.getElementById('citySelect');
-  if (!sel) return;
-  sel.innerHTML = '<option value="All">All Cities</option>' +
-    cities.map(c => `<option value="${c}" ${c === currentCity ? 'selected' : ''}>${c}</option>`).join('');
+  if (sel) {
+    sel.innerHTML = '<option value="All">All Cities</option>' +
+      cities.map(c => `<option value="${c}" ${c === currentCity ? 'selected' : ''}>${c}</option>`).join('');
+  }
+  // Update filter bar dropdown
+  const selBar = document.getElementById('citySelectBar');
+  if (selBar) {
+    selBar.innerHTML = '<option value="All">All Cities</option>' +
+      cities.map(c => `<option value="${c}" ${c === currentCity ? 'selected' : ''}>${c}</option>`).join('');
+  }
 }
 
 function setSort(mode) {
@@ -4044,7 +4059,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.76</span>
+  Philinity Eats ©️ <span>Rev 10.77</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
