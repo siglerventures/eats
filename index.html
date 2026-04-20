@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.74</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.75</div>
   </div>
 </div>
 
@@ -2453,6 +2453,17 @@ Keep responses concise. For recommendations, highlight Phil's picks and server n
         const cmd = JSON.parse(jsonMatch[0]);
         if (cmd.action === 'add' && cmd.data?.name) {
           const id = cmd.data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+          // Auto-detect entry_type if AI didn't set it
+          const tastingKeywords = ['oyster','wine','bourbon','whiskey','beer','cocktail','tasting','spirits','champagne','sake','mead','cider','port','brandy','rum','gin','vodka','tequila','mezcal'];
+          const isTasting = cmd.data.entry_type === 'tasting' ||
+            tastingKeywords.some(k => cmd.data.name?.toLowerCase().includes(k)) ||
+            tastingKeywords.some(k => (cmd.data.tags || []).join(' ').toLowerCase().includes(k)) ||
+            (cmd.data.category || []).some(c => tastingKeywords.some(k => c.toLowerCase().includes(k)));
+          if (!cmd.data.entry_type) cmd.data.entry_type = isTasting ? 'tasting' : 'restaurant';
+          // Default city to Boise for tastings if not specified or set to a region name
+          if (isTasting && (!cmd.data.city || cmd.data.city === cmd.data.name.split(' ')[0])) {
+            cmd.data.city = 'Boise';
+          }
           const entry = { ...cmd.data, id, lastUpdated: Date.now() };
           await dbSet(`${EATS_PATH}/${id}`, entry);
           appendAIBubble('✅ Added ' + cmd.data.name + ' to your guide!', 'success');
@@ -4028,7 +4039,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.74</span>
+  Philinity Eats ©️ <span>Rev 10.75</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
