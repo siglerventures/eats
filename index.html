@@ -1185,6 +1185,54 @@
     font-weight: 600;
   }
 
+  /* ENTRY TYPE TOGGLE (v10.73 Tastings feature) */
+  .entry-type-toggle {
+    display: flex;
+    gap: 8px;
+    padding: 6px;
+    background: var(--surface2);
+    border: 1px solid var(--border-amber);
+    border-radius: 10px;
+    margin-bottom: 4px;
+  }
+  .entry-type-btn {
+    flex: 1;
+    padding: 9px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    transition: all 0.15s;
+  }
+  .entry-type-btn:hover { color: var(--text); }
+  .entry-type-btn.selected[data-type="restaurant"] {
+    background: var(--amber);
+    color: #0f0c08;
+    font-weight: 600;
+  }
+  .entry-type-btn.selected[data-type="tasting"] {
+    background: #8b5cf6;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* TASTING BADGE on cards (purple) */
+  .badge-tasting {
+    background: rgba(139,92,246,0.18);
+    color: #c4a8fa;
+    border: 1px solid rgba(139,92,246,0.4);
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+
 
   /* HIGHLIGHT */
   .card.highlighted {
@@ -1290,7 +1338,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.75</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.73</div>
   </div>
 </div>
 
@@ -1321,11 +1369,11 @@
       <button class="sort-pill" id="sort-az" onclick="setSort('az')">🔤 A–Z</button>
     </div>
     <div class="sort-panel-divider"></div>
-    <div class="sort-panel-inner" style="align-items:center;gap:8px;flex-wrap:wrap;">
-      <span class="sort-panel-label">📋 Type</span>
-      <button class="sort-pill active" id="type-all" onclick="setEntryType('all')">All</button>
-      <button class="sort-pill" id="type-restaurant" onclick="setEntryType('restaurant')">🍽 Restaurants</button>
-      <button class="sort-pill" id="type-tasting" onclick="setEntryType('tasting')">🍷 Tastings</button>
+    <div class="sort-panel-inner" style="align-items:center;gap:8px;">
+      <span class="sort-panel-label">Type</span>
+      <button class="sort-pill active" id="type-all" onclick="setTypeFilter('all')">All</button>
+      <button class="sort-pill" id="type-restaurant" onclick="setTypeFilter('restaurant')">🍽 Restaurants</button>
+      <button class="sort-pill" id="type-tasting" onclick="setTypeFilter('tasting')">🍷 Tastings</button>
     </div>
     <div class="sort-panel-divider"></div>
     <div class="sort-panel-inner" style="align-items:center;gap:8px;">
@@ -1401,17 +1449,17 @@
 <div class="modal-overlay" id="formModal" onclick="if(event.target===this) closeFormModal()">
   <div class="modal">
     <button class="modal-close" onclick="closeFormModal()">✕</button>
-    <div class="modal-title" id="formTitle">Add Entry</div>
+    <div class="modal-title" id="formTitle">Add Restaurant</div>
     <div class="modal-subtitle">Philinity Eats</div>
 
-    <!-- Entry Type Toggle -->
-    <div style="display:flex;gap:8px;margin-bottom:16px;">
-      <button id="fTypeRestaurant" class="sort-pill active" onclick="setFormEntryType('restaurant')" style="flex:1;justify-content:center;">🍽 Restaurant</button>
-      <button id="fTypeTasting" class="sort-pill" onclick="setFormEntryType('tasting')" style="flex:1;justify-content:center;">🍷 Tasting</button>
+    <!-- Entry Type Toggle (v10.73 Tastings feature) -->
+    <div class="entry-type-toggle" style="margin-top:10px">
+      <button type="button" class="entry-type-btn selected" data-type="restaurant" onclick="setEntryType('restaurant')">🍽 Restaurant</button>
+      <button type="button" class="entry-type-btn" data-type="tasting" onclick="setEntryType('tasting')">🍷 Tasting</button>
     </div>
     <input type="hidden" id="fEntryType" value="restaurant">
 
-    <div class="form-grid">
+    <div class="form-grid" style="margin-top:14px">
       <div class="form-group full">
         <label id="fNameLabel">Restaurant Name</label>
         <input type="text" id="fName" placeholder="e.g. Barbacoa">
@@ -1429,26 +1477,25 @@
         <div id="fCategoryPicker" style="display:flex;flex-wrap:wrap;gap:6px;padding:8px;background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;min-height:42px"></div>
         <input type="hidden" id="fCategory">
       </div>
-      <div class="form-group" id="fCuisineGroup">
+      <div class="form-group restaurant-only">
         <label>Cuisine</label>
         <input type="text" id="fCuisine" placeholder="American/Steak">
       </div>
-      <!-- Tasting-specific fields (hidden for restaurants) -->
-      <div class="form-group" id="fVarietalGroup" style="display:none;">
+      <div class="form-group tasting-only" style="display:none">
         <label>Varietal / Type</label>
-        <input type="text" id="fVarietal" placeholder="e.g. Cabernet Sauvignon">
+        <input type="text" id="fVarietal" placeholder="e.g. Cabernet Sauvignon, Bourbon, Oyster">
       </div>
-      <div class="form-group" id="fVintageGroup" style="display:none;">
+      <div class="form-group tasting-only" style="display:none">
         <label>Vintage / Year</label>
-        <input type="text" id="fVintage" placeholder="e.g. 2021">
+        <input type="text" id="fVintage" placeholder="e.g. 2019, N/A">
       </div>
-      <div class="form-group full" id="fProducerGroup" style="display:none;">
-        <label>Producer / Winery / Distillery</label>
-        <input type="text" id="fProducer" placeholder="e.g. Caymus Vineyards">
+      <div class="form-group tasting-only" style="display:none">
+        <label>Producer / Winery</label>
+        <input type="text" id="fProducer" placeholder="e.g. Silver Oak">
       </div>
-      <div class="form-group full" id="fWhereHadGroup" style="display:none;">
+      <div class="form-group tasting-only" style="display:none">
         <label>Where Had It</label>
-        <input type="text" id="fWhereHad" placeholder="e.g. Chandlers, Boise">
+        <input type="text" id="fWhereHadIt" placeholder="e.g. Chandlers Steakhouse">
       </div>
       <div class="form-group">
         <label>Status</label>
@@ -1467,11 +1514,11 @@
           <button class="star-btn" onclick="setRating(5)">★</button>
         </div>
       </div>
-      <div class="form-group">
+      <div class="form-group restaurant-only">
         <label>Ask for (Server)</label>
         <input type="text" id="fServer" placeholder="Patrick">
       </div>
-      <div class="form-group full">
+      <div class="form-group full restaurant-only">
         <div id="dd-fields-container">
           <!-- Drag-drop fields rendered by JS -->
         </div>
@@ -1653,7 +1700,7 @@ function setCity(city) {
   currentCity = city;
   const sel = document.getElementById('citySelect');
   if (sel) sel.value = city;
-  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || currentEntryType !== 'all' || city !== 'Boise');
+  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || city !== 'All');
   applyFilters();
 }
 
@@ -1687,11 +1734,17 @@ function applyFilters() {
   let filtered = [...allRestaurants];
 
   if (currentCity !== 'All') filtered = filtered.filter(r => r.city === currentCity);
-  if (currentEntryType !== 'all') filtered = filtered.filter(r => r.entry_type === currentEntryType);
   if (currentCat !== 'All') filtered = filtered.filter(r => {
     if (Array.isArray(r.category)) return r.category.includes(currentCat);
     return r.category === currentCat;
   });
+  // Type filter (All / Restaurants / Tastings) — entries without entry_type default to 'restaurant'
+  if (currentTypeFilter !== 'all') {
+    filtered = filtered.filter(r => {
+      const type = r.entry_type === 'tasting' ? 'tasting' : 'restaurant';
+      return type === currentTypeFilter;
+    });
+  }
   if (showToTryOnly) filtered = filtered.filter(r => r.status === 'to-try');
   if (starFilter > 0) filtered = filtered.filter(r => (r.rating || 0) === starFilter);
 
@@ -1701,7 +1754,9 @@ function applyFilters() {
         r.name, r.city, r.cuisine, r.category,
         ...(r.drinks || []), ...(r.appetizers || []), ...(r.mains || []),
         ...(r.desserts || []), ...(r.phil_picks || []), ...(r.trinity_picks || []),
-        ...(r.tags || []), r.notes, r.server
+        ...(r.tags || []), r.notes, r.server,
+        // Tasting fields included in search — unified search across both types
+        r.varietal, r.vintage, r.producer, r.whereHadIt
       ].join(' ').toLowerCase();
       return haystack.includes(search);
     });
@@ -1859,6 +1914,28 @@ function sanitizeCategoryObj(cat) {
   };
 }
 
+// ── KEYWORD DETECTION for AI entry_type fallback (v10.73) ──
+const TASTING_KEYWORDS = [
+  'oyster','oysters','wine','wines','bourbon','whiskey','whisky','scotch',
+  'cocktail','cocktails','beer','beers','cheese','coffee','tea','spirits',
+  'champagne','sake','mead','cider','port','brandy','rum','gin','vodka',
+  'tequila','mezcal'
+];
+
+function detectEntryTypeFromKeywords(data) {
+  if (!data) return false;
+  const haystack = [
+    data.name || '',
+    ...(Array.isArray(data.category) ? data.category : [data.category || '']),
+    ...(Array.isArray(data.tags) ? data.tags : [data.tags || ''])
+  ].join(' ').toLowerCase();
+  return TASTING_KEYWORDS.some(kw => {
+    // word-boundary match so "porterhouse" doesn't match "port"
+    const re = new RegExp('(^|[^a-z])' + kw + '([^a-z]|$)', 'i');
+    return re.test(haystack);
+  });
+}
+
 function sanitizeRestaurant(r) {
   const x = sanitizeValue(r || {});
   x.id = stripHTML(x.id || '');
@@ -1869,12 +1946,13 @@ function sanitizeRestaurant(r) {
   x.server = stripHTML(x.server || '');
   x.notes = stripHTML(x.notes || '');
   x.status = x.status === 'to-try' ? 'to-try' : 'tried';
-  x.entry_type = x.entry_type === 'tasting' ? 'tasting' : 'restaurant';
+  // entry_type: whitelist to 'restaurant' or 'tasting', default 'restaurant' for backward compat
+  x.entry_type = (x.entry_type === 'tasting') ? 'tasting' : 'restaurant';
+  // Tasting-specific fields — empty string if not present
   x.varietal = stripHTML(x.varietal || '');
   x.vintage = stripHTML(x.vintage || '');
   x.producer = stripHTML(x.producer || '');
-  x.region = stripHTML(x.region || '');
-  x.where_had = stripHTML(x.where_had || '');
+  x.whereHadIt = stripHTML(x.whereHadIt || '');
   x.category = Array.isArray(x.category) ? x.category.map(stripHTML).filter(Boolean) : stripHTML(x.category || '');
   x.tags = Array.isArray(x.tags) ? x.tags.map(stripHTML).filter(Boolean) : [];
   x.drinks = Array.isArray(x.drinks) ? x.drinks.map(stripHTML).filter(Boolean) : [];
@@ -2040,19 +2118,35 @@ function renderCard(r) {
   const statusClass = r.status === 'tried' ? 'status-tried' : 'status-to-try';
   const statusLabel = r.status === 'tried' ? '✅ Tried' : '🔖 To Try';
 
+  // Tasting-specific
+  const isTasting = r.entry_type === 'tasting';
+  const safeVarietal = stripHTML(r.varietal || '');
+  const safeVintage = stripHTML(r.vintage || '');
+  const safeProducer = stripHTML(r.producer || '');
+  const safeWhereHadIt = stripHTML(r.whereHadIt || '');
+  // Subtitle under name: for tastings show "Producer · Vintage" or "Varietal"; for restaurants show cuisine
+  let subtitle = safeCuisine;
+  if (isTasting) {
+    const parts = [];
+    if (safeProducer) parts.push(safeProducer);
+    if (safeVarietal) parts.push(safeVarietal);
+    if (safeVintage) parts.push(safeVintage);
+    subtitle = parts.join(' · ');
+  }
+
   const imgUrl = getImageUrl(r);
   return `
     <div class="card" data-id="${escapeAttr(r.id)}" onclick="openDetail(\'${escapeAttr(r.id)}\')">
       <img class="card-img" src="${escapeAttr(imgUrl)}" alt="${escapeAttr(r.name)}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-      <div class="card-img-placeholder" style="display:none">${getCuisineEmoji(r.cuisine)}</div>
+      <div class="card-img-placeholder" style="display:none">${isTasting ? '🍷' : getCuisineEmoji(r.cuisine)}</div>
       <div class="card-top">
         <div class="card-name">${safeName}</div>
         <div class="card-badges">
-          ${r.entry_type === 'tasting' ? '<span style="background:rgba(139,90,180,0.2);border:1px solid rgba(139,90,180,0.5);color:#c084fc;font-size:9px;padding:2px 7px;border-radius:6px;font-weight:600;letter-spacing:0.5px;">🍷 Tasting</span>' : ''}
+          ${isTasting ? '<span class="badge-tasting">🍷 Tasting</span>' : ''}
           <span class="badge-status ${statusClass}">${statusLabel}</span>
         </div>
       </div>
-      <div class="card-cuisine">${safeCuisine}</div>
+      ${subtitle ? `<div class="card-cuisine">${subtitle}</div>` : ''}
       <div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">
         ${(Array.isArray(r.category) ? r.category : [r.category]).filter(Boolean).map(c => {
           const cat = categories.find(x => x.name === c);
@@ -2063,6 +2157,7 @@ function renderCard(r) {
       ${picks.length ? `<div class="card-picks" style="margin-top:8px"><strong>Phil's Picks</strong><br>${picks.join(', ')}</div>` : ''}
       ${trinityPicks.length ? `<div class="card-picks" style="margin-top:4px"><strong>Trinity's Picks</strong><br>${trinityPicks.join(', ')}</div>` : ''}
       ${safeServer ? `<div class="card-server">👤 ${safeServer}</div>` : ''}
+      ${isTasting && safeWhereHadIt ? `<div class="card-server" style="color:#c4a8fa">📍 Had at ${safeWhereHadIt}</div>` : ''}
       ${safeNotes ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-style:italic;line-height:1.4">${safeNotes.length > 80 ? safeNotes.substring(0,80) + '...' : safeNotes}</div>` : ''}
       ${r.lastUpdated ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px">Updated ${new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>` : ''}
       ${safeTags.length ? `<div class="card-tags">${safeTags.slice(0,4).map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
@@ -2138,13 +2233,12 @@ function editFromDetail() {
 function openAddModal() {
   editingId = null;
   currentRating = 0;
-  document.getElementById('formTitle').textContent = 'Add Entry';
-  setFormEntryType('restaurant');
   document.getElementById('deleteBtn').style.display = 'none';
   clearDDData();
   renderCategoryPicker([]);
-  ['fName','fCity','fState','fCuisine','fStatus','fServer','fNotes','fTags','fImageUrl'].forEach(id => {
+  ['fName','fCity','fState','fCuisine','fStatus','fServer','fNotes','fTags','fImageUrl','fVarietal','fVintage','fProducer','fWhereHadIt'].forEach(id => {
     const el = document.getElementById(id);
+    if (!el) return;
     if (el.tagName === 'SELECT') el.value = el.options[0].value;
     else el.value = '';
   });
@@ -2153,6 +2247,8 @@ function openAddModal() {
   editingPhotos = [];
   renderGalleryEdit();
   updateStars(0);
+  // Reset to Restaurant mode (this also sets the form title)
+  setEntryType('restaurant');
   document.getElementById('formModal').classList.add('open');
 }
 
@@ -2162,8 +2258,6 @@ function openEditModal(id) {
   editingId = id;
   currentRating = r.rating || 0;
 
-  document.getElementById('formTitle').textContent = 'Edit Entry';
-  setFormEntryType(r.entry_type || 'restaurant');
   document.getElementById('deleteBtn').style.display = 'block';
   document.getElementById('fName').value = r.name || '';
   document.getElementById('fCity').value = r.city || '';
@@ -2171,12 +2265,13 @@ function openEditModal(id) {
   const cats = Array.isArray(r.category) ? r.category : (r.category ? r.category.split(',').map(s=>s.trim()) : []);
   renderCategoryPicker(cats);
   document.getElementById('fCuisine').value = r.cuisine || '';
+  document.getElementById('fStatus').value = r.status || 'tried';
+  document.getElementById('fServer').value = r.server || '';
+  // Tasting-specific fields
   document.getElementById('fVarietal').value = r.varietal || '';
   document.getElementById('fVintage').value = r.vintage || '';
   document.getElementById('fProducer').value = r.producer || '';
-  document.getElementById('fWhereHad').value = r.where_had || '';
-  document.getElementById('fStatus').value = r.status || 'tried';
-  document.getElementById('fServer').value = r.server || '';
+  document.getElementById('fWhereHadIt').value = r.whereHadIt || '';
   loadDDData(r);
   document.getElementById('fNotes').value = r.notes || '';
   document.getElementById('fTags').value = (r.tags || []).join(', ');
@@ -2194,11 +2289,44 @@ function openEditModal(id) {
     document.getElementById('previewContent').style.display = 'none';
   }
   updateStars(currentRating);
+  // Set entry type (this updates title + field visibility)
+  setEntryType(r.entry_type === 'tasting' ? 'tasting' : 'restaurant');
   document.getElementById('formModal').classList.add('open');
 }
 
 function closeFormModal() {
   document.getElementById('formModal').classList.remove('open');
+}
+
+// ─── ENTRY TYPE TOGGLE (v10.73 Tastings feature) ───
+function setEntryType(type) {
+  const safe = (type === 'tasting') ? 'tasting' : 'restaurant';
+  document.getElementById('fEntryType').value = safe;
+  // Update toggle button styling
+  document.querySelectorAll('.entry-type-btn').forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.type === safe);
+  });
+  // Show/hide fields
+  document.querySelectorAll('.restaurant-only').forEach(el => {
+    el.style.display = (safe === 'restaurant') ? '' : 'none';
+  });
+  document.querySelectorAll('.tasting-only').forEach(el => {
+    el.style.display = (safe === 'tasting') ? '' : 'none';
+  });
+  // Update the form title + Name label
+  const isEditing = !!editingId;
+  const title = document.getElementById('formTitle');
+  const nameLabel = document.getElementById('fNameLabel');
+  if (safe === 'tasting') {
+    title.textContent = isEditing ? 'Edit Tasting' : 'Add Tasting';
+    nameLabel.textContent = 'Tasting Name';
+    // Auto-populate Boise for new tastings if city is empty
+    const cityInput = document.getElementById('fCity');
+    if (!isEditing && !cityInput.value.trim()) cityInput.value = 'Boise';
+  } else {
+    title.textContent = isEditing ? 'Edit Restaurant' : 'Add Restaurant';
+    nameLabel.textContent = 'Restaurant Name';
+  }
 }
 
 function setRating(n) {
@@ -2326,32 +2454,40 @@ async function persistEntryImages(entryId) {
 
 async function saveEntry() {
   const name = document.getElementById('fName').value.trim();
-  if (!name) { showToast('Restaurant name is required'); return; }
+  const entryType = document.getElementById('fEntryType').value === 'tasting' ? 'tasting' : 'restaurant';
+  if (!name) { showToast(entryType === 'tasting' ? 'Tasting name is required' : 'Restaurant name is required'); return; }
 
   const entryId = editingId || name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
   const imageState = await persistEntryImages(entryId);
 
+  const isTasting = entryType === 'tasting';
+  // Cities default to Boise for new entries of either type (unchanged for restaurants; explicit for tastings)
+  const cityVal = document.getElementById('fCity').value.trim() || 'Boise';
+
   const entry = {
     id: entryId,
-    entry_type: document.getElementById('fEntryType').value || 'restaurant',
     name,
-    city: document.getElementById('fCity').value.trim() || 'Boise',
+    entry_type: entryType,
+    city: cityVal,
     state: document.getElementById('fState').value.trim() || 'ID',
     category: selectedCategories.length ? selectedCategories : ['Good Restaurants'],
-    cuisine: document.getElementById('fCuisine').value.trim(),
-    varietal: document.getElementById('fVarietal').value.trim(),
-    vintage: document.getElementById('fVintage').value.trim(),
-    producer: document.getElementById('fProducer').value.trim(),
-    where_had: document.getElementById('fWhereHad').value.trim(),
+    // Restaurant-only fields — empty if tasting
+    cuisine: isTasting ? '' : document.getElementById('fCuisine').value.trim(),
+    server: isTasting ? '' : document.getElementById('fServer').value.trim(),
+    drinks: isTasting ? [] : (ddData.fDrinks || []),
+    appetizers: isTasting ? [] : (ddData.fApps || []),
+    mains: isTasting ? [] : (ddData.fMains || []),
+    desserts: isTasting ? [] : (ddData.fDesserts || []),
+    // Tasting-only fields — empty if restaurant
+    varietal: isTasting ? document.getElementById('fVarietal').value.trim() : '',
+    vintage: isTasting ? document.getElementById('fVintage').value.trim() : '',
+    producer: isTasting ? document.getElementById('fProducer').value.trim() : '',
+    whereHadIt: isTasting ? document.getElementById('fWhereHadIt').value.trim() : '',
+    // Shared fields
     status: document.getElementById('fStatus').value,
     rating: currentRating,
-    server: document.getElementById('fServer').value.trim(),
     phil_picks: ddData.fPhilPicks || [],
     trinity_picks: ddData.fTrinityPicks || [],
-    drinks: ddData.fDrinks || [],
-    appetizers: ddData.fApps || [],
-    mains: ddData.fMains || [],
-    desserts: ddData.fDesserts || [],
     notes: document.getElementById('fNotes').value.trim(),
     tags: splitCSV(document.getElementById('fTags').value),
     imageUrl: imageState.mainImageUrl || '',
@@ -2367,12 +2503,15 @@ async function saveEntry() {
     document.getElementById('fImageUrl').value = entry.imageUrl;
   }
   closeFormModal();
-  showToast(editingId ? '✅ Updated!' : '✅ Added!');
+  const label = isTasting ? 'Tasting' : 'Restaurant';
+  showToast(editingId ? `✅ ${label} updated!` : `✅ ${label} added!`);
 }
 
 async function deleteEntry() {
   if (!editingId) return;
-  if (!confirm('Delete this restaurant?')) return;
+  const r = allRestaurants.find(x => x.id === editingId);
+  const label = (r && r.entry_type === 'tasting') ? 'tasting' : 'restaurant';
+  if (!confirm(`Delete this ${label}?`)) return;
   await dbRemove(`${EATS_PATH}/${editingId}`);
   closeFormModal();
   showToast('🗑 Deleted');
@@ -2390,26 +2529,37 @@ async function askAI() {
   document.getElementById('aiThinking').classList.add('visible');
   chatHistory.push({ role: 'user', content: q });
 
-  // Build restaurant context
-  const context = allRestaurants.slice(0, 80).map(r =>
-    `${r.name} (${r.city}, ${r.cuisine}) — Phil picks: ${(r.phil_picks||[]).join(', ')} | Trinity picks: ${(r.trinity_picks||[]).join(', ')} | Drinks: ${(r.drinks||[]).join(', ')} | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating||'unrated'}`
-  ).join('\n');
+  // Build entry context (restaurants AND tastings — unified pool)
+  const context = allRestaurants.slice(0, 80).map(r => {
+    const type = r.entry_type === 'tasting' ? 'TASTING' : 'RESTAURANT';
+    if (r.entry_type === 'tasting') {
+      return `[${type}] ${r.name} (${r.city}) — Varietal: ${r.varietal || ''} | Vintage: ${r.vintage || ''} | Producer: ${r.producer || ''} | Where Had It: ${r.whereHadIt || ''} | Categories: ${(Array.isArray(r.category) ? r.category.join(', ') : r.category || '')} | Tags: ${(r.tags||[]).join(', ')} | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating||'unrated'}`;
+    }
+    return `[${type}] ${r.name} (${r.city}, ${r.cuisine}) — Phil picks: ${(r.phil_picks||[]).join(', ')} | Trinity picks: ${(r.trinity_picks||[]).join(', ')} | Drinks: ${(r.drinks||[]).join(', ')} | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating||'unrated'}`;
+  }).join('\n');
 
-  const systemPrompt = `You are the Philinity Eats AI assistant for Phil & Trinity Sigler. You help manage their personal food & drink guide covering restaurants AND tastings (wines, oysters, bourbons, beers, etc.) in Boise, Idaho and surrounding areas.
+  const systemPrompt = `You are the Philinity Eats AI assistant for Phil & Trinity Sigler. You help manage and search their personal guide of restaurants AND tastings in Boise, Idaho and surrounding areas.
 
-Current data (${allRestaurants.length} entries):
+There are TWO entry types in this guide:
+- RESTAURANT: a place to eat (cuisine, server, menu items, etc.)
+- TASTING: a specific drink or food item sampled — wine, bourbon, whiskey, scotch, oyster, cheese, coffee, tea, cocktail, beer, champagne, sake, spirits, etc. Tastings have a varietal/type, vintage, producer, and a "where had it" venue.
+
+Current guide (${allRestaurants.length} total entries — both restaurants and tastings):
 ${context}
 
 You can:
-1. Answer questions, recommend places, search by cuisine/vibe/occasion/type
-2. Add a RESTAURANT with JSON:
+1. Answer questions, recommend entries, search across BOTH restaurants and tastings.
+2. Add a new RESTAURANT with JSON:
 {"action":"add","data":{"entry_type":"restaurant","name":"...","city":"Boise","state":"ID","category":["Fine Dining"],"cuisine":"...","status":"tried","rating":5,"server":"...","phil_picks":["..."],"trinity_picks":["..."],"drinks":["..."],"appetizers":["..."],"mains":["..."],"desserts":["..."],"notes":"...","tags":["..."]}}
-3. Add a TASTING (wine, oyster, bourbon, beer, etc.) with JSON:
-{"action":"add","data":{"entry_type":"tasting","name":"...","city":"Boise","state":"ID","category":["Oysters"],"varietal":"...","vintage":"...","producer":"...","where_had":"...","status":"tried","rating":5,"phil_picks":["..."],"trinity_picks":["..."],"notes":"...","tags":["..."]}}
-4. Update any entry: {"action":"update","id":"entry-id","data":{...fields to update...}}
+3. Add a new TASTING with JSON:
+{"action":"add","data":{"entry_type":"tasting","name":"2019 Silver Oak Cabernet","city":"Boise","state":"ID","category":["Wine"],"varietal":"Cabernet Sauvignon","vintage":"2019","producer":"Silver Oak","whereHadIt":"Chandlers Steakhouse","status":"tried","rating":5,"notes":"...","tags":["wine","red"]}}
+4. Update existing entries with: {"action":"update","id":"entry-id","data":{...fields to update...}}
 
-IMPORTANT: When adding tastings (oysters, wines, bourbons, beers, cocktails, etc.) always set entry_type:"tasting". When adding restaurants always set entry_type:"restaurant". Default city is Boise unless specified.
-Keep responses concise. For recommendations, highlight Phil's picks and server names.`;
+IMPORTANT RULES:
+- ALWAYS include "entry_type" as either "restaurant" or "tasting" when adding new entries.
+- For TASTINGS, default city to "Boise" unless the user specifies otherwise.
+- If the user says "add oyster X" or "add wine Y" or mentions bourbon/whiskey/scotch/cocktail/beer/cheese/coffee/tea/spirits/champagne/sake/mead/cider/port/brandy/rum/gin/vodka/tequila/mezcal — treat as TASTING.
+- Keep responses concise. For recommendations, highlight Phil's picks, producer names, and server names where relevant.`;
 
   try {
     const user = auth.currentUser;
@@ -2446,27 +2596,27 @@ Keep responses concise. For recommendations, highlight Phil's picks and server n
     const reply = data.content?.[0]?.text || '';
     chatHistory.push({ role: 'assistant', content: reply });
 
-    // Check if AI wants to add/update a restaurant
+    // Check if AI wants to add/update an entry
     const jsonMatch = reply.match(/\{[\s\S]*"action"\s*:\s*"(add|update)"[\s\S]*\}/);
     if (jsonMatch) {
       try {
         const cmd = JSON.parse(jsonMatch[0]);
         if (cmd.action === 'add' && cmd.data?.name) {
-          const id = cmd.data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
-          // Auto-detect entry_type if AI didn't set it
-          const tastingKeywords = ['oyster','wine','bourbon','whiskey','beer','cocktail','tasting','spirits','champagne','sake','mead','cider','port','brandy','rum','gin','vodka','tequila','mezcal'];
-          const isTasting = cmd.data.entry_type === 'tasting' ||
-            tastingKeywords.some(k => cmd.data.name?.toLowerCase().includes(k)) ||
-            tastingKeywords.some(k => (cmd.data.tags || []).join(' ').toLowerCase().includes(k)) ||
-            (cmd.data.category || []).some(c => tastingKeywords.some(k => c.toLowerCase().includes(k)));
-          if (!cmd.data.entry_type) cmd.data.entry_type = isTasting ? 'tasting' : 'restaurant';
-          // Default city to Boise for tastings if not specified or set to a region name
-          if (isTasting && (!cmd.data.city || cmd.data.city === cmd.data.name.split(' ')[0])) {
+          // ── Keyword-based entry_type fallback (v10.73) ──
+          // If AI didn't set entry_type, detect from name/category/tags
+          if (cmd.data.entry_type !== 'restaurant' && cmd.data.entry_type !== 'tasting') {
+            cmd.data.entry_type = detectEntryTypeFromKeywords(cmd.data) ? 'tasting' : 'restaurant';
+          }
+          // Default city to Boise for tastings if AI left it blank
+          if (cmd.data.entry_type === 'tasting' && !String(cmd.data.city || '').trim()) {
             cmd.data.city = 'Boise';
           }
+          if (!String(cmd.data.state || '').trim()) cmd.data.state = 'ID';
+          const id = cmd.data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
           const entry = { ...cmd.data, id, lastUpdated: Date.now() };
           await dbSet(`${EATS_PATH}/${id}`, entry);
-          appendAIBubble('✅ Added ' + cmd.data.name + ' to your guide!', 'success');
+          const label = entry.entry_type === 'tasting' ? 'tasting' : 'restaurant';
+          appendAIBubble('✅ Added ' + cmd.data.name + ' (' + label + ') to your guide!', 'success');
         } else if (cmd.action === 'update' && cmd.id) {
           const updates = {};
           Object.entries(cmd.data).forEach(([k,v]) => { updates[EATS_PATH + '/' + cmd.id + '/' + k] = v; });
@@ -2817,6 +2967,11 @@ function resetHome() {
   currentSort = 'recent';
   ['recent','rating','totry','az'].forEach(m => {
     document.getElementById('sort-' + m)?.classList.toggle('active', m === 'recent');
+  });
+  // Reset type filter
+  currentTypeFilter = 'all';
+  ['all','restaurant','tasting'].forEach(m => {
+    document.getElementById('type-' + m)?.classList.toggle('active', m === 'all');
   });
   // Clear search
   document.getElementById('searchInput').value = '';
@@ -3337,6 +3492,12 @@ function sanitizeImportedRestaurant(row) {
   else if (row.category) clean.category = [stripHTML(String(row.category)).trim()].filter(Boolean);
   else clean.category = ['Good Restaurants'];
   clean.cuisine = stripHTML(row.cuisine || '').trim();
+  // Entry type + tasting-specific fields (v10.73 Tastings feature)
+  clean.entry_type = (row.entry_type === 'tasting') ? 'tasting' : 'restaurant';
+  clean.varietal = stripHTML(row.varietal || '').trim();
+  clean.vintage = stripHTML(row.vintage || '').trim();
+  clean.producer = stripHTML(row.producer || '').trim();
+  clean.whereHadIt = stripHTML(row.whereHadIt || '').trim();
   clean.status = (row.status === 'to-try') ? 'to-try' : 'tried';
   clean.rating = Math.max(0, Math.min(5, parseInt(row.rating) || 0));
   clean.server = stripHTML(row.server || '').trim();
@@ -3682,12 +3843,11 @@ window.openEditCityModal = openEditCityModal;
 window.closeEditCityModal = closeEditCityModal;
 window.confirmEditCity = confirmEditCity;
 window.setSort = setSort;
-window.setEntryType = setEntryType;
-window.setFormEntryType = setFormEntryType;
 window.openDetail = openDetail;
 window.closeDetailModal = closeDetailModal;
 window.editFromDetail = editFromDetail;
 window.setRating = setRating;
+window.setEntryType = setEntryType;
 window.handleImageUpload = handleImageUpload;
 window.handleDrop = handleDrop;
 window.handleUrlInput = handleUrlInput;
@@ -3719,33 +3879,7 @@ window.clearHighlight = clearHighlight;
 
 // ── SORT ──────────────────────────────────────────────────
 let currentSort = 'recent';
-let currentEntryType = 'all';
-
-function setEntryType(type) {
-  currentEntryType = type;
-  ['all','restaurant','tasting'].forEach(t => {
-    document.getElementById('type-' + t)?.classList.toggle('active', t === type);
-  });
-  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || currentEntryType !== 'all' || currentCity !== 'Boise');
-  const panel = document.getElementById('sortPanel');
-  if (panel) panel.style.display = 'none';
-  applyFilters();
-}
-
-function setFormEntryType(type) {
-  document.getElementById('fEntryType').value = type;
-  document.getElementById('fTypeRestaurant').classList.toggle('active', type === 'restaurant');
-  document.getElementById('fTypeTasting').classList.toggle('active', type === 'tasting');
-  // Show/hide fields
-  const isTasting = type === 'tasting';
-  document.getElementById('fNameLabel').textContent = isTasting ? 'Item Name' : 'Restaurant Name';
-  document.getElementById('fName').placeholder = isTasting ? 'e.g. Kumamoto Oysters' : 'e.g. Barbacoa';
-  document.getElementById('fCuisineGroup').style.display = isTasting ? 'none' : '';
-  document.getElementById('fVarietalGroup').style.display = isTasting ? '' : 'none';
-  document.getElementById('fVintageGroup').style.display = isTasting ? '' : 'none';
-  document.getElementById('fProducerGroup').style.display = isTasting ? '' : 'none';
-  document.getElementById('fWhereHadGroup').style.display = isTasting ? '' : 'none';
-}
+let currentTypeFilter = 'all'; // 'all' | 'restaurant' | 'tasting'
 
 function toggleSortPanel() {
   const panel = document.getElementById('sortPanel');
@@ -3758,7 +3892,7 @@ function toggleSortPanel() {
 function setCityFromSelect(city) {
   currentCity = city;
   // Update sort btn dot if city is also filtered
-  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || currentEntryType !== 'all' || city !== 'Boise');
+  document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || city !== 'All');
   // Close the sort panel
   const panel = document.getElementById('sortPanel');
   if (panel) panel.style.display = 'none';
@@ -3782,6 +3916,21 @@ function setSort(mode) {
   // Show amber on sort btn when non-default sort is active
   document.getElementById('sortBtn').classList.toggle('active', mode !== 'recent');
   // Auto-close the sort panel after picking
+  const panel = document.getElementById('sortPanel');
+  if (panel) panel.style.display = 'none';
+  applyFilters();
+}
+
+function setTypeFilter(mode) {
+  currentTypeFilter = (mode === 'restaurant' || mode === 'tasting') ? mode : 'all';
+  // Update pill styles
+  ['all','restaurant','tasting'].forEach(m => {
+    document.getElementById('type-' + m)?.classList.toggle('active', m === currentTypeFilter);
+  });
+  // Keep sort button amber when any non-default is active (sort OR type)
+  const nonDefault = currentSort !== 'recent' || currentTypeFilter !== 'all';
+  document.getElementById('sortBtn').classList.toggle('active', nonDefault);
+  // Auto-close panel after selection
   const panel = document.getElementById('sortPanel');
   if (panel) panel.style.display = 'none';
   applyFilters();
@@ -4039,7 +4188,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.75</span>
+  Philinity Eats ©️ <span>Rev 10.73</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
