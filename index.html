@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.81</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.82</div>
   </div>
 </div>
 
@@ -1691,13 +1691,10 @@ function applyFilters() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
   let filtered = [...allRestaurants];
 
-  // City filter — when search is active, tastings bypass the city filter
-  // (a tasting in Walla Walla should still be findable while browsing Boise)
+  // City filter — tastings ALWAYS bypass city filter (wine is wine, oyster is oyster,
+  // regardless of where it was had). Restaurants still respect city filter.
   if (currentCity !== 'All') {
-    filtered = filtered.filter(r => {
-      if (search && r.entry_type === 'tasting') return true;
-      return r.city === currentCity;
-    });
+    filtered = filtered.filter(r => r.entry_type === 'tasting' || r.city === currentCity);
   }
   if (currentEntryType !== 'all') filtered = filtered.filter(r => r.entry_type === currentEntryType);
   if (currentCat !== 'All') filtered = filtered.filter(r => {
@@ -4136,7 +4133,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.81</span>
+  Philinity Eats ©️ <span>Rev 10.82</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
