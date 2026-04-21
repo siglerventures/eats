@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.87</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.88</div>
   </div>
 </div>
 
@@ -1735,7 +1735,7 @@ function applyFilters() {
   if (search) {
     filtered = filtered.filter(r => {
       const haystack = [
-        r.name, r.city, r.state, r.cuisine, r.category,
+        r.id, r.name, r.city, r.state, r.cuisine, r.category,
         ...(r.drinks || []), ...(r.appetizers || []), ...(r.mains || []),
         ...(r.desserts || []), ...(r.phil_picks || []), ...(r.trinity_picks || []),
         ...(r.tags || []), r.notes, r.server,
@@ -2157,7 +2157,7 @@ function starsHTML(rating) {
 
 function renderCard(r) {
   // Sanitize ALL fields before rendering — prevents XSS from Firebase data
-  const safeName = stripHTML(r.name);
+  const safeName = stripHTML(r.name) || ('⚠️ [No name — id: ' + stripHTML(r.id) + ']');
   const safeCuisine = stripHTML(r.cuisine);
   const safeNotes = stripHTML(r.notes);
   const safeServer = stripHTML(r.server);
@@ -2710,6 +2710,8 @@ PHOTO ATTACHMENTS: When the user's message contains "[Attached N photo URL(s)...
 
 ENTRY IDs: Each entry in the current data list is prefixed with "[id:xxx]" — that is the exact entry ID to use for update actions. When the user says "add these pics to Corso", look up Corso in the list and use its [id:xxx] value directly. Do not ask the user for the ID — it's already in your context.
 
+DISAMBIGUATION RULE: If the user's entry reference doesn't EXACTLY match any name in the context, do NOT guess or create a new entry. Instead, look for close/partial matches and ASK the user to confirm which one. Example: user says "Corso" and the context has "Corso and James" — do NOT create a new "Corso" entry, and do NOT assume they're the same. Ask: "Did you mean Corso and James?" and wait for confirmation. If no close match exists at all, ask whether they want to CREATE a new entry.
+
 Keep responses concise. For recommendations, highlight Phil's picks and server names.`;
 
   try {
@@ -2773,15 +2775,29 @@ Keep responses concise. For recommendations, highlight Phil's picks and server n
           await ensureCategoriesExist(entry.category);
           appendAIBubble('✅ Added ' + cmd.data.name + ' to your guide!', 'success');
         } else if (cmd.action === 'update' && cmd.id) {
+          // Guard: reject updates to non-existent IDs — prevents AI from creating
+          // ghost entries by guessing wrong IDs (v10.88)
+          const existing = allRestaurants.find(r => r.id === cmd.id);
+          if (!existing) {
+            // Suggest close matches so user can tell AI the right ID
+            const target = String(cmd.id || '').toLowerCase();
+            const suggestions = allRestaurants
+              .filter(r => r.id && (r.id.includes(target.slice(0, 4)) || (r.name || '').toLowerCase().includes(target)))
+              .slice(0, 5)
+              .map(r => `"${r.name}" (id: ${r.id})`)
+              .join(', ');
+            const msg = `❌ No entry with id "${cmd.id}" exists.${suggestions ? '\n\nDid you mean: ' + suggestions : ''}`;
+            appendAIBubble(msg, 'ai');
+            return;
+          }
           // If AI included photos, merge with existing gallery (don't overwrite)
           if (Array.isArray(cmd.data.photos) && cmd.data.photos.length) {
-            const existing = allRestaurants.find(r => r.id === cmd.id);
-            const existingPhotos = (existing && Array.isArray(existing.photos)) ? existing.photos : [];
+            const existingPhotos = Array.isArray(existing.photos) ? existing.photos : [];
             const merged = [...existingPhotos];
             cmd.data.photos.forEach(p => { if (p && !merged.includes(p)) merged.push(p); });
             cmd.data.photos = merged;
             // If entry has no main imageUrl yet, set first new photo as main
-            if (existing && !existing.imageUrl && merged.length && !cmd.data.imageUrl) {
+            if (!existing.imageUrl && merged.length && !cmd.data.imageUrl) {
               cmd.data.imageUrl = merged[0];
             }
           }
@@ -2791,7 +2807,7 @@ Keep responses concise. For recommendations, highlight Phil's picks and server n
           await dbUpdate(updates);
           // Also ensure any categories in the update exist as chips
           if (cmd.data.category) await ensureCategoriesExist(cmd.data.category);
-          appendAIBubble('✅ Updated ' + cmd.id + '!', 'success');
+          appendAIBubble('✅ Updated ' + (existing.name || cmd.id) + '!', 'success');
         }
       } catch(e) {
         const text = reply.replace(/\{[\s\S]*\}/, '').trim();
@@ -4388,7 +4404,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.87</span>
+  Philinity Eats ©️ <span>Rev 10.88</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
