@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.78</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.79</div>
   </div>
 </div>
 
@@ -1873,6 +1873,57 @@ function sanitizeCategoryObj(cat) {
   };
 }
 
+// ── AUTO-TAG TASTINGS (v10.79) ──
+// For new tastings only: scan name/varietal/notes/tags for keywords
+// and add matching categories IF they already exist in the user's category list.
+// Never creates new categories. Never duplicates existing categories on the entry.
+const TASTING_CATEGORY_RULES = [
+  {
+    category: 'Wine',
+    keywords: ['wine','cabernet','merlot','pinot','chardonnay','sauvignon','syrah',
+               'zinfandel','riesling','rosé','rose wine','champagne','port','graciano',
+               'malbec','tempranillo','sangiovese','grenache','viognier','chenin',
+               'gewürztraminer','gewurztraminer','prosecco','bordeaux']
+  },
+  {
+    category: 'Oysters',
+    keywords: ['oyster','oysters']
+  }
+];
+
+function autoTagTastingCategories(entry) {
+  if (!entry || entry.entry_type !== 'tasting') return entry;
+  const haystack = [
+    entry.name, entry.varietal, entry.notes,
+    ...(Array.isArray(entry.tags) ? entry.tags : [])
+  ].filter(Boolean).join(' ').toLowerCase();
+
+  if (!haystack) return entry;
+
+  // Start with existing categories (dedupe + array-ify)
+  const existing = Array.isArray(entry.category)
+    ? [...entry.category]
+    : (entry.category ? [entry.category] : []);
+  const current = new Set(existing);
+
+  TASTING_CATEGORY_RULES.forEach(rule => {
+    // Skip if user already has this category on the entry
+    if (current.has(rule.category)) return;
+    // Skip if the category doesn't exist in the user's category list
+    const categoryExists = categories.some(c => c.name === rule.category);
+    if (!categoryExists) return;
+    // Check if any keyword matches (word boundary so "porterhouse" doesn't match "port")
+    const matched = rule.keywords.some(kw => {
+      const re = new RegExp('(^|[^a-z])' + kw.replace(/[.*+?^${}()|[\]\\]/g,'\\$&') + '([^a-z]|$)', 'i');
+      return re.test(haystack);
+    });
+    if (matched) current.add(rule.category);
+  });
+
+  entry.category = Array.from(current);
+  return entry;
+}
+
 function sanitizeRestaurant(r) {
   const x = sanitizeValue(r || {});
   x.id = stripHTML(x.id || '');
@@ -2373,6 +2424,8 @@ async function saveEntry() {
   };
 
   entry.lastUpdated = Date.now();
+  // Auto-tag Wine/Oysters for tastings (v10.79) — only adds existing categories, never duplicates
+  autoTagTastingCategories(entry);
   await dbSet(`${EATS_PATH}/${entry.id}`, entry);
   editingPhotos = [...imageState.persistedPhotos];
   if (entry.imageUrl) {
@@ -2479,6 +2532,8 @@ Keep responses concise. For recommendations, highlight Phil's picks and server n
             cmd.data.city = 'Boise';
           }
           const entry = { ...cmd.data, id, lastUpdated: Date.now() };
+          // Auto-tag Wine/Oysters for tastings (v10.79) — only adds existing categories, never duplicates
+          autoTagTastingCategories(entry);
           await dbSet(`${EATS_PATH}/${id}`, entry);
           appendAIBubble('✅ Added ' + cmd.data.name + ' to your guide!', 'success');
         } else if (cmd.action === 'update' && cmd.id) {
@@ -4068,7 +4123,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.78</span>
+  Philinity Eats ©️ <span>Rev 10.79</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
