@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.93</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.94</div>
   </div>
 </div>
 
@@ -1401,10 +1401,6 @@
     <div class="filter-sep"></div>
     <span class="filter-label">Type</span>
     <button class="chip active cat-chip" onclick="setCat('All', this)">All</button>
-    <!-- Entry-type shortcuts (v10.93) — synced with sort panel Type buttons -->
-    <button class="chip entry-type-chip" id="etype-restaurant" onclick="setEntryType('restaurant')">🍽 Restaurants</button>
-    <button class="chip entry-type-chip" id="etype-tasting" onclick="setEntryType('tasting')">🍷 Tastings</button>
-    <button class="chip entry-type-chip" id="etype-recipe" onclick="setEntryType('recipe')">📖 Recipes</button>
     <div id="catChips" style="display:contents">
       <button class="chip cat-chip" onclick="setCat('Fine Dining', this)">🍽 Fine Dining</button>
       <button class="chip cat-chip" onclick="setCat('Sushi', this)">🍣 Sushi</button>
@@ -1417,7 +1413,6 @@
       <button class="chip cat-chip" onclick="setCat('Desserts', this)">🧁 Desserts</button>
       <button class="chip cat-chip" onclick="setCat('Vineyard', this)">🍷 Vineyard</button>
     </div>
-    <button class="cat-manage-btn" onclick="openCatManager()">⚙️ Edit Categories</button>
 
     <div class="filter-sep"></div>
     <select id="starSelect" onchange="setStarFilter(this.value)" style="background:var(--surface2);border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none">
@@ -1430,6 +1425,10 @@
     </select>
     <div class="filter-sep"></div>
     <button class="chip status-chip" id="toTryChip" onclick="toggleToTry()">🔖 To Try</button>
+    <!-- Entry-type shortcuts (v10.94) — moved to end, synced with sort panel Type buttons -->
+    <button class="chip entry-type-chip" id="etype-recipe" onclick="setEntryType('recipe')">📖 Recipes</button>
+    <button class="chip entry-type-chip" id="etype-tasting" onclick="setEntryType('tasting')">🍷 Tastings</button>
+    <button class="cat-manage-btn" onclick="openCatManager()">⚙️ Edit Categories</button>
   </div>
 </div>
 
@@ -3379,8 +3378,12 @@ function resetHome() {
   });
   // Reset type filter
   currentEntryType = 'all';
-  ['all','restaurant','tasting'].forEach(m => {
+  ['all','restaurant','tasting','recipe'].forEach(m => {
     document.getElementById('type-' + m)?.classList.toggle('active', m === 'all');
+  });
+  // Also deactivate main-bar entry-type shortcut chips (v10.94)
+  ['restaurant','tasting','recipe'].forEach(m => {
+    document.getElementById('etype-' + m)?.classList.remove('active');
   });
   // Clear search
   document.getElementById('searchInput').value = '';
@@ -4324,6 +4327,7 @@ function setEntryType(type) {
     document.getElementById('type-' + t)?.classList.toggle('active', t === type);
   });
   ['restaurant','tasting','recipe'].forEach(t => {
+    // Only tasting and recipe have shortcuts on the main bar (restaurant was removed in v10.94)
     document.getElementById('etype-' + t)?.classList.toggle('active', t === type);
   });
   document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || currentEntryType !== 'all' || currentCity !== 'Boise');
@@ -4684,7 +4688,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.93</span>
+  Philinity Eats ©️ <span>Rev 10.94</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
