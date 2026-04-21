@@ -402,6 +402,10 @@
   .chip:hover { border-color: var(--amber); color: var(--text); }
   .chip.active { background: var(--amber); border-color: var(--amber); color: #0f0c08; }
 
+  /* Entry-type shortcut chips (v10.93) — subtly distinct from category chips */
+  .entry-type-chip { border-style: dashed; }
+  .entry-type-chip.active { background: var(--amber); border-color: var(--amber); color: #0f0c08; border-style: solid; }
+
   .filter-sep {
     width: 1px;
     height: 20px;
@@ -1290,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.92</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.93</div>
   </div>
 </div>
 
@@ -1397,6 +1401,10 @@
     <div class="filter-sep"></div>
     <span class="filter-label">Type</span>
     <button class="chip active cat-chip" onclick="setCat('All', this)">All</button>
+    <!-- Entry-type shortcuts (v10.93) — synced with sort panel Type buttons -->
+    <button class="chip entry-type-chip" id="etype-restaurant" onclick="setEntryType('restaurant')">🍽 Restaurants</button>
+    <button class="chip entry-type-chip" id="etype-tasting" onclick="setEntryType('tasting')">🍷 Tastings</button>
+    <button class="chip entry-type-chip" id="etype-recipe" onclick="setEntryType('recipe')">📖 Recipes</button>
     <div id="catChips" style="display:contents">
       <button class="chip cat-chip" onclick="setCat('Fine Dining', this)">🍽 Fine Dining</button>
       <button class="chip cat-chip" onclick="setCat('Sushi', this)">🍣 Sushi</button>
@@ -3514,7 +3522,11 @@ function renderCatChips() {
   const container = document.getElementById('catChips');
   if (!container) return;
   container.style.display = 'contents'; // let chips flow inline with siblings
-  container.innerHTML = categories.map(c => 
+  // Alphabetical by name (case-insensitive)
+  const sorted = [...categories].sort((a, b) =>
+    String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase())
+  );
+  container.innerHTML = sorted.map(c =>
     '<button class="chip cat-chip" onclick="setCat(\'' + escapeAttr(c.name).replace(/'/g, "\\'") + '\', this)">' + escapeHTML(c.emoji) + ' ' + escapeHTML(c.name) + '</button>'
   ).join('');
 }
@@ -3525,7 +3537,10 @@ function updateCategoryDropdown() {
 }
 
 function openCatManager() {
-  editingCategories = categories.map(c => ({...c}));
+  // Default to alphabetical order (users can still drag to reorder inside modal if they want)
+  editingCategories = categories.map(c => ({...c})).sort((a, b) =>
+    String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase())
+  );
   renderCatGrid();
   document.getElementById('catModal').classList.add('open');
 }
@@ -4299,9 +4314,17 @@ let currentSort = 'recent';
 let currentEntryType = 'all';
 
 function setEntryType(type) {
+  // Toggle off: click same active type chip again → revert to 'all'
+  if (currentEntryType === type && type !== 'all') {
+    type = 'all';
+  }
   currentEntryType = type;
+  // Sync both button sets: sort panel (type-*) and main bar shortcuts (etype-*)
   ['all','restaurant','tasting','recipe'].forEach(t => {
     document.getElementById('type-' + t)?.classList.toggle('active', t === type);
+  });
+  ['restaurant','tasting','recipe'].forEach(t => {
+    document.getElementById('etype-' + t)?.classList.toggle('active', t === type);
   });
   document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || currentEntryType !== 'all' || currentCity !== 'Boise');
   const panel = document.getElementById('sortPanel');
@@ -4661,7 +4684,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.92</span>
+  Philinity Eats ©️ <span>Rev 10.93</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
