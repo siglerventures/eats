@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.80</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.81</div>
   </div>
 </div>
 
@@ -3017,8 +3017,12 @@ let editingCategories = [];
 async function loadCategories() {
   try {
     const snap = await dbGet('eats/categories');
-    if (snap.exists() && Array.isArray(snap.val())) {
-      categories = snap.val().map(sanitizeCategoryObj).filter(c => c.name);
+    if (snap.exists()) {
+      const val = snap.val();
+      // Support both legacy array format (0,1,2...) and current object format (Fine-Dining, Sushi...)
+      const list = Array.isArray(val) ? val : Object.values(val || {});
+      const cleaned = list.map(sanitizeCategoryObj).filter(c => c.name);
+      if (cleaned.length) categories = cleaned;
     }
   } catch(e) {
     console.warn('Could not load categories from Firebase:', e);
@@ -3128,7 +3132,13 @@ async function saveCategories() {
   })).filter(c => c.name);
   
   categories = [...editingCategories];
-  await dbSet('eats/categories', categories);
+  // Write as object with slug keys (matches the migrated format: "Fine Dining" → "Fine-Dining")
+  const obj = {};
+  editingCategories.forEach(c => {
+    const slug = String(c.name).trim().replace(/\s+/g, '-');
+    obj[slug] = { emoji: c.emoji || '🍽', name: c.name };
+  });
+  await dbSet('eats/categories', obj);
   renderCatChips();
   updateCategoryDropdown();
   closeCatManager();
@@ -4126,7 +4136,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.80</span>
+  Philinity Eats ©️ <span>Rev 10.81</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
