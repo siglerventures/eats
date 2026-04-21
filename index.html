@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.90</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.91</div>
   </div>
 </div>
 
@@ -1326,6 +1326,7 @@
       <button class="sort-pill active" id="type-all" onclick="setEntryType('all')">All</button>
       <button class="sort-pill" id="type-restaurant" onclick="setEntryType('restaurant')">🍽 Restaurants</button>
       <button class="sort-pill" id="type-tasting" onclick="setEntryType('tasting')">🍷 Tastings</button>
+      <button class="sort-pill" id="type-recipe" onclick="setEntryType('recipe')">📖 Recipes</button>
     </div>
     <div class="sort-panel-divider"></div>
     <div class="sort-panel-inner" style="align-items:center;gap:8px;">
@@ -1441,6 +1442,7 @@
     <div style="display:flex;gap:8px;margin-bottom:16px;">
       <button id="fTypeRestaurant" class="sort-pill active" onclick="setFormEntryType('restaurant')" style="flex:1;justify-content:center;">🍽 Restaurant</button>
       <button id="fTypeTasting" class="sort-pill" onclick="setFormEntryType('tasting')" style="flex:1;justify-content:center;">🍷 Tasting</button>
+      <button id="fTypeRecipe" class="sort-pill" onclick="setFormEntryType('recipe')" style="flex:1;justify-content:center;">📖 Recipe</button>
     </div>
     <input type="hidden" id="fEntryType" value="restaurant">
 
@@ -1483,6 +1485,15 @@
         <label>Where Had It</label>
         <input type="text" id="fWhereHad" placeholder="e.g. Chandlers, Boise">
       </div>
+      <!-- Recipe-specific fields (hidden unless recipe) -->
+      <div class="form-group" id="fPrepTimeGroup" style="display:none;">
+        <label>Prep Time</label>
+        <input type="text" id="fPrepTime" placeholder="e.g. 15 min">
+      </div>
+      <div class="form-group" id="fCookTimeGroup" style="display:none;">
+        <label>Cook Time</label>
+        <input type="text" id="fCookTime" placeholder="e.g. 45 min">
+      </div>
       <div class="form-group">
         <label>Status</label>
         <select id="fStatus">
@@ -1515,6 +1526,16 @@
         <input type="hidden" id="fApps">
         <input type="hidden" id="fMains">
         <input type="hidden" id="fDesserts">
+      </div>
+      <!-- Recipe-specific: Ingredients (one per line) -->
+      <div class="form-group full" id="fIngredientsGroup" style="display:none;">
+        <label>🥣 Ingredients (one per line)</label>
+        <textarea id="fIngredients" rows="6" placeholder="2 cups flour&#10;1 tsp salt&#10;3 tbsp butter" style="font-family:'DM Mono',monospace;font-size:13px;"></textarea>
+      </div>
+      <!-- Recipe-specific: Instructions (one step per line) -->
+      <div class="form-group full" id="fInstructionsGroup" style="display:none;">
+        <label>📝 Instructions (one step per line)</label>
+        <textarea id="fInstructions" rows="8" placeholder="Preheat oven to 400°F&#10;Mix dry ingredients in a bowl&#10;Add wet ingredients and stir" style="font-family:'DM Mono',monospace;font-size:13px;"></textarea>
       </div>
       <div class="form-group full">
         <label>Notes / Tips</label>
@@ -1719,12 +1740,13 @@ function applyFilters() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
   let filtered = [...allRestaurants];
 
-  // City filter — tastings ALWAYS bypass city filter (wine is wine, oyster is oyster,
-  // regardless of where it was had). Restaurants still respect city filter.
-  // Entries with NO city (ghosts / incomplete) also bypass so they're findable.
+  // City filter — tastings AND recipes bypass city filter (they aren't tied
+  // to a specific city the way a restaurant is). Entries with no city (ghosts
+  // / incomplete) also bypass so they're findable.
   if (currentCity !== 'All') {
     filtered = filtered.filter(r =>
       r.entry_type === 'tasting' ||
+      r.entry_type === 'recipe' ||
       !r.city ||             // ghost / missing city — always show
       r.city === currentCity
     );
@@ -1745,7 +1767,9 @@ function applyFilters() {
         ...(r.desserts || []), ...(r.phil_picks || []), ...(r.trinity_picks || []),
         ...(r.tags || []), r.notes, r.server,
         // Tasting-specific fields — so searching "cabernet" or "silver oak" finds wines
-        r.varietal, r.vintage, r.producer, r.where_had, r.region, r.entry_type
+        r.varietal, r.vintage, r.producer, r.where_had, r.region, r.entry_type,
+        // Recipe-specific fields — so searching "puff pastry" or "sear" finds recipes
+        ...(r.ingredients || []), ...(r.instructions || []), r.prep_time, r.cook_time
       ].join(' ').toLowerCase();
       return haystack.includes(search);
     });
@@ -2001,12 +2025,17 @@ function sanitizeRestaurant(r) {
   x.server = stripHTML(x.server || '');
   x.notes = stripHTML(x.notes || '');
   x.status = x.status === 'to-try' ? 'to-try' : 'tried';
-  x.entry_type = x.entry_type === 'tasting' ? 'tasting' : 'restaurant';
+  x.entry_type = (x.entry_type === 'tasting' || x.entry_type === 'recipe') ? x.entry_type : 'restaurant';
   x.varietal = stripHTML(x.varietal || '');
   x.vintage = stripHTML(x.vintage || '');
   x.producer = stripHTML(x.producer || '');
   x.region = stripHTML(x.region || '');
   x.where_had = stripHTML(x.where_had || '');
+  // Recipe-specific fields (v10.91)
+  x.ingredients = Array.isArray(x.ingredients) ? x.ingredients.map(stripHTML).filter(Boolean) : [];
+  x.instructions = Array.isArray(x.instructions) ? x.instructions.map(stripHTML).filter(Boolean) : [];
+  x.prep_time = stripHTML(x.prep_time || '');
+  x.cook_time = stripHTML(x.cook_time || '');
   x.category = Array.isArray(x.category) ? x.category.map(stripHTML).filter(Boolean) : stripHTML(x.category || '');
   x.tags = Array.isArray(x.tags) ? x.tags.map(stripHTML).filter(Boolean) : [];
   x.drinks = Array.isArray(x.drinks) ? x.drinks.map(stripHTML).filter(Boolean) : [];
@@ -2181,6 +2210,7 @@ function renderCard(r) {
         <div class="card-name">${safeName}</div>
         <div class="card-badges">
           ${r.entry_type === 'tasting' ? '<span style="background:rgba(139,90,180,0.2);border:1px solid rgba(139,90,180,0.5);color:#c084fc;font-size:9px;padding:2px 7px;border-radius:6px;font-weight:600;letter-spacing:0.5px;">🍷 Tasting</span>' : ''}
+          ${r.entry_type === 'recipe' ? '<span style="background:rgba(52,168,83,0.18);border:1px solid rgba(52,168,83,0.5);color:#6ee7a0;font-size:9px;padding:2px 7px;border-radius:6px;font-weight:600;letter-spacing:0.5px;">📖 Recipe</span>' : ''}
           <span class="badge-status ${statusClass}">${statusLabel}</span>
         </div>
       </div>
@@ -2224,6 +2254,15 @@ function openDetail(id) {
   const dphil = stripHTMLArray(r.phil_picks);
   const dtrinity = stripHTMLArray(r.trinity_picks);
   const dtags = stripHTMLArray(r.tags);
+  const dingredients = stripHTMLArray(r.ingredients);
+  const dinstructions = stripHTMLArray(r.instructions);
+  const dprep = stripHTML(r.prep_time || '');
+  const dcook = stripHTML(r.cook_time || '');
+
+  const numberedSection = (title, items) => {
+    if (!items || !items.length) return '';
+    return `<div class="detail-section"><h4>${escapeHTML(title)}</h4><ol class="detail-list" style="padding-left:20px">${items.map(i => `<li style="margin-bottom:6px">${escapeHTML(i)}</li>`).join('')}</ol></div>`;
+  };
 
   document.getElementById('detailContent').innerHTML = `
     <img class="detail-img" src="${getImageUrl(r)}" alt="${dn}" onerror="this.style.display='none'">
@@ -2242,6 +2281,9 @@ function openDetail(id) {
       <span style="font-size:11px;color:var(--text-muted)">click to rate</span>
     </div>
     ${ds ? `<div class="card-server" style="margin-bottom:14px">👤 Ask for <strong>${ds}</strong></div>` : ''}
+    ${(dprep || dcook) ? `<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">${dprep ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">⏱ Prep: <strong>${dprep}</strong></span>` : ''}${dcook ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">🔥 Cook: <strong>${dcook}</strong></span>` : ''}</div>` : ''}
+    ${section('🥣 Ingredients', dingredients)}
+    ${numberedSection('📝 Instructions', dinstructions)}
     ${section('🥃 Drinks', ddrinks)}
     ${section('🍽 Appetizers', dapps)}
     ${section('🥩 Mains', dmains)}
@@ -2307,6 +2349,10 @@ function openEditModal(id) {
   document.getElementById('fVintage').value = r.vintage || '';
   document.getElementById('fProducer').value = r.producer || '';
   document.getElementById('fWhereHad').value = r.where_had || '';
+  document.getElementById('fPrepTime').value = r.prep_time || '';
+  document.getElementById('fCookTime').value = r.cook_time || '';
+  document.getElementById('fIngredients').value = (r.ingredients || []).join('\n');
+  document.getElementById('fInstructions').value = (r.instructions || []).join('\n');
   document.getElementById('fStatus').value = r.status || 'tried';
   document.getElementById('fServer').value = r.server || '';
   loadDDData(r);
@@ -2475,6 +2521,10 @@ async function saveEntry() {
     vintage: document.getElementById('fVintage').value.trim(),
     producer: document.getElementById('fProducer').value.trim(),
     where_had: document.getElementById('fWhereHad').value.trim(),
+    prep_time: document.getElementById('fPrepTime').value.trim(),
+    cook_time: document.getElementById('fCookTime').value.trim(),
+    ingredients: document.getElementById('fIngredients').value.split('\n').map(s => s.trim()).filter(Boolean),
+    instructions: document.getElementById('fInstructions').value.split('\n').map(s => s.trim()).filter(Boolean),
     status: document.getElementById('fStatus').value,
     rating: currentRating,
     server: document.getElementById('fServer').value.trim(),
@@ -2689,12 +2739,12 @@ async function askAI() {
   document.getElementById('aiThinking').classList.add('visible');
   chatHistory.push({ role: 'user', content: fullMessage });
 
-  // Build restaurant context
+  // Build restaurant context — include entry_type so AI can disambiguate
   const context = allRestaurants.slice(0, 500).map(r =>
-    `[id:${r.id}] ${r.name} (${r.city}, ${r.cuisine}) — Phil picks: ${(r.phil_picks||[]).join(', ')} | Trinity picks: ${(r.trinity_picks||[]).join(', ')} | Drinks: ${(r.drinks||[]).join(', ')} | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating||'unrated'}`
+    `[id:${r.id}] [${r.entry_type || 'restaurant'}] ${r.name} (${r.city}, ${r.cuisine}) — Phil picks: ${(r.phil_picks||[]).join(', ')} | Trinity picks: ${(r.trinity_picks||[]).join(', ')} | Drinks: ${(r.drinks||[]).join(', ')} | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating||'unrated'}`
   ).join('\n');
 
-  const systemPrompt = `You are the Philinity Eats AI assistant for Phil & Trinity Sigler. You help manage their personal food & drink guide covering restaurants AND tastings (wines, oysters, bourbons, beers, etc.) in Boise, Idaho and surrounding areas.
+  const systemPrompt = `You are the Philinity Eats AI assistant for Phil & Trinity Sigler. You help manage their personal food & drink guide covering RESTAURANTS, TASTINGS (wines, oysters, bourbons, beers, etc.), and RECIPES (home-cooked dishes with ingredients & instructions).
 
 Current data (${allRestaurants.length} entries):
 ${context}
@@ -2705,9 +2755,13 @@ You can:
 {"action":"add","data":{"entry_type":"restaurant","name":"...","city":"Boise","state":"ID","category":["Fine Dining"],"cuisine":"...","status":"tried","rating":5,"server":"...","phil_picks":["..."],"trinity_picks":["..."],"drinks":["..."],"appetizers":["..."],"mains":["..."],"desserts":["..."],"notes":"...","tags":["..."]}}
 3. Add a TASTING (wine, oyster, bourbon, beer, etc.) with JSON:
 {"action":"add","data":{"entry_type":"tasting","name":"...","city":"Boise","state":"ID","category":["Oysters"],"varietal":"...","vintage":"...","producer":"...","where_had":"...","status":"tried","rating":5,"phil_picks":["..."],"trinity_picks":["..."],"notes":"...","tags":["..."]}}
-4. Update any entry: {"action":"update","id":"entry-id","data":{...fields to update...}}
+4. Add a RECIPE with JSON:
+{"action":"add","data":{"entry_type":"recipe","name":"Beef Wellington","city":"Boise","state":"ID","category":["Steaks"],"cuisine":"...","status":"tried","rating":5,"prep_time":"30 min","cook_time":"1 hr 15 min","ingredients":["2 lb beef tenderloin","1/2 lb mushrooms, finely chopped","8 oz puff pastry","2 egg yolks, beaten","..."],"instructions":["Season beef generously with salt and pepper","Sear in hot pan 2 min per side","Spread mushroom duxelles over prosciutto","Wrap in puff pastry and brush with egg yolk","Bake at 400°F for 35-40 min"],"notes":"...","tags":["..."]}}
+5. Update any entry: {"action":"update","id":"entry-id","data":{...fields to update...}}
 
-IMPORTANT: When adding tastings (oysters, wines, bourbons, beers, cocktails, etc.) always set entry_type:"tasting". When adding restaurants always set entry_type:"restaurant". Default city is Boise unless specified.
+IMPORTANT: When adding tastings (oysters, wines, bourbons, beers, cocktails, etc.) always set entry_type:"tasting". When adding restaurants always set entry_type:"restaurant". When adding recipes (home-cooked dishes with ingredients/instructions) always set entry_type:"recipe". Default city is Boise unless specified.
+
+RECIPE RULE: When the user says "add a recipe", "save this recipe", or describes a dish with ingredients or steps, always set entry_type:"recipe" and fill in ingredients (array of strings) and instructions (array of step strings in order). Include prep_time and cook_time when mentioned. Recipes do not have drinks/appetizers/mains/desserts — use ingredients/instructions instead.
 
 CRITICAL — CATEGORY RULE: Only use the EXACT category/categories the user explicitly names in their message. Do NOT add extra categories based on cuisine type, food type, or your own judgment. If the user says "category Salad", the category array must be EXACTLY ["Salad"] — nothing else. NEVER leave the category empty — if the user does not specify a category, ASK them before saving the entry.
 
@@ -2763,13 +2817,19 @@ Keep responses concise. For recommendations, highlight Phil's picks and server n
           const id = cmd.data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
           // Auto-detect entry_type if AI didn't set it
           const tastingKeywords = ['oyster','wine','bourbon','whiskey','beer','cocktail','tasting','spirits','champagne','sake','mead','cider','port','brandy','rum','gin','vodka','tequila','mezcal'];
-          const isTasting = cmd.data.entry_type === 'tasting' ||
+          // Recipe heuristic: has ingredients or instructions arrays, or explicit entry_type
+          const isRecipe = cmd.data.entry_type === 'recipe' ||
+            (Array.isArray(cmd.data.ingredients) && cmd.data.ingredients.length > 0) ||
+            (Array.isArray(cmd.data.instructions) && cmd.data.instructions.length > 0);
+          const isTasting = !isRecipe && (cmd.data.entry_type === 'tasting' ||
             tastingKeywords.some(k => cmd.data.name?.toLowerCase().includes(k)) ||
             tastingKeywords.some(k => (cmd.data.tags || []).join(' ').toLowerCase().includes(k)) ||
-            (cmd.data.category || []).some(c => tastingKeywords.some(k => c.toLowerCase().includes(k)));
-          if (!cmd.data.entry_type) cmd.data.entry_type = isTasting ? 'tasting' : 'restaurant';
-          // Default city to Boise for tastings if not specified or set to a region name
-          if (isTasting && (!cmd.data.city || cmd.data.city === cmd.data.name.split(' ')[0])) {
+            (cmd.data.category || []).some(c => tastingKeywords.some(k => c.toLowerCase().includes(k))));
+          if (!cmd.data.entry_type) {
+            cmd.data.entry_type = isRecipe ? 'recipe' : (isTasting ? 'tasting' : 'restaurant');
+          }
+          // Default city to Boise for tastings & recipes if not specified or set to a region name
+          if ((isTasting || isRecipe) && (!cmd.data.city || cmd.data.city === cmd.data.name.split(' ')[0])) {
             cmd.data.city = 'Boise';
           }
           const entry = { ...cmd.data, id, lastUpdated: Date.now() };
@@ -4085,7 +4145,7 @@ let currentEntryType = 'all';
 
 function setEntryType(type) {
   currentEntryType = type;
-  ['all','restaurant','tasting'].forEach(t => {
+  ['all','restaurant','tasting','recipe'].forEach(t => {
     document.getElementById('type-' + t)?.classList.toggle('active', t === type);
   });
   document.getElementById('sortBtn').classList.toggle('active', currentSort !== 'recent' || currentEntryType !== 'all' || currentCity !== 'Boise');
@@ -4098,15 +4158,27 @@ function setFormEntryType(type) {
   document.getElementById('fEntryType').value = type;
   document.getElementById('fTypeRestaurant').classList.toggle('active', type === 'restaurant');
   document.getElementById('fTypeTasting').classList.toggle('active', type === 'tasting');
+  document.getElementById('fTypeRecipe').classList.toggle('active', type === 'recipe');
   // Show/hide fields
   const isTasting = type === 'tasting';
-  document.getElementById('fNameLabel').textContent = isTasting ? 'Item Name' : 'Restaurant Name';
-  document.getElementById('fName').placeholder = isTasting ? 'e.g. Kumamoto Oysters' : 'e.g. Barbacoa';
+  const isRecipe = type === 'recipe';
+  const isRestaurant = type === 'restaurant';
+  const labels = { restaurant: 'Restaurant Name', tasting: 'Item Name', recipe: 'Recipe Name' };
+  const placeholders = { restaurant: 'e.g. Barbacoa', tasting: 'e.g. Kumamoto Oysters', recipe: 'e.g. Beef Wellington' };
+  document.getElementById('fNameLabel').textContent = labels[type] || labels.restaurant;
+  document.getElementById('fName').placeholder = placeholders[type] || placeholders.restaurant;
+  // Cuisine field shown for restaurant + recipe (e.g., "American" or "Italian" helps categorize)
   document.getElementById('fCuisineGroup').style.display = isTasting ? 'none' : '';
+  // Tasting-only fields
   document.getElementById('fVarietalGroup').style.display = isTasting ? '' : 'none';
   document.getElementById('fVintageGroup').style.display = isTasting ? '' : 'none';
   document.getElementById('fProducerGroup').style.display = isTasting ? '' : 'none';
   document.getElementById('fWhereHadGroup').style.display = isTasting ? '' : 'none';
+  // Recipe-only fields
+  document.getElementById('fPrepTimeGroup').style.display = isRecipe ? '' : 'none';
+  document.getElementById('fCookTimeGroup').style.display = isRecipe ? '' : 'none';
+  document.getElementById('fIngredientsGroup').style.display = isRecipe ? '' : 'none';
+  document.getElementById('fInstructionsGroup').style.display = isRecipe ? '' : 'none';
 }
 
 function toggleSortPanel() {
@@ -4409,7 +4481,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.90</span>
+  Philinity Eats ©️ <span>Rev 10.91</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
