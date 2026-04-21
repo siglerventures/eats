@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.82</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.83</div>
   </div>
 </div>
 
@@ -1924,6 +1924,40 @@ function autoTagTastingCategories(entry) {
   return entry;
 }
 
+// ── ENSURE CATEGORIES EXIST (v10.83) ──
+// When AI saves an entry with a category that doesn't exist in eats/categories yet,
+// append it so it appears as a filter chip. User can edit the emoji later.
+async function ensureCategoriesExist(entryCategories) {
+  if (!entryCategories) return;
+  const cats = Array.isArray(entryCategories) ? entryCategories : [entryCategories];
+  const toAdd = [];
+  cats.forEach(name => {
+    const clean = String(name || '').trim();
+    if (!clean) return;
+    // Already exists in local categories cache?
+    if (categories.some(c => c.name === clean)) return;
+    toAdd.push({ emoji: '🏷', name: clean });
+  });
+  if (!toAdd.length) return;
+  // Update local cache immediately
+  toAdd.forEach(c => categories.push(c));
+  // Write updated categories object to Firebase (slug keys to match v10.81 format)
+  const obj = {};
+  categories.forEach(c => {
+    const slug = String(c.name).trim().replace(/\s+/g, '-');
+    obj[slug] = { emoji: c.emoji || '🏷', name: c.name };
+  });
+  try {
+    await dbSet('eats/categories', obj);
+    renderCatChips();
+    updateCategoryDropdown();
+    const names = toAdd.map(c => c.name).join(', ');
+    showToast(`🏷 New category added: ${names}`);
+  } catch(e) {
+    console.warn('[Eats] ensureCategoriesExist failed:', e);
+  }
+}
+
 function sanitizeRestaurant(r) {
   const x = sanitizeValue(r || {});
   x.id = stripHTML(x.id || '');
@@ -2535,12 +2569,16 @@ Keep responses concise. For recommendations, highlight Phil's picks and server n
           // Auto-tag Wine/Oysters for tastings (v10.79) — only adds existing categories, never duplicates
           autoTagTastingCategories(entry);
           await dbSet(`${EATS_PATH}/${id}`, entry);
+          // Auto-add any new categories to eats/categories so they appear as filter chips (v10.83)
+          await ensureCategoriesExist(entry.category);
           appendAIBubble('✅ Added ' + cmd.data.name + ' to your guide!', 'success');
         } else if (cmd.action === 'update' && cmd.id) {
           const updates = {};
           Object.entries(cmd.data).forEach(([k,v]) => { updates[EATS_PATH + '/' + cmd.id + '/' + k] = v; });
           updates[EATS_PATH + '/' + cmd.id + '/lastUpdated'] = Date.now();
           await dbUpdate(updates);
+          // Also ensure any categories in the update exist as chips
+          if (cmd.data.category) await ensureCategoriesExist(cmd.data.category);
           appendAIBubble('✅ Updated ' + cmd.id + '!', 'success');
         }
       } catch(e) {
@@ -4133,7 +4171,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.82</span>
+  Philinity Eats ©️ <span>Rev 10.83</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
