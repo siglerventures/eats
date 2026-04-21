@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.88</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.90</div>
   </div>
 </div>
 
@@ -1721,8 +1721,13 @@ function applyFilters() {
 
   // City filter — tastings ALWAYS bypass city filter (wine is wine, oyster is oyster,
   // regardless of where it was had). Restaurants still respect city filter.
+  // Entries with NO city (ghosts / incomplete) also bypass so they're findable.
   if (currentCity !== 'All') {
-    filtered = filtered.filter(r => r.entry_type === 'tasting' || r.city === currentCity);
+    filtered = filtered.filter(r =>
+      r.entry_type === 'tasting' ||
+      !r.city ||             // ghost / missing city — always show
+      r.city === currentCity
+    );
   }
   if (currentEntryType !== 'all') filtered = filtered.filter(r => r.entry_type === currentEntryType);
   if (currentCat !== 'All') filtered = filtered.filter(r => {
@@ -2685,7 +2690,7 @@ async function askAI() {
   chatHistory.push({ role: 'user', content: fullMessage });
 
   // Build restaurant context
-  const context = allRestaurants.slice(0, 80).map(r =>
+  const context = allRestaurants.slice(0, 500).map(r =>
     `[id:${r.id}] ${r.name} (${r.city}, ${r.cuisine}) — Phil picks: ${(r.phil_picks||[]).join(', ')} | Trinity picks: ${(r.trinity_picks||[]).join(', ')} | Drinks: ${(r.drinks||[]).join(', ')} | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating||'unrated'}`
   ).join('\n');
 
@@ -4404,7 +4409,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.88</span>
+  Philinity Eats ©️ <span>Rev 10.90</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
