@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.79</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.80</div>
   </div>
 </div>
 
@@ -1779,12 +1779,15 @@ function renderNextPage() {
     if (!citySection) {
       // Show total count for this city across full list
       const cityTotal = currentRestaurantList.filter(r => r.city === city).length;
+      // Pull state from the first entry in this city (fall back to ID if missing)
+      const cityEntries = currentRestaurantList.filter(r => r.city === city);
+      const stateForCity = (cityEntries[0] && cityEntries[0].state) ? cityEntries[0].state : 'ID';
       citySection = document.createElement('div');
       citySection.className = 'city-section';
       citySection.dataset.city = city;
       citySection.innerHTML = `
         <div class="city-header">
-          <div class="city-name">🌆 ${escapeHTML(city)}, ID</div>
+          <div class="city-name">🌆 ${escapeHTML(city)}, ${escapeHTML(stateForCity)}</div>
           <div class="city-count">${cityTotal}</div>
           <div class="city-line"></div>
         </div>
@@ -4123,7 +4126,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.79</span>
+  Philinity Eats ©️ <span>Rev 10.80</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
