@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.85</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.86</div>
   </div>
 </div>
 
@@ -1345,13 +1345,36 @@
     <div class="bar-label">🤖 Ask AI</div>
     <input type="text" id="aiInput" placeholder="Ask anything, or: 'Add North End Pizza we like their Hyde House Combo'" onkeydown="if(event.key==='Enter') askAI()" class="unified-input">
     <button class="icon-btn" onclick="askAI()" title="Ask AI">🤖</button>
-    <label class="icon-btn" title="Attach photos (up to 4)" style="cursor:pointer;margin:0">
+    <button class="icon-btn" id="aiPhotoToggle" onclick="toggleAIPhotoPanel()" title="Attach photos (up to 4)" style="position:relative">
       📸
-      <input type="file" id="aiPhotoInput" accept="image/*" multiple style="display:none" onchange="handleAIPhotoUpload(event)">
-    </label>
+      <span id="aiPhotoBadge" style="display:none;position:absolute;top:0;right:0;background:var(--amber);color:#0f0c08;font-size:10px;font-weight:700;border-radius:50%;min-width:16px;height:16px;line-height:16px;padding:0 3px">0</span>
+    </button>
   </div>
-  <!-- Photo attachment preview strip (v10.85) -->
-  <div id="aiPhotoPreview" class="ai-bar-inner" style="display:none;margin-top:8px;padding:8px;background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;gap:8px;align-items:center;flex-wrap:wrap;"></div>
+  <!-- AI Photo Panel (v10.86) — same options as Edit Entry gallery -->
+  <div id="aiPhotoPanel" style="display:none;margin-top:10px;padding:12px;background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;max-width:1400px;margin-left:auto;margin-right:auto">
+    <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
+      <span style="font-size:11px;color:var(--amber);text-transform:uppercase;letter-spacing:1px;font-weight:500">📸 Attach Photos (max 4)</span>
+      <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 14px">
+        📷 Take Photo
+        <input type="file" id="aiCameraInput" accept="image/*" capture="environment" multiple style="display:none" onchange="handleAIPhotoUpload(event)">
+      </label>
+      <label class="btn btn-ghost" style="cursor:pointer;font-size:12px;padding:7px 14px">
+        🖼 Choose from Library
+        <input type="file" id="aiPhotoInput" accept="image/*" multiple style="display:none" onchange="handleAIPhotoUpload(event)">
+      </label>
+      <div id="aiDropZone" class="btn btn-ghost" style="font-size:12px;padding:7px 14px;border-style:dashed;cursor:pointer"
+        ondragover="event.preventDefault();this.style.borderColor='var(--amber-light)'"
+        ondragleave="this.style.borderColor=''"
+        ondrop="handleAIPhotoDrop(event)">
+        🖱 Drag & Drop here
+      </div>
+      <div style="flex:1"></div>
+      <button onclick="clearAIPhotos()" style="background:transparent;border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:6px;font-size:11px;cursor:pointer">✕ Clear</button>
+    </div>
+    <div style="font-size:11px;color:var(--amber);margin-bottom:8px">💡 Tip: <strong>Ctrl+V</strong> while this panel is open to paste a screenshot</div>
+    <div id="aiPhotoPreview" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Then type an AI message (e.g. "Add these pics to Cheesecake Factory" or "Create Bella Aquila with these pics")</div>
+  </div>
   <div class="highlight-bar" id="highlightBar">
     <span id="highlightMsg">✨ Showing recommended spots</span>
     <button onclick="clearHighlight()" style="background:transparent;border:none;color:var(--amber);cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif">✕ Show all</button>
@@ -2487,38 +2510,80 @@ async function deleteEntry() {
 // ─── AI CHAT ──────────────────────────────────────────────
 
 
-// ── AI PHOTO ATTACHMENTS (v10.85) ──
-// Lets user attach up to 4 photos via 📸 button; they get uploaded to Firebase
-// Storage when AI save fires. AI doesn't "see" them — it just receives URLs in
-// the message context and can attach them to the right entry via JSON action.
+// ── AI PHOTO ATTACHMENTS (v10.86) ──
+// Same options as Edit Entry: Camera / Library / Drag&Drop / Ctrl+V paste.
+// Up to 4 photos per AI message. Photos upload to Firebase Storage when AI is
+// called; AI gets URLs in the message and can attach them via JSON action.
 const AI_PHOTO_MAX = 4;
-let aiPendingPhotos = []; // array of { dataUrl, compressed }
+let aiPendingPhotos = []; // [{ compressed }]
+
+function toggleAIPhotoPanel() {
+  const panel = document.getElementById('aiPhotoPanel');
+  if (!panel) return;
+  const open = (panel.style.display === 'none' || !panel.style.display);
+  panel.style.display = open ? 'block' : 'none';
+}
+
+function updateAIPhotoBadge() {
+  const badge = document.getElementById('aiPhotoBadge');
+  if (!badge) return;
+  if (aiPendingPhotos.length) {
+    badge.textContent = aiPendingPhotos.length;
+    badge.style.display = 'inline-block';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function addAIPhotoFromDataUrl(dataUrl) {
+  if (aiPendingPhotos.length >= AI_PHOTO_MAX) {
+    showToast('📸 Max ' + AI_PHOTO_MAX + ' photos — remove one first');
+    return;
+  }
+  compressImage(dataUrl, compressed => {
+    if (aiPendingPhotos.length >= AI_PHOTO_MAX) return;
+    aiPendingPhotos.push({ compressed });
+    renderAIPhotoPreview();
+    updateAIPhotoBadge();
+  });
+}
 
 function handleAIPhotoUpload(event) {
   const files = Array.from(event.target.files || []);
   if (!files.length) return;
-  // Reset input so picking the same file again works
   event.target.value = '';
-
   const remaining = AI_PHOTO_MAX - aiPendingPhotos.length;
   if (remaining <= 0) {
-    showToast(`📸 Max ${AI_PHOTO_MAX} photos — remove one first`);
+    showToast('📸 Max ' + AI_PHOTO_MAX + ' photos — remove one first');
     return;
   }
-  const toAdd = files.slice(0, remaining);
-  if (files.length > remaining) {
-    showToast(`📸 Added ${remaining} (limit ${AI_PHOTO_MAX})`);
-  }
-
-  toAdd.forEach(file => {
+  // Ensure panel visible
+  const panel = document.getElementById('aiPhotoPanel');
+  if (panel) panel.style.display = 'block';
+  if (files.length > remaining) showToast('📸 Added ' + remaining + ' (limit ' + AI_PHOTO_MAX + ')');
+  files.slice(0, remaining).forEach(file => {
     if (!file.type.startsWith('image/')) return;
     const reader = new FileReader();
-    reader.onload = e => {
-      compressImage(e.target.result, compressed => {
-        aiPendingPhotos.push({ compressed });
-        renderAIPhotoPreview();
-      });
-    };
+    reader.onload = e => addAIPhotoFromDataUrl(e.target.result);
+    reader.readAsDataURL(file);
+  });
+}
+
+function handleAIPhotoDrop(event) {
+  event.preventDefault();
+  const dz = document.getElementById('aiDropZone');
+  if (dz) dz.style.borderColor = '';
+  const files = Array.from(event.dataTransfer && event.dataTransfer.files || []);
+  if (!files.length) return;
+  const remaining = AI_PHOTO_MAX - aiPendingPhotos.length;
+  if (remaining <= 0) {
+    showToast('📸 Max ' + AI_PHOTO_MAX + ' photos — remove one first');
+    return;
+  }
+  files.slice(0, remaining).forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => addAIPhotoFromDataUrl(e.target.result);
     reader.readAsDataURL(file);
   });
 }
@@ -2527,32 +2592,52 @@ function renderAIPhotoPreview() {
   const strip = document.getElementById('aiPhotoPreview');
   if (!strip) return;
   if (!aiPendingPhotos.length) {
-    strip.style.display = 'none';
-    strip.innerHTML = '';
+    strip.innerHTML = '<span style="font-size:11px;color:var(--text-muted);font-style:italic">No photos attached yet</span>';
     return;
   }
-  strip.style.display = 'flex';
-  strip.innerHTML =
-    '<span style="font-size:11px;color:var(--text-dim);font-weight:500">📸 ' + aiPendingPhotos.length + '/' + AI_PHOTO_MAX + ' photos — type your instruction then send:</span>' +
-    aiPendingPhotos.map((p, i) =>
-      '<div style="position:relative;display:inline-block">' +
-        '<img src="' + p.compressed + '" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border-amber)">' +
-        '<button onclick="removeAIPhoto(' + i + ')" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:white;border:none;width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:10px;line-height:1;padding:0">✕</button>' +
-      '</div>'
-    ).join('');
+  strip.innerHTML = aiPendingPhotos.map((p, i) =>
+    '<div style="position:relative;display:inline-block">' +
+      '<img src="' + p.compressed + '" style="width:72px;height:72px;object-fit:cover;border-radius:6px;border:1px solid var(--border-amber)">' +
+      '<button onclick="removeAIPhoto(' + i + ')" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:white;border:none;width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1;padding:0;font-weight:700">✕</button>' +
+    '</div>'
+  ).join('');
 }
 
 function removeAIPhoto(index) {
   aiPendingPhotos.splice(index, 1);
   renderAIPhotoPreview();
+  updateAIPhotoBadge();
 }
 
 function clearAIPhotos() {
   aiPendingPhotos = [];
   renderAIPhotoPreview();
+  updateAIPhotoBadge();
 }
 
-// Upload pending photos to Firebase Storage and return an array of URLs
+// Ctrl+V paste support — only when AI photo panel is open
+document.addEventListener('paste', e => {
+  const panel = document.getElementById('aiPhotoPanel');
+  if (!panel || panel.style.display === 'none' || !panel.style.display) return;
+  // Don't steal paste from form modal (it has its own handler)
+  const formModal = document.getElementById('formModal');
+  if (formModal && formModal.classList.contains('open')) return;
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      const reader = new FileReader();
+      reader.onload = ev => addAIPhotoFromDataUrl(ev.target.result);
+      reader.readAsDataURL(file);
+      e.preventDefault();
+      showToast('📋 Pasted!');
+      break;
+    }
+  }
+});
+
+// Upload pending photos to Firebase Storage and return URLs
 async function uploadPendingAIPhotos() {
   if (!aiPendingPhotos.length) return [];
   const urls = [];
@@ -2562,7 +2647,7 @@ async function uploadPendingAIPhotos() {
       const url = await uploadDataUrlToStorage(aiPendingPhotos[i].compressed, path);
       urls.push(url);
     } catch(e) {
-      console.warn('[Eats] AI photo upload failed for photo', i, e);
+      console.warn('[Eats] AI photo upload failed:', e);
     }
   }
   return urls;
@@ -2592,6 +2677,9 @@ async function askAI() {
   appendUserBubble(q + (photoUrls.length ? ' (📸 ' + photoUrls.length + ')' : ''));
   document.getElementById('aiInput').value = '';
   clearAIPhotos();
+  // Close the photo panel after sending
+  const _panelEl = document.getElementById('aiPhotoPanel');
+  if (_panelEl) _panelEl.style.display = 'none';
 
   document.getElementById('aiThinking').classList.add('visible');
   chatHistory.push({ role: 'user', content: fullMessage });
@@ -3859,6 +3947,9 @@ window.cleanupUndefined = cleanupUndefined;
 window.askAI = askAI;
 window.clearChat = clearChat;
 window.handleAIPhotoUpload = handleAIPhotoUpload;
+window.handleAIPhotoDrop = handleAIPhotoDrop;
+window.toggleAIPhotoPanel = toggleAIPhotoPanel;
+window.clearAIPhotos = clearAIPhotos;
 window.removeAIPhoto = removeAIPhoto;
 window.resetHome = resetHome;
 window.setCity = setCity;
@@ -4295,7 +4386,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.85</span>
+  Philinity Eats ©️ <span>Rev 10.86</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
