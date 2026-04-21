@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.91</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.92</div>
   </div>
 </div>
 
@@ -2013,6 +2013,157 @@ async function ensureCategoriesExist(entryCategories) {
   } catch(e) {
     console.warn('[Eats] ensureCategoriesExist failed:', e);
   }
+}
+
+// ── JUNK CATEGORY SCAN (v10.92) ──
+// Finds entries with categories that are: empty, contain emojis, or don't exist
+// in eats/categories. User picks per-item: keep / remove / create as new category.
+let junkScanFindings = []; // populated by scanJunkCategories()
+
+function scanJunkCategories() {
+  // Build valid category set from current in-memory categories (already synced with Firebase)
+  const validCats = new Set(categories.map(c => c.name));
+  const hasEmoji = (s) => /[\u{1F300}-\u{1F9FF}]|[\u2600-\u27BF]/u.test(s);
+
+  // Collect all junk findings — one per (entryId, junkCategoryString) pair
+  junkScanFindings = [];
+  allRestaurants.forEach(r => {
+    if (!r.id) return;
+    const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+    cats.forEach(c => {
+      const str = String(c || '').trim();
+      let reason = null;
+      if (!str) reason = 'empty';
+      else if (hasEmoji(str)) reason = 'contains emoji';
+      else if (!validCats.has(str)) reason = 'not in your categories';
+      if (reason) {
+        junkScanFindings.push({
+          entryId: r.id,
+          entryName: r.name || '(no name)',
+          junkValue: c,
+          reason,
+          allCats: cats,
+          action: 'keep' // default — nothing happens unless user changes this
+        });
+      }
+    });
+  });
+
+  // Close Data Manager, open scan modal
+  closeDataModal();
+  renderJunkScanResults();
+  document.getElementById('junkScanModal').classList.add('open');
+}
+
+function renderJunkScanResults() {
+  const container = document.getElementById('junkScanResults');
+  const summary = document.getElementById('junkScanSummary');
+  const applyBtn = document.getElementById('junkScanApplyBtn');
+  if (!container) return;
+
+  if (!junkScanFindings.length) {
+    container.innerHTML = '<div style="padding:32px 16px;text-align:center;color:var(--text-dim)">✅ No junk categories found — everything looks clean.</div>';
+    summary.textContent = '';
+    applyBtn.style.display = 'none';
+    return;
+  }
+  applyBtn.style.display = '';
+
+  // Group findings by entry for readability
+  const byEntry = {};
+  junkScanFindings.forEach((f, i) => {
+    if (!byEntry[f.entryId]) byEntry[f.entryId] = { name: f.entryName, items: [] };
+    byEntry[f.entryId].items.push({ ...f, index: i });
+  });
+
+  container.innerHTML = Object.values(byEntry).map(g => `
+    <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:12px;margin-bottom:10px">
+      <div style="font-weight:600;color:var(--amber-light);margin-bottom:6px">${escapeHTML(g.name)}</div>
+      ${g.items.map(it => `
+        <div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--border);flex-wrap:wrap">
+          <div style="flex:1;min-width:160px">
+            <div style="font-size:12px;color:var(--text)"><span style="font-family:monospace;background:rgba(239,68,68,0.15);color:#fca5a5;padding:2px 6px;border-radius:4px">${escapeHTML(String(it.junkValue) || '(empty)')}</span></div>
+            <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Reason: ${escapeHTML(it.reason)}</div>
+          </div>
+          <select onchange="setJunkAction(${it.index}, this.value)" style="background:var(--surface);border:1px solid var(--border-amber);color:var(--text);padding:6px 10px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none">
+            <option value="keep" ${it.action === 'keep' ? 'selected' : ''}>Keep</option>
+            <option value="remove" ${it.action === 'remove' ? 'selected' : ''}>🗑 Remove from entry</option>
+            ${it.reason !== 'empty' && it.reason !== 'contains emoji' ? `<option value="create" ${it.action === 'create' ? 'selected' : ''}>➕ Create as new category</option>` : ''}
+          </select>
+        </div>
+      `).join('')}
+    </div>
+  `).join('');
+
+  updateJunkScanSummary();
+}
+
+function updateJunkScanSummary() {
+  const summary = document.getElementById('junkScanSummary');
+  const counts = { keep: 0, remove: 0, create: 0 };
+  junkScanFindings.forEach(f => counts[f.action]++);
+  summary.textContent = `${junkScanFindings.length} junk items · Keep: ${counts.keep} · Remove: ${counts.remove} · Create: ${counts.create}`;
+}
+
+function setJunkAction(index, action) {
+  if (!junkScanFindings[index]) return;
+  junkScanFindings[index].action = action;
+  updateJunkScanSummary();
+}
+
+async function applyJunkScanFixes() {
+  // Group actions
+  const toRemove = junkScanFindings.filter(f => f.action === 'remove');
+  const toCreate = junkScanFindings.filter(f => f.action === 'create');
+
+  if (!toRemove.length && !toCreate.length) {
+    showToast('Nothing to apply — all set to Keep.');
+    return;
+  }
+
+  if (!confirm(`Apply ${toRemove.length} removal${toRemove.length === 1 ? '' : 's'} and ${toCreate.length} new categor${toCreate.length === 1 ? 'y' : 'ies'}?`)) return;
+
+  const updates = {};
+
+  // Build category name sets to create (dedupe by name)
+  const newCatNames = new Set(toCreate.map(f => String(f.junkValue).trim()).filter(Boolean));
+  newCatNames.forEach(name => {
+    const slug = name.replace(/\s+/g, '-');
+    if (!categories.some(c => c.name === name)) {
+      updates[`eats/categories/${slug}`] = { emoji: '🏷', name };
+    }
+  });
+
+  // For each entry that has items marked remove, filter those out of its category array
+  // Group removals by entryId to compute the new array once per entry
+  const removalsByEntry = {};
+  toRemove.forEach(f => {
+    if (!removalsByEntry[f.entryId]) removalsByEntry[f.entryId] = new Set();
+    removalsByEntry[f.entryId].add(f.junkValue);
+  });
+  Object.entries(removalsByEntry).forEach(([entryId, removeSet]) => {
+    const entry = allRestaurants.find(r => r.id === entryId);
+    if (!entry) return;
+    const current = Array.isArray(entry.category) ? entry.category : (entry.category ? [entry.category] : []);
+    const filtered = current.filter(c => !removeSet.has(c));
+    updates[`eats/${entryId}/category`] = filtered;
+    updates[`eats/${entryId}/lastUpdated`] = Date.now();
+  });
+
+  try {
+    await dbUpdate(updates);
+    const msg = `✅ Applied: ${toRemove.length} removed, ${newCatNames.size} categor${newCatNames.size === 1 ? 'y' : 'ies'} created`;
+    showToast(msg);
+    closeJunkScanModal();
+  } catch(e) {
+    console.error('[Eats] applyJunkScanFixes failed:', e);
+    showToast('❌ Failed to apply — check console');
+  }
+}
+
+function closeJunkScanModal() {
+  document.getElementById('junkScanModal').classList.remove('open');
+  junkScanFindings = [];
 }
 
 function sanitizeRestaurant(r) {
@@ -4034,6 +4185,10 @@ window.handleAIPhotoDrop = handleAIPhotoDrop;
 window.toggleAIPhotoPanel = toggleAIPhotoPanel;
 window.clearAIPhotos = clearAIPhotos;
 window.removeAIPhoto = removeAIPhoto;
+window.scanJunkCategories = scanJunkCategories;
+window.setJunkAction = setJunkAction;
+window.applyJunkScanFixes = applyJunkScanFixes;
+window.closeJunkScanModal = closeJunkScanModal;
 window.resetHome = resetHome;
 window.setCity = setCity;
 window.setCat = setCat;
@@ -4408,12 +4563,37 @@ function sortRestaurants(arr) {
         </div>
       </div>
 
+      <!-- Scan for Junk Categories (v10.92) -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">🧹 Scan for Junk Categories</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">Find entries tagged with categories that don't exist, are empty, or contain stray emojis. You decide per-item: Keep, Remove, or Create as new category.</div>
+        <button onclick="scanJunkCategories()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🧹 Scan Now</button>
+      </div>
+
     </div>
 
     <div id="data-modal-status" style="margin-top:14px;font-size:0.72rem;color:var(--text-muted);line-height:1.8;font-family:monospace"></div>
 
     <div style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn btn-ghost" onclick="closeDataModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- JUNK CATEGORY SCAN RESULTS MODAL (v10.92) -->
+<div class="modal-overlay" id="junkScanModal" onclick="if(event.target===this) closeJunkScanModal()">
+  <div class="modal" style="max-width:720px">
+    <button class="modal-close" onclick="closeJunkScanModal()">✕</button>
+    <div class="modal-title">🧹 Junk Category Scan</div>
+    <div class="modal-subtitle" style="margin-bottom:12px">Review each item and pick an action. Default is "Keep" — nothing changes until you click Apply.</div>
+    <div id="junkScanResults" style="max-height:60vh;overflow-y:auto;padding-right:4px"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);gap:8px">
+      <div id="junkScanSummary" style="font-size:11px;color:var(--text-dim);align-self:center"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closeJunkScanModal()">Cancel</button>
+        <button id="junkScanApplyBtn" class="btn btn-amber" onclick="applyJunkScanFixes()">Apply</button>
+      </div>
     </div>
   </div>
 </div>
@@ -4481,7 +4661,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.91</span>
+  Philinity Eats ©️ <span>Rev 10.92</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
