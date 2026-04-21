@@ -2511,7 +2511,7 @@ You can:
 
 IMPORTANT: When adding tastings (oysters, wines, bourbons, beers, cocktails, etc.) always set entry_type:"tasting". When adding restaurants always set entry_type:"restaurant". Default city is Boise unless specified.
 
-CRITICAL — CATEGORY RULE: Only use the EXACT category/categories the user explicitly names in their message. Do NOT add extra categories based on cuisine type, food type, or your own judgment. If the user says "category Salad", the category array must be EXACTLY ["Salad"] — nothing else. If the user does not specify a category, leave it empty (the app will handle defaults).
+CRITICAL — CATEGORY RULE: Only use the EXACT category/categories the user explicitly names in their message. Do NOT add extra categories based on cuisine type, food type, or your own judgment. If the user says "category Salad", the category array must be EXACTLY ["Salad"] — nothing else. NEVER leave the category empty — if the user does not specify a category, ASK them before saving the entry.
 
 Keep responses concise. For recommendations, highlight Phil's picks and server names.`;
 
