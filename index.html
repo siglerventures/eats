@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.94</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.95</div>
   </div>
 </div>
 
@@ -2866,6 +2866,103 @@ async function uploadPendingAIPhotos() {
   return urls;
 }
 
+// ── AI JSON COMMAND PARSER (v10.95) ──
+// AI sometimes returns multiple JSON actions in one reply (e.g., "update X AND add Y"),
+// and sometimes wraps them in ```json ... ``` code fences. This parser handles both.
+// Uses brace-balance scanning so nested { } inside values don't break parsing.
+function extractActionJSONs(text) {
+  const results = [];
+  let i = 0;
+  const n = text.length;
+  while (i < n) {
+    // Seek next opening brace
+    const open = text.indexOf('{', i);
+    if (open === -1) break;
+    // Walk forward tracking brace depth, respecting strings
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    let end = -1;
+    for (let j = open; j < n; j++) {
+      const ch = text[j];
+      if (escape) { escape = false; continue; }
+      if (ch === '\\') { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === '{') depth++;
+      else if (ch === '}') {
+        depth--;
+        if (depth === 0) { end = j; break; }
+      }
+    }
+    if (end === -1) break; // unbalanced — stop
+    const candidate = text.slice(open, end + 1);
+    // Only collect if it mentions "action":"add" or "action":"update"
+    if (/"action"\s*:\s*"(add|update)"/.test(candidate)) {
+      results.push(candidate);
+    }
+    i = end + 1;
+  }
+  return results;
+}
+
+async function processAICommand(cmd) {
+  if (cmd.action === 'add' && cmd.data?.name) {
+    const id = cmd.data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
+    // Auto-detect entry_type if AI didn't set it
+    const tastingKeywords = ['oyster','wine','bourbon','whiskey','beer','cocktail','tasting','spirits','champagne','sake','mead','cider','port','brandy','rum','gin','vodka','tequila','mezcal'];
+    const isRecipe = cmd.data.entry_type === 'recipe' ||
+      (Array.isArray(cmd.data.ingredients) && cmd.data.ingredients.length > 0) ||
+      (Array.isArray(cmd.data.instructions) && cmd.data.instructions.length > 0);
+    const isTasting = !isRecipe && (cmd.data.entry_type === 'tasting' ||
+      tastingKeywords.some(k => cmd.data.name?.toLowerCase().includes(k)) ||
+      tastingKeywords.some(k => (cmd.data.tags || []).join(' ').toLowerCase().includes(k)) ||
+      (cmd.data.category || []).some(c => tastingKeywords.some(k => c.toLowerCase().includes(k))));
+    if (!cmd.data.entry_type) {
+      cmd.data.entry_type = isRecipe ? 'recipe' : (isTasting ? 'tasting' : 'restaurant');
+    }
+    if ((isTasting || isRecipe) && (!cmd.data.city || cmd.data.city === cmd.data.name.split(' ')[0])) {
+      cmd.data.city = 'Boise';
+    }
+    const entry = { ...cmd.data, id, lastUpdated: Date.now() };
+    autoTagTastingCategories(entry);
+    await dbSet(`${EATS_PATH}/${id}`, entry);
+    await ensureCategoriesExist(entry.category);
+    appendAIBubble('✅ Added ' + cmd.data.name + ' to your guide!', 'success');
+  } else if (cmd.action === 'update' && cmd.id) {
+    // Guard: reject updates to non-existent IDs — prevents AI from creating
+    // ghost entries by guessing wrong IDs (v10.88)
+    const existing = allRestaurants.find(r => r.id === cmd.id);
+    if (!existing) {
+      const target = String(cmd.id || '').toLowerCase();
+      const suggestions = allRestaurants
+        .filter(r => r.id && (r.id.includes(target.slice(0, 4)) || (r.name || '').toLowerCase().includes(target)))
+        .slice(0, 5)
+        .map(r => `"${r.name}" (id: ${r.id})`)
+        .join(', ');
+      const msg = `❌ No entry with id "${cmd.id}" exists.${suggestions ? '\n\nDid you mean: ' + suggestions : ''}`;
+      appendAIBubble(msg, 'ai');
+      return;
+    }
+    // Merge photos with existing gallery (don't overwrite)
+    if (Array.isArray(cmd.data.photos) && cmd.data.photos.length) {
+      const existingPhotos = Array.isArray(existing.photos) ? existing.photos : [];
+      const merged = [...existingPhotos];
+      cmd.data.photos.forEach(p => { if (p && !merged.includes(p)) merged.push(p); });
+      cmd.data.photos = merged;
+      if (!existing.imageUrl && merged.length && !cmd.data.imageUrl) {
+        cmd.data.imageUrl = merged[0];
+      }
+    }
+    const updates = {};
+    Object.entries(cmd.data).forEach(([k,v]) => { updates[EATS_PATH + '/' + cmd.id + '/' + k] = v; });
+    updates[EATS_PATH + '/' + cmd.id + '/lastUpdated'] = Date.now();
+    await dbUpdate(updates);
+    if (cmd.data.category) await ensureCategoriesExist(cmd.data.category);
+    appendAIBubble('✅ Updated ' + (existing.name || cmd.id) + '!', 'success');
+  }
+}
+
 async function askAI() {
   const q = document.getElementById('aiInput').value.trim();
   if (!q) return;
@@ -2929,6 +3026,8 @@ ENTRY IDs: Each entry in the current data list is prefixed with "[id:xxx]" — t
 
 DISAMBIGUATION RULE: If the user's entry reference doesn't EXACTLY match any name in the context, do NOT guess or create a new entry. Instead, look for close/partial matches and ASK the user to confirm which one. Example: user says "Corso" and the context has "Corso and James" — do NOT create a new "Corso" entry, and do NOT assume they're the same. Ask: "Did you mean Corso and James?" and wait for confirmation. If no close match exists at all, ask whether they want to CREATE a new entry.
 
+JSON OUTPUT FORMAT: When returning action JSON, emit it as raw JSON — do NOT wrap in markdown code fences (no triple-backtick json or triple-backtick markers). Multiple actions in one reply are fine (e.g., an update plus an add); output each as its own JSON object on its own line. Keep your conversational prose brief and separate from the JSON.
+
 Keep responses concise. For recommendations, highlight Phil's picks and server names.`;
 
   try {
@@ -2966,76 +3065,27 @@ Keep responses concise. For recommendations, highlight Phil's picks and server n
     const reply = data.content?.[0]?.text || '';
     chatHistory.push({ role: 'assistant', content: reply });
 
-    // Check if AI wants to add/update a restaurant
-    const jsonMatch = reply.match(/\{[\s\S]*"action"\s*:\s*"(add|update)"[\s\S]*\}/);
-    if (jsonMatch) {
-      try {
-        const cmd = JSON.parse(jsonMatch[0]);
-        if (cmd.action === 'add' && cmd.data?.name) {
-          const id = cmd.data.name.toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-');
-          // Auto-detect entry_type if AI didn't set it
-          const tastingKeywords = ['oyster','wine','bourbon','whiskey','beer','cocktail','tasting','spirits','champagne','sake','mead','cider','port','brandy','rum','gin','vodka','tequila','mezcal'];
-          // Recipe heuristic: has ingredients or instructions arrays, or explicit entry_type
-          const isRecipe = cmd.data.entry_type === 'recipe' ||
-            (Array.isArray(cmd.data.ingredients) && cmd.data.ingredients.length > 0) ||
-            (Array.isArray(cmd.data.instructions) && cmd.data.instructions.length > 0);
-          const isTasting = !isRecipe && (cmd.data.entry_type === 'tasting' ||
-            tastingKeywords.some(k => cmd.data.name?.toLowerCase().includes(k)) ||
-            tastingKeywords.some(k => (cmd.data.tags || []).join(' ').toLowerCase().includes(k)) ||
-            (cmd.data.category || []).some(c => tastingKeywords.some(k => c.toLowerCase().includes(k))));
-          if (!cmd.data.entry_type) {
-            cmd.data.entry_type = isRecipe ? 'recipe' : (isTasting ? 'tasting' : 'restaurant');
-          }
-          // Default city to Boise for tastings & recipes if not specified or set to a region name
-          if ((isTasting || isRecipe) && (!cmd.data.city || cmd.data.city === cmd.data.name.split(' ')[0])) {
-            cmd.data.city = 'Boise';
-          }
-          const entry = { ...cmd.data, id, lastUpdated: Date.now() };
-          // Auto-tag Wine/Oysters for tastings (v10.79) — only adds existing categories, never duplicates
-          autoTagTastingCategories(entry);
-          await dbSet(`${EATS_PATH}/${id}`, entry);
-          // Auto-add any new categories to eats/categories so they appear as filter chips (v10.83)
-          await ensureCategoriesExist(entry.category);
-          appendAIBubble('✅ Added ' + cmd.data.name + ' to your guide!', 'success');
-        } else if (cmd.action === 'update' && cmd.id) {
-          // Guard: reject updates to non-existent IDs — prevents AI from creating
-          // ghost entries by guessing wrong IDs (v10.88)
-          const existing = allRestaurants.find(r => r.id === cmd.id);
-          if (!existing) {
-            // Suggest close matches so user can tell AI the right ID
-            const target = String(cmd.id || '').toLowerCase();
-            const suggestions = allRestaurants
-              .filter(r => r.id && (r.id.includes(target.slice(0, 4)) || (r.name || '').toLowerCase().includes(target)))
-              .slice(0, 5)
-              .map(r => `"${r.name}" (id: ${r.id})`)
-              .join(', ');
-            const msg = `❌ No entry with id "${cmd.id}" exists.${suggestions ? '\n\nDid you mean: ' + suggestions : ''}`;
-            appendAIBubble(msg, 'ai');
-            return;
-          }
-          // If AI included photos, merge with existing gallery (don't overwrite)
-          if (Array.isArray(cmd.data.photos) && cmd.data.photos.length) {
-            const existingPhotos = Array.isArray(existing.photos) ? existing.photos : [];
-            const merged = [...existingPhotos];
-            cmd.data.photos.forEach(p => { if (p && !merged.includes(p)) merged.push(p); });
-            cmd.data.photos = merged;
-            // If entry has no main imageUrl yet, set first new photo as main
-            if (!existing.imageUrl && merged.length && !cmd.data.imageUrl) {
-              cmd.data.imageUrl = merged[0];
-            }
-          }
-          const updates = {};
-          Object.entries(cmd.data).forEach(([k,v]) => { updates[EATS_PATH + '/' + cmd.id + '/' + k] = v; });
-          updates[EATS_PATH + '/' + cmd.id + '/lastUpdated'] = Date.now();
-          await dbUpdate(updates);
-          // Also ensure any categories in the update exist as chips
-          if (cmd.data.category) await ensureCategoriesExist(cmd.data.category);
-          appendAIBubble('✅ Updated ' + (existing.name || cmd.id) + '!', 'success');
+    // Strip markdown code fences first so ```json { ... } ``` gets cleanly parsed (v10.95)
+    let cleanReply = reply.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+
+    // Find ALL JSON action blocks (AI sometimes sends multiple ops in one reply: update + add)
+    const jsonMatches = extractActionJSONs(cleanReply);
+
+    if (jsonMatches.length) {
+      let anyProcessed = false;
+      for (const rawJSON of jsonMatches) {
+        try {
+          const cmd = JSON.parse(rawJSON);
+          await processAICommand(cmd);
+          anyProcessed = true;
+        } catch(e) {
+          console.warn('[Eats] Failed to parse AI command JSON:', e, rawJSON.slice(0, 120));
         }
-      } catch(e) {
-        const text = reply.replace(/\{[\s\S]*\}/, '').trim();
-        if (text) appendAIBubble(text, 'ai');
       }
+      // Show any prose that was alongside the JSON (the AI's conversational preamble)
+      // but strip out any lingering JSON-looking blobs and empty code-fence remnants.
+      const text = cleanReply.replace(/\{[\s\S]*?\}/g, '').replace(/```[^`]*```?/g, '').trim();
+      if (text && !anyProcessed) appendAIBubble(text, 'ai');
     } else {
       appendAIBubble(reply, 'ai');
     }
@@ -4688,7 +4738,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.94</span>
+  Philinity Eats ©️ <span>Rev 10.95</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
