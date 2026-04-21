@@ -1290,7 +1290,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.84</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.85</div>
   </div>
 </div>
 
@@ -1345,8 +1345,13 @@
     <div class="bar-label">🤖 Ask AI</div>
     <input type="text" id="aiInput" placeholder="Ask anything, or: 'Add North End Pizza we like their Hyde House Combo'" onkeydown="if(event.key==='Enter') askAI()" class="unified-input">
     <button class="icon-btn" onclick="askAI()" title="Ask AI">🤖</button>
-    <button class="icon-btn" onclick="clearChat()" title="Clear">🗑</button>
+    <label class="icon-btn" title="Attach photos (up to 4)" style="cursor:pointer;margin:0">
+      📸
+      <input type="file" id="aiPhotoInput" accept="image/*" multiple style="display:none" onchange="handleAIPhotoUpload(event)">
+    </label>
   </div>
+  <!-- Photo attachment preview strip (v10.85) -->
+  <div id="aiPhotoPreview" class="ai-bar-inner" style="display:none;margin-top:8px;padding:8px;background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;gap:8px;align-items:center;flex-wrap:wrap;"></div>
   <div class="highlight-bar" id="highlightBar">
     <span id="highlightMsg">✨ Showing recommended spots</span>
     <button onclick="clearHighlight()" style="background:transparent;border:none;color:var(--amber);cursor:pointer;font-size:12px;font-family:'DM Sans',sans-serif">✕ Show all</button>
@@ -2482,14 +2487,114 @@ async function deleteEntry() {
 // ─── AI CHAT ──────────────────────────────────────────────
 
 
+// ── AI PHOTO ATTACHMENTS (v10.85) ──
+// Lets user attach up to 4 photos via 📸 button; they get uploaded to Firebase
+// Storage when AI save fires. AI doesn't "see" them — it just receives URLs in
+// the message context and can attach them to the right entry via JSON action.
+const AI_PHOTO_MAX = 4;
+let aiPendingPhotos = []; // array of { dataUrl, compressed }
+
+function handleAIPhotoUpload(event) {
+  const files = Array.from(event.target.files || []);
+  if (!files.length) return;
+  // Reset input so picking the same file again works
+  event.target.value = '';
+
+  const remaining = AI_PHOTO_MAX - aiPendingPhotos.length;
+  if (remaining <= 0) {
+    showToast(`📸 Max ${AI_PHOTO_MAX} photos — remove one first`);
+    return;
+  }
+  const toAdd = files.slice(0, remaining);
+  if (files.length > remaining) {
+    showToast(`📸 Added ${remaining} (limit ${AI_PHOTO_MAX})`);
+  }
+
+  toAdd.forEach(file => {
+    if (!file.type.startsWith('image/')) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      compressImage(e.target.result, compressed => {
+        aiPendingPhotos.push({ compressed });
+        renderAIPhotoPreview();
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderAIPhotoPreview() {
+  const strip = document.getElementById('aiPhotoPreview');
+  if (!strip) return;
+  if (!aiPendingPhotos.length) {
+    strip.style.display = 'none';
+    strip.innerHTML = '';
+    return;
+  }
+  strip.style.display = 'flex';
+  strip.innerHTML =
+    '<span style="font-size:11px;color:var(--text-dim);font-weight:500">📸 ' + aiPendingPhotos.length + '/' + AI_PHOTO_MAX + ' photos — type your instruction then send:</span>' +
+    aiPendingPhotos.map((p, i) =>
+      '<div style="position:relative;display:inline-block">' +
+        '<img src="' + p.compressed + '" style="width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border-amber)">' +
+        '<button onclick="removeAIPhoto(' + i + ')" style="position:absolute;top:-6px;right:-6px;background:var(--red);color:white;border:none;width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:10px;line-height:1;padding:0">✕</button>' +
+      '</div>'
+    ).join('');
+}
+
+function removeAIPhoto(index) {
+  aiPendingPhotos.splice(index, 1);
+  renderAIPhotoPreview();
+}
+
+function clearAIPhotos() {
+  aiPendingPhotos = [];
+  renderAIPhotoPreview();
+}
+
+// Upload pending photos to Firebase Storage and return an array of URLs
+async function uploadPendingAIPhotos() {
+  if (!aiPendingPhotos.length) return [];
+  const urls = [];
+  for (let i = 0; i < aiPendingPhotos.length; i++) {
+    const path = makeStoragePath('ai-chat', 'ai-' + (i + 1));
+    try {
+      const url = await uploadDataUrlToStorage(aiPendingPhotos[i].compressed, path);
+      urls.push(url);
+    } catch(e) {
+      console.warn('[Eats] AI photo upload failed for photo', i, e);
+    }
+  }
+  return urls;
+}
+
 async function askAI() {
   const q = document.getElementById('aiInput').value.trim();
   if (!q) return;
-  appendUserBubble(q);
+
+  // Upload any attached photos FIRST (v10.85) — so their URLs are ready for AI
+  let photoUrls = [];
+  if (aiPendingPhotos.length) {
+    document.getElementById('aiThinking').classList.add('visible');
+    try {
+      photoUrls = await uploadPendingAIPhotos();
+    } catch(e) {
+      console.error('[Eats] Photo upload failed:', e);
+    }
+  }
+
+  // Compose the user message for display + history
+  const photoNote = photoUrls.length
+    ? '\n\n[Attached ' + photoUrls.length + ' photo URL' + (photoUrls.length === 1 ? '' : 's') + ' — use in photos array when calling add or update]:\n' + photoUrls.join('\n')
+    : '';
+  const fullMessage = q + photoNote;
+
+  appendUserBubble(q + (photoUrls.length ? ' (📸 ' + photoUrls.length + ')' : ''));
   document.getElementById('aiInput').value = '';
+  clearAIPhotos();
 
   document.getElementById('aiThinking').classList.add('visible');
-  chatHistory.push({ role: 'user', content: q });
+  chatHistory.push({ role: 'user', content: fullMessage });
 
   // Build restaurant context
   const context = allRestaurants.slice(0, 80).map(r =>
@@ -2512,6 +2617,8 @@ You can:
 IMPORTANT: When adding tastings (oysters, wines, bourbons, beers, cocktails, etc.) always set entry_type:"tasting". When adding restaurants always set entry_type:"restaurant". Default city is Boise unless specified.
 
 CRITICAL — CATEGORY RULE: Only use the EXACT category/categories the user explicitly names in their message. Do NOT add extra categories based on cuisine type, food type, or your own judgment. If the user says "category Salad", the category array must be EXACTLY ["Salad"] — nothing else. NEVER leave the category empty — if the user does not specify a category, ASK them before saving the entry.
+
+PHOTO ATTACHMENTS: When the user's message contains "[Attached N photo URL(s)...]" followed by URLs, those are Firebase Storage URLs the user already uploaded. Include them in the "photos" array when calling add or update. For update actions on existing entries, MERGE with existing photos (preserve what's there). For add actions, include them in the new entry's photos array. The first attached photo should also be set as imageUrl (main card image) if the entry has no imageUrl yet.
 
 Keep responses concise. For recommendations, highlight Phil's picks and server names.`;
 
@@ -2576,6 +2683,18 @@ Keep responses concise. For recommendations, highlight Phil's picks and server n
           await ensureCategoriesExist(entry.category);
           appendAIBubble('✅ Added ' + cmd.data.name + ' to your guide!', 'success');
         } else if (cmd.action === 'update' && cmd.id) {
+          // If AI included photos, merge with existing gallery (don't overwrite)
+          if (Array.isArray(cmd.data.photos) && cmd.data.photos.length) {
+            const existing = allRestaurants.find(r => r.id === cmd.id);
+            const existingPhotos = (existing && Array.isArray(existing.photos)) ? existing.photos : [];
+            const merged = [...existingPhotos];
+            cmd.data.photos.forEach(p => { if (p && !merged.includes(p)) merged.push(p); });
+            cmd.data.photos = merged;
+            // If entry has no main imageUrl yet, set first new photo as main
+            if (existing && !existing.imageUrl && merged.length && !cmd.data.imageUrl) {
+              cmd.data.imageUrl = merged[0];
+            }
+          }
           const updates = {};
           Object.entries(cmd.data).forEach(([k,v]) => { updates[EATS_PATH + '/' + cmd.id + '/' + k] = v; });
           updates[EATS_PATH + '/' + cmd.id + '/lastUpdated'] = Date.now();
@@ -3739,6 +3858,8 @@ window.verifyAndMigrateImages = verifyAndMigrateImages;
 window.cleanupUndefined = cleanupUndefined;
 window.askAI = askAI;
 window.clearChat = clearChat;
+window.handleAIPhotoUpload = handleAIPhotoUpload;
+window.removeAIPhoto = removeAIPhoto;
 window.resetHome = resetHome;
 window.setCity = setCity;
 window.setCat = setCat;
@@ -4174,7 +4295,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.84</span>
+  Philinity Eats ©️ <span>Rev 10.85</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
