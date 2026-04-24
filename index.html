@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.02</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.03</div>
   </div>
 </div>
 
@@ -2396,11 +2396,20 @@ function renderCard(r) {
   const statusClass = r.status === 'tried' ? 'status-tried' : 'status-to-try';
   const visits = Array.isArray(r.visits) ? r.visits : [];
   const visitCount = visits.length;
-  const lastVisit = visits.length ? new Date(visits[0].date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
-  const triedLabel = visitCount > 0
-    ? `✅ ${visitCount} visit${visitCount === 1 ? '' : 's'} · last ${lastVisit}`
-    : (r.lastUpdated ? `✅ ${new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}` : '✅ Tried');
-  const statusLabel = r.status === 'tried' ? triedLabel : '🔖 To Try';
+  // v11.03: Short numeric date on top of the badge, visit count in white below.
+  const shortDate = (ts) => {
+    const d = new Date(ts);
+    return (d.getMonth()+1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(-2);
+  };
+  const lastVisitDate = visits.length ? shortDate(visits[0].date) : (r.lastUpdated ? shortDate(r.lastUpdated) : '');
+  let statusLabel;
+  if (r.status !== 'tried') {
+    statusLabel = '🔖 To Try';
+  } else if (visitCount > 0) {
+    statusLabel = `<div style="line-height:1.2"><div>✅ ${lastVisitDate}</div><div style="color:#fff;font-size:9px;font-weight:500;margin-top:1px">${visitCount} visit${visitCount === 1 ? '' : 's'}</div></div>`;
+  } else {
+    statusLabel = lastVisitDate ? `✅ ${lastVisitDate}` : '✅ Tried';
+  }
 
   const imgUrl = getImageUrl(r);
   return `
@@ -2472,9 +2481,15 @@ function openDetail(id) {
         <span class="badge-status ${r.status === 'tried' ? 'status-tried' : 'status-to-try'}">${(() => {
           const visits = Array.isArray(r.visits) ? r.visits : [];
           if (r.status !== 'tried') return '🔖 To Try';
-          if (!visits.length) return '✅ Tried';
-          const last = new Date(visits[0].date).toLocaleDateString('en-US',{month:'short',day:'numeric'});
-          return `✅ ${visits.length} visit${visits.length === 1 ? '' : 's'} · last ${last}`;
+          const shortDate = (ts) => {
+            const d = new Date(ts);
+            return (d.getMonth()+1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(-2);
+          };
+          const lastVisitDate = visits.length ? shortDate(visits[0].date) : (r.lastUpdated ? shortDate(r.lastUpdated) : '');
+          if (visits.length > 0) {
+            return `<div style="line-height:1.2"><div>✅ ${lastVisitDate}</div><div style="color:#fff;font-size:9px;font-weight:500;margin-top:1px">${visits.length} visit${visits.length === 1 ? '' : 's'}</div></div>`;
+          }
+          return lastVisitDate ? `✅ ${lastVisitDate}` : '✅ Tried';
         })()}</span>
       </div>
     </div>
@@ -3589,17 +3604,18 @@ async function setDetailRating(id, rating) {
 // { date, notes, who } — sorted newest-first by the sanitizer.
 
 function renderVisitHistorySection(r) {
-  if (r.status !== 'tried') return ''; // only show for tried places
+  // v11.03: Show Visit History on all entries (not just tried) so user can log
+  // visits anywhere. Default-open if there are any visits so the date fields are
+  // immediately visible and editable without an extra click.
   const visits = Array.isArray(r.visits) ? r.visits : [];
   const count = visits.length;
+  const defaultOpen = count > 0;
   const listHtml = visits.map((v, i) => {
     const dateVal = new Date(v.date);
     const dateStr = dateVal.getFullYear() + '-' + String(dateVal.getMonth()+1).padStart(2,'0') + '-' + String(dateVal.getDate()).padStart(2,'0');
-    const display = dateVal.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
     return `<div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <input type="date" value="${dateStr}" onchange="updateVisitDate('${r.id}', ${i}, this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:1px dashed var(--amber-dim);border-radius:4px;padding:3px 6px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;" />
-        <span style="font-size:11px;color:var(--text-muted)">${display}</span>
         <button onclick="removeVisit('${r.id}', ${i})" title="Remove visit" style="margin-left:auto;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px">🗑</button>
       </div>
       <input type="text" placeholder="Who went? (Phil, Trinity, guests...)" value="${escapeAttr(v.who || '')}" onchange="updateVisitField('${r.id}', ${i}, 'who', this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none" />
@@ -3608,10 +3624,10 @@ function renderVisitHistorySection(r) {
   }).join('');
   return `<div class="detail-section" style="margin-bottom:16px">
     <div onclick="toggleVisitHistory()" style="cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;padding:6px 0">
-      <span id="visitHistoryChevron" style="color:var(--amber);font-size:12px;transition:transform 0.15s">▶</span>
+      <span id="visitHistoryChevron" style="color:var(--amber);font-size:12px;transition:transform 0.15s;transform:${defaultOpen ? 'rotate(90deg)' : 'rotate(0deg)'}">▶</span>
       <h4 style="margin:0;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--amber);font-weight:500">✨ Visit History${count ? ` (${count})` : ''}</h4>
     </div>
-    <div id="visitHistoryBody" style="display:none;margin-top:10px;flex-direction:column;gap:10px">
+    <div id="visitHistoryBody" style="display:${defaultOpen ? 'flex' : 'none'};margin-top:10px;flex-direction:column;gap:10px">
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button onclick="addVisitToday('${r.id}')" class="btn btn-amber" style="font-size:12px;padding:6px 12px">+ Today</button>
         <span style="font-size:11px;color:var(--text-muted)">or pick a past date:</span>
@@ -3651,10 +3667,8 @@ async function persistVisits(id, visits) {
     [`${EATS_PATH}/${id}/visits`]: visits,
     [`${EATS_PATH}/${id}/lastUpdated`]: newestVisit
   });
-  // Re-render the detail modal and the main grid
-  const wasOpen = document.getElementById('visitHistoryBody') && document.getElementById('visitHistoryBody').style.display !== 'none';
+  // Re-render detail modal (visit section auto-opens when visits exist) and main grid
   openDetail(id);
-  if (wasOpen) toggleVisitHistory(); // keep it expanded after re-render
   applyFilters();
 }
 
@@ -4947,7 +4961,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.02</span>
+  Philinity Eats ©️ <span>Rev 11.03</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
