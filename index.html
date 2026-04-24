@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.04</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.05</div>
   </div>
 </div>
 
@@ -1771,6 +1771,9 @@ function applyFilters() {
 
   if (search) {
     filtered = filtered.filter(r => {
+      const visitText = Array.isArray(r.visits)
+        ? r.visits.flatMap(v => [v && v.who, v && v.notes]).filter(Boolean)
+        : [];
       const haystack = [
         r.id, r.name, r.city, r.state, r.cuisine, r.category,
         ...(r.drinks || []), ...(r.appetizers || []), ...(r.mains || []),
@@ -1779,7 +1782,9 @@ function applyFilters() {
         // Tasting-specific fields — so searching "cabernet" or "silver oak" finds wines
         r.varietal, r.vintage, r.producer, r.where_had, r.region, r.entry_type,
         // Recipe-specific fields — so searching "puff pastry" or "sear" finds recipes
-        ...(r.ingredients || []), ...(r.instructions || []), r.prep_time, r.cook_time
+        ...(r.ingredients || []), ...(r.instructions || []), r.prep_time, r.cook_time,
+        // Visit history — so searching "Trevor Lawhorn" or "investors" finds matching visits (v11.05)
+        ...visitText
       ].join(' ').toLowerCase();
       return haystack.includes(search);
     });
@@ -4968,7 +4973,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.04</span>
+  Philinity Eats ©️ <span>Rev 11.05</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
