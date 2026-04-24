@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.95</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.96</div>
   </div>
 </div>
 
@@ -1439,7 +1439,8 @@
 </div>
 
 <!-- ADD/EDIT MODAL -->
-<div class="modal-overlay" id="formModal" onclick="if(event.target===this) closeFormModal()">
+<!-- Overlay click-to-close removed in v10.96 — prevents accidental data loss from stray clicks/touches. Close only via X, Cancel, Save, or Esc. -->
+<div class="modal-overlay" id="formModal">
   <div class="modal">
     <button class="modal-close" onclick="closeFormModal()">✕</button>
     <div class="modal-title" id="formTitle">Add Entry</div>
@@ -3377,6 +3378,15 @@ document.addEventListener('paste', (event) => {
 document.addEventListener('keydown', (e) => { if (e.key === 'g' || e.key === 'G') window._pasteToGallery = true; });
 document.addEventListener('keyup', (e) => { if (e.key === 'g' || e.key === 'G') window._pasteToGallery = false; });
 
+// v10.96: Esc closes Add/Edit modal (along with X, Cancel, Save — the only close methods)
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  const formModal = document.getElementById('formModal');
+  if (formModal && formModal.classList.contains('open')) {
+    closeFormModal();
+  }
+});
+
 
 
 
@@ -4738,7 +4748,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.95</span>
+  Philinity Eats ©️ <span>Rev 10.96</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
