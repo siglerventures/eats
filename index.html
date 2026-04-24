@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.98</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.99</div>
   </div>
 </div>
 
@@ -1748,6 +1748,14 @@ function applyFilters() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
   let filtered = [...allRestaurants];
 
+  // v10.99: Hide recipe entries by default — only show when the Recipes chip is
+  // explicitly active, or when there's an active search (so recipes stay findable
+  // by typing). This keeps the main grid focused on restaurants + tastings.
+  const showRecipes = currentEntryType === 'recipe' || search.length > 0;
+  if (!showRecipes) {
+    filtered = filtered.filter(r => r.entry_type !== 'recipe');
+  }
+
   // City filter — tastings AND recipes bypass city filter (they aren't tied
   // to a specific city the way a restaurant is). Entries with no city (ghosts
   // / incomplete) also bypass so they're findable.
@@ -1818,12 +1826,29 @@ function renderNextPage() {
   const container = document.getElementById('content');
   const byCityOrder = ['Boise', 'Eagle', 'Nampa', 'Caldwell', 'Kuna', 'Wilder'];
 
-  // Get next flat batch across ALL cities
-  const batch = currentRestaurantList.slice(renderedCount, renderedCount + PAGE_SIZE);
+  // Build a city-ordered flat list: Boise entries first (in their sorted order),
+  // then other Idaho cities in byCityOrder, then any remaining cities alphabetically.
+  // This way PAGE_SIZE slices fill one city before moving to the next instead of
+  // interleaving cities by date across the page.
+  const listByCity = {};
+  currentRestaurantList.forEach(r => {
+    const c = r.city || '(No City)';
+    if (!listByCity[c]) listByCity[c] = [];
+    listByCity[c].push(r);
+  });
+  const orderedCities = [
+    ...byCityOrder.filter(c => listByCity[c]),
+    ...Object.keys(listByCity).filter(c => !byCityOrder.includes(c)).sort()
+  ];
+  const orderedFlat = [];
+  orderedCities.forEach(c => listByCity[c].forEach(r => orderedFlat.push(r)));
+
+  // Get next batch from the city-grouped flat list
+  const batch = orderedFlat.slice(renderedCount, renderedCount + PAGE_SIZE);
   if (batch.length === 0) return;
   renderedCount += batch.length;
 
-  // Group this batch by city
+  // Group this batch by city for section rendering
   const byCity = {};
   batch.forEach(r => {
     if (!byCity[r.city]) byCity[r.city] = [];
@@ -1870,13 +1895,13 @@ function renderNextPage() {
   if (oldBtn) oldBtn.remove();
 
   // If more to load, add Load More button
-  if (renderedCount < currentRestaurantList.length) {
-    const remaining = currentRestaurantList.length - renderedCount;
+  if (renderedCount < orderedFlat.length) {
+    const remaining = orderedFlat.length - renderedCount;
     const nextBatch = Math.min(PAGE_SIZE, remaining);
     const btn = document.createElement('button');
     btn.id = 'load-more-btn';
     btn.type = 'button';
-    btn.textContent = `↓ Load ${nextBatch} more  (${renderedCount} of ${currentRestaurantList.length} shown)`;
+    btn.textContent = `↓ Load ${nextBatch} more  (${renderedCount} of ${orderedFlat.length} shown)`;
     btn.style.cssText = 'display:block;margin:24px auto;padding:12px 28px;background:var(--surface2);border:1px solid var(--amber-dim);color:var(--amber-light);border-radius:24px;font-size:13px;font-family:\'DM Sans\',sans-serif;letter-spacing:0.5px;cursor:pointer;transition:all 0.15s;min-height:44px;';
     btn.onmouseover = () => { btn.style.borderColor = 'var(--amber)'; btn.style.background = 'var(--surface3)'; };
     btn.onmouseout = () => { btn.style.borderColor = 'var(--amber-dim)'; btn.style.background = 'var(--surface2)'; };
@@ -4791,7 +4816,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.98</span>
+  Philinity Eats ©️ <span>Rev 10.99</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
