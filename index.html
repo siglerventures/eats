@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.97</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.98</div>
   </div>
 </div>
 
@@ -2429,7 +2429,7 @@ function openDetail(id) {
       <div class="modal-title">${dn}</div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:4px">
         <span class="badge-status ${r.status === 'tried' ? 'status-tried' : 'status-to-try'}">${r.status === 'tried' ? '✅ Tried' : '🔖 To Try'}</span>
-        ${r.lastUpdated ? `<span style="font-size:10px;color:var(--text)">${new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : ''}
+        ${r.lastUpdated ? `<span id="detailDateBadge" onclick="openDetailDatePicker('${r.id}')" title="Click to change date" style="font-size:10px;color:var(--text);cursor:pointer;padding:2px 6px;border-radius:4px;border:1px dashed transparent;transition:all 0.15s" onmouseover="this.style.borderColor='var(--amber-dim)';this.style.color='var(--amber-light)'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--text)'">📅 ${new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : `<span onclick="openDetailDatePicker('${r.id}')" title="Click to set date" style="font-size:10px;color:var(--amber);cursor:pointer;padding:2px 6px;border-radius:4px;border:1px dashed var(--amber-dim)">📅 set date</span>`}
       </div>
     </div>
     <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}</div>
@@ -3538,6 +3538,47 @@ async function setDetailRating(id, rating) {
   showToast(`⭐ Rated ${rating} star${rating !== 1 ? 's' : ''}!`);
 }
 
+// v10.98: Click the date badge in the detail view to edit it with a native date picker.
+// We use a hidden <input type="date"> so iOS/Android show their native calendar UI.
+function openDetailDatePicker(id) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  const current = r.lastUpdated ? new Date(r.lastUpdated) : new Date();
+  const yyyy = current.getFullYear();
+  const mm = String(current.getMonth() + 1).padStart(2, '0');
+  const dd = String(current.getDate()).padStart(2, '0');
+  const input = document.createElement('input');
+  input.type = 'date';
+  input.value = `${yyyy}-${mm}-${dd}`;
+  input.style.cssText = 'position:fixed;left:-9999px;opacity:0;';
+  document.body.appendChild(input);
+  input.addEventListener('change', async () => {
+    if (input.value) {
+      // Parse YYYY-MM-DD as local date (not UTC) so it displays the day the user picked
+      const [y, m, d] = input.value.split('-').map(Number);
+      const newDate = new Date(y, m - 1, d, 12, 0, 0); // noon local to avoid TZ edge cases
+      await setDetailDate(id, newDate.getTime());
+    }
+    input.remove();
+  });
+  // Some browsers need focus+click to open the native picker
+  input.focus();
+  if (input.showPicker) {
+    try { input.showPicker(); } catch(_) { input.click(); }
+  } else {
+    input.click();
+  }
+}
+
+async function setDetailDate(id, timestamp) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (r) r.lastUpdated = timestamp;
+  await dbSet(`${EATS_PATH}/${id}/lastUpdated`, timestamp);
+  // Re-render the detail modal so the new date shows immediately
+  openDetail(id);
+  showToast('📅 Date updated!');
+}
+
 // ─── TOAST ────────────────────────────────────────────────
 function showToast(msg) {
   const t = document.getElementById('toast');
@@ -4369,6 +4410,8 @@ window.catDragEnd = catDragEnd;
 window.hoverDetailStars = hoverDetailStars;
 window.resetDetailStars = resetDetailStars;
 window.setDetailRating = setDetailRating;
+window.openDetailDatePicker = openDetailDatePicker;
+window.setDetailDate = setDetailDate;
 window.clearHighlight = clearHighlight;
 
 
@@ -4748,7 +4791,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.97</span>
+  Philinity Eats ©️ <span>Rev 10.98</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
