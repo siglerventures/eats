@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.99</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.00</div>
   </div>
 </div>
 
@@ -1748,24 +1748,18 @@ function applyFilters() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
   let filtered = [...allRestaurants];
 
-  // v10.99: Hide recipe entries by default — only show when the Recipes chip is
-  // explicitly active, or when there's an active search (so recipes stay findable
-  // by typing). This keeps the main grid focused on restaurants + tastings.
+  // v10.99: Hide recipes by default — shown only when Recipes chip active or searching.
+  // v11.00: Same rule now applies to tastings.
   const showRecipes = currentEntryType === 'recipe' || search.length > 0;
-  if (!showRecipes) {
-    filtered = filtered.filter(r => r.entry_type !== 'recipe');
-  }
+  const showTastings = currentEntryType === 'tasting' || search.length > 0;
+  if (!showRecipes) filtered = filtered.filter(r => r.entry_type !== 'recipe');
+  if (!showTastings) filtered = filtered.filter(r => r.entry_type !== 'tasting');
 
-  // City filter — tastings AND recipes bypass city filter (they aren't tied
-  // to a specific city the way a restaurant is). Entries with no city (ghosts
-  // / incomplete) also bypass so they're findable.
+  // City filter — strict: when a specific city is picked, only entries with that city show.
+  // All entry types (restaurant, tasting, recipe) respect the filter (v11.00).
+  // Entries with no city at all still slip through so they remain findable.
   if (currentCity !== 'All') {
-    filtered = filtered.filter(r =>
-      r.entry_type === 'tasting' ||
-      r.entry_type === 'recipe' ||
-      !r.city ||             // ghost / missing city — always show
-      r.city === currentCity
-    );
+    filtered = filtered.filter(r => !r.city || r.city === currentCity);
   }
   if (currentEntryType !== 'all') filtered = filtered.filter(r => r.entry_type === currentEntryType);
   if (currentCat !== 'All') filtered = filtered.filter(r => {
@@ -2454,7 +2448,15 @@ function openDetail(id) {
       <div class="modal-title">${dn}</div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:4px">
         <span class="badge-status ${r.status === 'tried' ? 'status-tried' : 'status-to-try'}">${r.status === 'tried' ? '✅ Tried' : '🔖 To Try'}</span>
-        ${r.lastUpdated ? `<span id="detailDateBadge" onclick="openDetailDatePicker('${r.id}')" title="Click to change date" style="font-size:10px;color:var(--text);cursor:pointer;padding:2px 6px;border-radius:4px;border:1px dashed transparent;transition:all 0.15s" onmouseover="this.style.borderColor='var(--amber-dim)';this.style.color='var(--amber-light)'" onmouseout="this.style.borderColor='transparent';this.style.color='var(--text)'">📅 ${new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>` : `<span onclick="openDetailDatePicker('${r.id}')" title="Click to set date" style="font-size:10px;color:var(--amber);cursor:pointer;padding:2px 6px;border-radius:4px;border:1px dashed var(--amber-dim)">📅 set date</span>`}
+        ${(() => {
+          const dateVal = r.lastUpdated ? new Date(r.lastUpdated) : null;
+          const dateStr = dateVal ? dateVal.getFullYear() + '-' + String(dateVal.getMonth()+1).padStart(2,'0') + '-' + String(dateVal.getDate()).padStart(2,'0') : '';
+          const displayStr = dateVal ? dateVal.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Set date';
+          return `<span style="position:relative;display:inline-block" title="Click to change date">
+            <span id="detailDateLabel" style="font-size:11px;color:var(--amber-light);cursor:pointer;padding:3px 8px;border-radius:4px;border:1px dashed var(--amber-dim);display:inline-flex;align-items:center;gap:4px;user-select:none" onclick="document.getElementById('detailDateInput').showPicker ? document.getElementById('detailDateInput').showPicker() : document.getElementById('detailDateInput').click()">📅 ${displayStr}</span>
+            <input type="date" id="detailDateInput" value="${dateStr}" onchange="handleDetailDateChange('${r.id}', this.value)" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;border:none;padding:0;margin:0;background:transparent;">
+          </span>`;
+        })()}
       </div>
     </div>
     <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}</div>
@@ -3563,36 +3565,14 @@ async function setDetailRating(id, rating) {
   showToast(`⭐ Rated ${rating} star${rating !== 1 ? 's' : ''}!`);
 }
 
-// v10.98: Click the date badge in the detail view to edit it with a native date picker.
-// We use a hidden <input type="date"> so iOS/Android show their native calendar UI.
-function openDetailDatePicker(id) {
-  const r = allRestaurants.find(x => x.id === id);
-  if (!r) return;
-  const current = r.lastUpdated ? new Date(r.lastUpdated) : new Date();
-  const yyyy = current.getFullYear();
-  const mm = String(current.getMonth() + 1).padStart(2, '0');
-  const dd = String(current.getDate()).padStart(2, '0');
-  const input = document.createElement('input');
-  input.type = 'date';
-  input.value = `${yyyy}-${mm}-${dd}`;
-  input.style.cssText = 'position:fixed;left:-9999px;opacity:0;';
-  document.body.appendChild(input);
-  input.addEventListener('change', async () => {
-    if (input.value) {
-      // Parse YYYY-MM-DD as local date (not UTC) so it displays the day the user picked
-      const [y, m, d] = input.value.split('-').map(Number);
-      const newDate = new Date(y, m - 1, d, 12, 0, 0); // noon local to avoid TZ edge cases
-      await setDetailDate(id, newDate.getTime());
-    }
-    input.remove();
-  });
-  // Some browsers need focus+click to open the native picker
-  input.focus();
-  if (input.showPicker) {
-    try { input.showPicker(); } catch(_) { input.click(); }
-  } else {
-    input.click();
-  }
+// v11.00: Date change handler. The detail view now has a real <input type="date">
+// overlaid on the date label so clicking it opens the native picker reliably on
+// all platforms (the previous off-screen-input approach failed on Safari/iOS).
+function handleDetailDateChange(id, value) {
+  if (!value) return;
+  const [y, m, d] = value.split('-').map(Number);
+  const newDate = new Date(y, m - 1, d, 12, 0, 0); // noon local — avoids TZ day shifts
+  setDetailDate(id, newDate.getTime());
 }
 
 async function setDetailDate(id, timestamp) {
@@ -4435,7 +4415,7 @@ window.catDragEnd = catDragEnd;
 window.hoverDetailStars = hoverDetailStars;
 window.resetDetailStars = resetDetailStars;
 window.setDetailRating = setDetailRating;
-window.openDetailDatePicker = openDetailDatePicker;
+window.handleDetailDateChange = handleDetailDateChange;
 window.setDetailDate = setDetailDate;
 window.clearHighlight = clearHighlight;
 
@@ -4816,7 +4796,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.99</span>
+  Philinity Eats ©️ <span>Rev 11.00</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
