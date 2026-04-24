@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.96</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 10.97</div>
   </div>
 </div>
 
@@ -2358,7 +2358,8 @@ function renderCard(r) {
   const picks = stripHTMLArray(r.phil_picks || []).slice(0, 3);
   const trinityPicks = stripHTMLArray(r.trinity_picks || []).filter(p => p);
   const statusClass = r.status === 'tried' ? 'status-tried' : 'status-to-try';
-  const statusLabel = r.status === 'tried' ? '✅ Tried' : '🔖 To Try';
+  const triedDate = r.lastUpdated ? new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Tried';
+  const statusLabel = r.status === 'tried' ? `✅ ${triedDate}` : '🔖 To Try';
 
   const imgUrl = getImageUrl(r);
   return `
@@ -2385,7 +2386,6 @@ function renderCard(r) {
       ${trinityPicks.length ? `<div class="card-picks" style="margin-top:4px"><strong>Trinity's Picks</strong><br>${trinityPicks.join(', ')}</div>` : ''}
       ${safeServer ? `<div class="card-server">👤 ${safeServer}</div>` : ''}
       ${safeNotes ? `<div style="font-size:11px;color:var(--text-muted);margin-top:6px;font-style:italic;line-height:1.4">${safeNotes.length > 80 ? safeNotes.substring(0,80) + '...' : safeNotes}</div>` : ''}
-      ${r.lastUpdated ? `<div style="font-size:10px;color:var(--text-muted);margin-top:4px">Updated ${new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</div>` : ''}
       ${safeTags.length ? `<div class="card-tags">${safeTags.slice(0,4).map(t => `<span class="tag">${t}</span>`).join('')}</div>` : ''}
     </div>`;
 }
@@ -4748,7 +4748,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 10.96</span>
+  Philinity Eats ©️ <span>Rev 10.97</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
