@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.03</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.04</div>
   </div>
 </div>
 
@@ -2406,7 +2406,7 @@ function renderCard(r) {
   if (r.status !== 'tried') {
     statusLabel = '🔖 To Try';
   } else if (visitCount > 0) {
-    statusLabel = `<div style="line-height:1.2"><div>✅ ${lastVisitDate}</div><div style="color:#fff;font-size:9px;font-weight:500;margin-top:1px">${visitCount} visit${visitCount === 1 ? '' : 's'}</div></div>`;
+    statusLabel = `<div style="line-height:1.2;text-align:center"><div>✅ ${lastVisitDate}</div><div style="color:#fff;font-size:9px;font-weight:500;margin-top:1px">${visitCount} visit${visitCount === 1 ? '' : 's'}</div></div>`;
   } else {
     statusLabel = lastVisitDate ? `✅ ${lastVisitDate}` : '✅ Tried';
   }
@@ -2487,7 +2487,7 @@ function openDetail(id) {
           };
           const lastVisitDate = visits.length ? shortDate(visits[0].date) : (r.lastUpdated ? shortDate(r.lastUpdated) : '');
           if (visits.length > 0) {
-            return `<div style="line-height:1.2"><div>✅ ${lastVisitDate}</div><div style="color:#fff;font-size:9px;font-weight:500;margin-top:1px">${visits.length} visit${visits.length === 1 ? '' : 's'}</div></div>`;
+            return `<div style="line-height:1.2;text-align:center"><div>✅ ${lastVisitDate}</div><div style="color:#fff;font-size:9px;font-weight:500;margin-top:1px">${visits.length} visit${visits.length === 1 ? '' : 's'}</div></div>`;
           }
           return lastVisitDate ? `✅ ${lastVisitDate}` : '✅ Tried';
         })()}</span>
@@ -3613,9 +3613,14 @@ function renderVisitHistorySection(r) {
   const listHtml = visits.map((v, i) => {
     const dateVal = new Date(v.date);
     const dateStr = dateVal.getFullYear() + '-' + String(dateVal.getMonth()+1).padStart(2,'0') + '-' + String(dateVal.getDate()).padStart(2,'0');
+    // v11.04: Wrap the date input in a <label> so the whole dashed box is the
+    // click target. onclick fallback calls showPicker() for Chrome desktop where
+    // a label click alone doesn't always open the native picker.
     return `<div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <input type="date" value="${dateStr}" onchange="updateVisitDate('${r.id}', ${i}, this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:1px dashed var(--amber-dim);border-radius:4px;padding:3px 6px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;" />
+        <label style="display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--amber-dim);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--amber-light);font-size:12px" onclick="const inp=this.querySelector('input');if(inp.showPicker)try{inp.showPicker()}catch(_){inp.click()}else inp.click()">
+          <input type="date" value="${dateStr}" onchange="updateVisitDate('${r.id}', ${i}, this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:none;padding:0;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;pointer-events:none" />
+        </label>
         <button onclick="removeVisit('${r.id}', ${i})" title="Remove visit" style="margin-left:auto;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px">🗑</button>
       </div>
       <input type="text" placeholder="Who went? (Phil, Trinity, guests...)" value="${escapeAttr(v.who || '')}" onchange="updateVisitField('${r.id}', ${i}, 'who', this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none" />
@@ -3631,7 +3636,9 @@ function renderVisitHistorySection(r) {
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
         <button onclick="addVisitToday('${r.id}')" class="btn btn-amber" style="font-size:12px;padding:6px 12px">+ Today</button>
         <span style="font-size:11px;color:var(--text-muted)">or pick a past date:</span>
-        <input type="date" id="addPastVisitInput" onchange="addPastVisit('${r.id}', this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:1px dashed var(--amber-dim);border-radius:4px;padding:4px 8px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;" />
+        <label style="display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--amber-dim);border-radius:4px;padding:4px 10px;cursor:pointer;color:var(--amber-light);font-size:12px" onclick="const inp=this.querySelector('input');if(inp.showPicker)try{inp.showPicker()}catch(_){inp.click()}else inp.click()">
+          <input type="date" id="addPastVisitInput" onchange="addPastVisit('${r.id}', this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:none;padding:0;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;pointer-events:none" />
+        </label>
       </div>
       ${listHtml || '<div style="font-size:12px;color:var(--text-muted);font-style:italic;padding:8px">No visits logged yet.</div>'}
     </div>
@@ -4961,7 +4968,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.03</span>
+  Philinity Eats ©️ <span>Rev 11.04</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
