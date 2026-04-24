@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.01</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.02</div>
   </div>
 </div>
 
@@ -2224,6 +2224,23 @@ function sanitizeRestaurant(r) {
   x.trinity_picks = Array.isArray(x.trinity_picks) ? x.trinity_picks.map(stripHTML).filter(Boolean) : [];
   x.imageUrl = isSafeImageUrl(x.imageUrl) ? x.imageUrl : '';
   x.photos = Array.isArray(x.photos) ? x.photos.filter(isSafeImageUrl) : [];
+  // v11.02: Visit history. Each visit: { date: ms, notes: string, who: string }
+  // Backfill rule: "tried" entries with no visits array get one visit seeded
+  // from lastUpdated so historical entries don't read as "0 visits".
+  if (Array.isArray(x.visits)) {
+    x.visits = x.visits
+      .map(v => (v && typeof v === 'object') ? {
+        date: parseInt(v.date) || 0,
+        notes: stripHTML(v.notes || ''),
+        who: stripHTML(v.who || '')
+      } : null)
+      .filter(v => v && v.date > 0)
+      .sort((a, b) => b.date - a.date); // newest first
+  } else if (x.status === 'tried' && x.lastUpdated) {
+    x.visits = [{ date: x.lastUpdated, notes: '', who: '' }];
+  } else {
+    x.visits = [];
+  }
   return x;
 }
 
@@ -2377,8 +2394,13 @@ function renderCard(r) {
   const picks = stripHTMLArray(r.phil_picks || []).slice(0, 3);
   const trinityPicks = stripHTMLArray(r.trinity_picks || []).filter(p => p);
   const statusClass = r.status === 'tried' ? 'status-tried' : 'status-to-try';
-  const triedDate = r.lastUpdated ? new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'}) : 'Tried';
-  const statusLabel = r.status === 'tried' ? `✅ ${triedDate}` : '🔖 To Try';
+  const visits = Array.isArray(r.visits) ? r.visits : [];
+  const visitCount = visits.length;
+  const lastVisit = visits.length ? new Date(visits[0].date).toLocaleDateString('en-US',{month:'short',day:'numeric'}) : '';
+  const triedLabel = visitCount > 0
+    ? `✅ ${visitCount} visit${visitCount === 1 ? '' : 's'} · last ${lastVisit}`
+    : (r.lastUpdated ? `✅ ${new Date(r.lastUpdated).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}` : '✅ Tried');
+  const statusLabel = r.status === 'tried' ? triedLabel : '🔖 To Try';
 
   const imgUrl = getImageUrl(r);
   return `
@@ -2447,14 +2469,13 @@ function openDetail(id) {
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:4px">
       <div class="modal-title">${dn}</div>
       <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;margin-top:4px">
-        <span class="badge-status ${r.status === 'tried' ? 'status-tried' : 'status-to-try'}">${r.status === 'tried' ? '✅ Tried' : '🔖 To Try'}</span>
-        ${(() => {
-          const dateVal = r.lastUpdated ? new Date(r.lastUpdated) : null;
-          const dateStr = dateVal ? dateVal.getFullYear() + '-' + String(dateVal.getMonth()+1).padStart(2,'0') + '-' + String(dateVal.getDate()).padStart(2,'0') : '';
-          // v11.01: Real visible <input type="date"> — no overlay hacks. Clicking
-          // the field opens the native picker on every platform.
-          return `<input type="date" id="detailDateInput" value="${dateStr}" onchange="handleDetailDateChange('${r.id}', this.value)" title="Click to change date" style="font-size:11px;color:var(--amber-light);background:transparent;border:1px dashed var(--amber-dim);border-radius:4px;padding:3px 8px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;" />`;
-        })()}
+        <span class="badge-status ${r.status === 'tried' ? 'status-tried' : 'status-to-try'}">${(() => {
+          const visits = Array.isArray(r.visits) ? r.visits : [];
+          if (r.status !== 'tried') return '🔖 To Try';
+          if (!visits.length) return '✅ Tried';
+          const last = new Date(visits[0].date).toLocaleDateString('en-US',{month:'short',day:'numeric'});
+          return `✅ ${visits.length} visit${visits.length === 1 ? '' : 's'} · last ${last}`;
+        })()}</span>
       </div>
     </div>
     <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}</div>
@@ -2464,6 +2485,7 @@ function openDetail(id) {
       </div>
       <span style="font-size:11px;color:var(--text-muted)">click to rate</span>
     </div>
+    ${renderVisitHistorySection(r)}
     ${ds ? `<div class="card-server" style="margin-bottom:14px">👤 Ask for <strong>${ds}</strong></div>` : ''}
     ${(dprep || dcook) ? `<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">${dprep ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">⏱ Prep: <strong>${dprep}</strong></span>` : ''}${dcook ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">🔥 Cook: <strong>${dcook}</strong></span>` : ''}</div>` : ''}
     ${section('🥣 Ingredients', dingredients)}
@@ -3563,14 +3585,139 @@ async function setDetailRating(id, rating) {
   showToast(`⭐ Rated ${rating} star${rating !== 1 ? 's' : ''}!`);
 }
 
-// v11.00: Date change handler. The detail view now has a real <input type="date">
-// overlaid on the date label so clicking it opens the native picker reliably on
-// all platforms (the previous off-screen-input approach failed on Safari/iOS).
+// v11.02: Visit history functions. Visits are stored as an array on the entry:
+// { date, notes, who } — sorted newest-first by the sanitizer.
+
+function renderVisitHistorySection(r) {
+  if (r.status !== 'tried') return ''; // only show for tried places
+  const visits = Array.isArray(r.visits) ? r.visits : [];
+  const count = visits.length;
+  const listHtml = visits.map((v, i) => {
+    const dateVal = new Date(v.date);
+    const dateStr = dateVal.getFullYear() + '-' + String(dateVal.getMonth()+1).padStart(2,'0') + '-' + String(dateVal.getDate()).padStart(2,'0');
+    const display = dateVal.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+    return `<div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <input type="date" value="${dateStr}" onchange="updateVisitDate('${r.id}', ${i}, this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:1px dashed var(--amber-dim);border-radius:4px;padding:3px 6px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;" />
+        <span style="font-size:11px;color:var(--text-muted)">${display}</span>
+        <button onclick="removeVisit('${r.id}', ${i})" title="Remove visit" style="margin-left:auto;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px">🗑</button>
+      </div>
+      <input type="text" placeholder="Who went? (Phil, Trinity, guests...)" value="${escapeAttr(v.who || '')}" onchange="updateVisitField('${r.id}', ${i}, 'who', this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none" />
+      <input type="text" placeholder="Notes (e.g. anniversary dinner)" value="${escapeAttr(v.notes || '')}" onchange="updateVisitField('${r.id}', ${i}, 'notes', this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none" />
+    </div>`;
+  }).join('');
+  return `<div class="detail-section" style="margin-bottom:16px">
+    <div onclick="toggleVisitHistory()" style="cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;padding:6px 0">
+      <span id="visitHistoryChevron" style="color:var(--amber);font-size:12px;transition:transform 0.15s">▶</span>
+      <h4 style="margin:0;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--amber);font-weight:500">✨ Visit History${count ? ` (${count})` : ''}</h4>
+    </div>
+    <div id="visitHistoryBody" style="display:none;margin-top:10px;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <button onclick="addVisitToday('${r.id}')" class="btn btn-amber" style="font-size:12px;padding:6px 12px">+ Today</button>
+        <span style="font-size:11px;color:var(--text-muted)">or pick a past date:</span>
+        <input type="date" id="addPastVisitInput" onchange="addPastVisit('${r.id}', this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:1px dashed var(--amber-dim);border-radius:4px;padding:4px 8px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;" />
+      </div>
+      ${listHtml || '<div style="font-size:12px;color:var(--text-muted);font-style:italic;padding:8px">No visits logged yet.</div>'}
+    </div>
+  </div>`;
+}
+
+function toggleVisitHistory() {
+  const body = document.getElementById('visitHistoryBody');
+  const chev = document.getElementById('visitHistoryChevron');
+  if (!body) return;
+  const open = body.style.display !== 'none';
+  body.style.display = open ? 'none' : 'flex';
+  if (chev) chev.style.transform = open ? 'rotate(0deg)' : 'rotate(90deg)';
+}
+
+function parseLocalDate(value) {
+  // YYYY-MM-DD → timestamp at local noon (avoids TZ day shifts)
+  if (!value) return 0;
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d, 12, 0, 0).getTime();
+}
+
+async function persistVisits(id, visits) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  // Sort newest-first
+  visits.sort((a, b) => b.date - a.date);
+  r.visits = visits;
+  // Keep lastUpdated in sync with most recent visit (for "recently updated" sort)
+  const newestVisit = visits[0] ? visits[0].date : Date.now();
+  r.lastUpdated = newestVisit;
+  await dbUpdate({
+    [`${EATS_PATH}/${id}/visits`]: visits,
+    [`${EATS_PATH}/${id}/lastUpdated`]: newestVisit
+  });
+  // Re-render the detail modal and the main grid
+  const wasOpen = document.getElementById('visitHistoryBody') && document.getElementById('visitHistoryBody').style.display !== 'none';
+  openDetail(id);
+  if (wasOpen) toggleVisitHistory(); // keep it expanded after re-render
+  applyFilters();
+}
+
+async function addVisitToday(id) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  const visits = Array.isArray(r.visits) ? [...r.visits] : [];
+  visits.push({ date: Date.now(), notes: '', who: '' });
+  await persistVisits(id, visits);
+  showToast('✨ Visit logged for today');
+}
+
+async function addPastVisit(id, value) {
+  if (!value) return;
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  const ts = parseLocalDate(value);
+  if (!ts) return;
+  const visits = Array.isArray(r.visits) ? [...r.visits] : [];
+  visits.push({ date: ts, notes: '', who: '' });
+  await persistVisits(id, visits);
+  showToast('✨ Past visit added');
+}
+
+async function removeVisit(id, index) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  const visits = Array.isArray(r.visits) ? [...r.visits] : [];
+  if (index < 0 || index >= visits.length) return;
+  if (!confirm('Remove this visit?')) return;
+  visits.splice(index, 1);
+  await persistVisits(id, visits);
+  showToast('🗑 Visit removed');
+}
+
+async function updateVisitDate(id, index, value) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  const visits = Array.isArray(r.visits) ? [...r.visits] : [];
+  if (index < 0 || index >= visits.length) return;
+  const ts = parseLocalDate(value);
+  if (!ts) return;
+  visits[index] = { ...visits[index], date: ts };
+  await persistVisits(id, visits);
+  showToast('📅 Visit date updated');
+}
+
+async function updateVisitField(id, index, field, value) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  const visits = Array.isArray(r.visits) ? [...r.visits] : [];
+  if (index < 0 || index >= visits.length) return;
+  visits[index] = { ...visits[index], [field]: String(value || '').trim() };
+  await persistVisits(id, visits);
+  // Don't toast on every keystroke — only the first save matters
+}
+
+// Legacy — kept for compatibility with any stale references.
+// The date in the header was replaced by the Visit History section in v11.02.
 function handleDetailDateChange(id, value) {
   if (!value) return;
-  const [y, m, d] = value.split('-').map(Number);
-  const newDate = new Date(y, m - 1, d, 12, 0, 0); // noon local — avoids TZ day shifts
-  setDetailDate(id, newDate.getTime());
+  const ts = parseLocalDate(value);
+  setDetailDate(id, ts);
 }
 
 async function setDetailDate(id, timestamp) {
@@ -4415,6 +4562,12 @@ window.resetDetailStars = resetDetailStars;
 window.setDetailRating = setDetailRating;
 window.handleDetailDateChange = handleDetailDateChange;
 window.setDetailDate = setDetailDate;
+window.toggleVisitHistory = toggleVisitHistory;
+window.addVisitToday = addVisitToday;
+window.addPastVisit = addPastVisit;
+window.removeVisit = removeVisit;
+window.updateVisitDate = updateVisitDate;
+window.updateVisitField = updateVisitField;
 window.clearHighlight = clearHighlight;
 
 
@@ -4794,7 +4947,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.01</span>
+  Philinity Eats ©️ <span>Rev 11.02</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
