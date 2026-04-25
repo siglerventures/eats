@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.11</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.12</div>
   </div>
 </div>
 
@@ -2078,6 +2078,67 @@ async function ensureCategoriesExist(entryCategories) {
 // in eats/categories. User picks per-item: keep / remove / create as new category.
 let junkScanFindings = []; // populated by scanJunkCategories()
 
+// v11.12: One-shot repair tool for image leakage. Finds entries whose imageUrl
+// points to another entry's storage path (i.e., the URL contains "eats/{otherId}/")
+// and clears the bad URL. The card will fall back to a stock image. Gallery photos
+// are NOT touched — only the main imageUrl is repaired.
+async function repairMismatchedImages() {
+  const status = document.getElementById('data-modal-status');
+  if (status) status.innerHTML = '<span style="color:var(--amber)">⏳ Scanning...</span>';
+
+  const mismatched = [];
+  allRestaurants.forEach(r => {
+    if (!r.id || !r.imageUrl) return;
+    // Only Firebase Storage URLs are checkable; Unsplash/Imgur stock URLs are fine.
+    if (!r.imageUrl.includes('firebasestorage.googleapis.com')) return;
+    // Storage path pattern: /o/eats%2F{entryId}%2F... (URL-encoded slashes)
+    // Normalize to plain slashes for matching.
+    const decoded = r.imageUrl.replace(/%2F/gi, '/');
+    const m = decoded.match(/\/eats\/([^/]+)\//);
+    if (!m) return;
+    const ownerId = m[1];
+    if (ownerId !== r.id && ownerId !== 'ai-chat') {
+      mismatched.push({ id: r.id, name: r.name, ownerId, currentUrl: r.imageUrl });
+    }
+  });
+
+  if (!mismatched.length) {
+    if (status) status.innerHTML = '<span style="color:var(--green)">✅ No mismatched images found — all clean!</span>';
+    showToast('✅ No mismatched images found');
+    return;
+  }
+
+  const summary = mismatched.slice(0, 10).map(m => `• ${m.name} → owned by "${m.ownerId}"`).join('\n');
+  const more = mismatched.length > 10 ? `\n…and ${mismatched.length - 10} more` : '';
+  const ok = confirm(
+    `Found ${mismatched.length} entr${mismatched.length === 1 ? 'y' : 'ies'} whose main image belongs to a different entry:\n\n${summary}${more}\n\n` +
+    `Clear the imageUrl on these entries so they fall back to a stock image?\n` +
+    `(Gallery photos are left alone.)`
+  );
+  if (!ok) {
+    if (status) status.innerHTML = '<span style="color:var(--text-muted)">Cancelled.</span>';
+    return;
+  }
+
+  if (status) status.innerHTML = '<span style="color:var(--amber)">⏳ Repairing ' + mismatched.length + ' entries...</span>';
+  const updates = {};
+  mismatched.forEach(m => { updates['eats/' + m.id + '/imageUrl'] = ''; });
+  try {
+    await dbUpdate(updates);
+    // Update local cache so applyFilters reflects immediately
+    mismatched.forEach(m => {
+      const r = allRestaurants.find(x => x.id === m.id);
+      if (r) r.imageUrl = '';
+    });
+    applyFilters();
+    if (status) status.innerHTML = '<span style="color:var(--green)">✅ Repaired ' + mismatched.length + ' entries</span>';
+    showToast('✅ Repaired ' + mismatched.length + ' entries');
+  } catch(e) {
+    console.error('[Eats] repair failed:', e);
+    if (status) status.innerHTML = '<span style="color:var(--red)">❌ Error: ' + e.message + '</span>';
+  }
+}
+
 function scanJunkCategories() {
   // Build valid category set from current in-memory categories (already synced with Firebase)
   const validCats = new Set(categories.map(c => c.name));
@@ -2620,7 +2681,13 @@ function openEditModal(id) {
     document.getElementById('dropContent').style.display = 'none';
     document.getElementById('previewContent').style.display = 'block';
   } else {
+    // v11.12: CRITICAL — clear previewImg.src in the empty-imageUrl branch.
+    // Previously, opening an entry with no image left the preview <img> showing
+    // the LAST entry's image, and saveEntry → persistEntryImages would read
+    // previewImg.src and persist that stale URL onto the new entry. This is how
+    // the Midnight Moon cheese photo leaked onto Matador, Fork, Willow Creek, etc.
     document.getElementById('fImageUrl').value = '';
+    document.getElementById('previewImg').src = '';
     document.getElementById('dropContent').style.display = 'block';
     document.getElementById('previewContent').style.display = 'none';
   }
@@ -2725,14 +2792,16 @@ async function persistEntryImages(entryId) {
   let mainImageUrl = '';
   const base64Main = document.getElementById('fImageFile').dataset.base64 || '';
   const typedUrl = (document.getElementById('fImageUrl').value || '').trim();
-  const previewSrc = document.getElementById('previewImg').src || '';
+  // v11.12: Removed the previewImg.src fallback. previewImg is just a display
+  // element that can hold stale state across modal opens; trusting it as an
+  // implicit "main image" caused leakage between entries (cheese photo onto
+  // unrelated restaurants). Only base64 (explicit upload) or typedUrl
+  // (explicit text entry) count as authoritative user input.
 
   if (base64Main && base64Main.startsWith('data:image/')) {
     mainImageUrl = await uploadDataUrlToStorage(base64Main, makeStoragePath(entryId, 'main'));
   } else if (typedUrl && isSafeImageUrl(typedUrl)) {
     mainImageUrl = typedUrl;
-  } else if (previewSrc && isSafeImageUrl(previewSrc)) {
-    mainImageUrl = previewSrc;
   }
 
   const persistedPhotos = [];
@@ -2742,7 +2811,6 @@ async function persistEntryImages(entryId) {
     if (typeof photo === 'string' && photo.startsWith('data:image/')) {
       const uploaded = await uploadDataUrlToStorage(photo, makeStoragePath(entryId, `gallery-${i + 1}`));
       persistedPhotos.push(uploaded);
-      if (!mainImageUrl && previewSrc === photo) mainImageUrl = uploaded;
     } else if (isSafeImageUrl(photo)) {
       persistedPhotos.push(photo);
     }
@@ -4762,6 +4830,7 @@ window.toggleAIPhotoPanel = toggleAIPhotoPanel;
 window.clearAIPhotos = clearAIPhotos;
 window.removeAIPhoto = removeAIPhoto;
 window.scanJunkCategories = scanJunkCategories;
+window.repairMismatchedImages = repairMismatchedImages;
 window.setJunkAction = setJunkAction;
 window.applyJunkScanFixes = applyJunkScanFixes;
 window.closeJunkScanModal = closeJunkScanModal;
@@ -5175,6 +5244,13 @@ function sortRestaurants(arr) {
         <button onclick="scanJunkCategories()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🧹 Scan Now</button>
       </div>
 
+      <!-- Repair Mismatched Images (v11.12) -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">🖼 Repair Mismatched Images</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">Finds entries whose <code>imageUrl</code> points to another entry's photo (e.g., a cheese photo that leaked onto restaurant cards). Clears the bad URL so the card falls back to its stock image. Photos in the gallery are left alone.</div>
+        <button onclick="repairMismatchedImages()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🖼 Scan & Repair</button>
+      </div>
+
     </div>
 
     <div id="data-modal-status" style="margin-top:14px;font-size:0.72rem;color:var(--text-muted);line-height:1.8;font-family:monospace"></div>
@@ -5266,7 +5342,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.11</span>
+  Philinity Eats ©️ <span>Rev 11.12</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
