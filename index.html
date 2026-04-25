@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.07</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.08</div>
   </div>
 </div>
 
@@ -1755,11 +1755,12 @@ function applyFilters() {
   if (!showRecipes) filtered = filtered.filter(r => r.entry_type !== 'recipe');
   if (!showTastings) filtered = filtered.filter(r => r.entry_type !== 'tasting');
 
-  // City filter — strict: when a specific city is picked, only entries with that city show.
-  // All entry types (restaurant, tasting, recipe) respect the filter (v11.00).
-  // Entries with no city at all still slip through so they remain findable.
+  // City filter — restaurants and recipes are tied to a specific city.
+  // Tastings bypass the filter entirely (v11.08): a wine from France or cheese from
+  // Wisconsin shouldn't disappear when Boise is selected — origin ≠ where you live.
+  // Entries with no city at all also slip through so they remain findable.
   if (currentCity !== 'All') {
-    filtered = filtered.filter(r => !r.city || r.city === currentCity);
+    filtered = filtered.filter(r => r.entry_type === 'tasting' || !r.city || r.city === currentCity);
   }
   if (currentEntryType !== 'all') filtered = filtered.filter(r => r.entry_type === currentEntryType);
   if (currentCat !== 'All') filtered = filtered.filter(r => {
@@ -4721,6 +4722,17 @@ function setEntryType(type) {
     type = 'all';
   }
   currentEntryType = type;
+  // v11.08: Picking Tastings auto-switches city to All. Tastings are origin-based
+  // (a wine is "from France", a cheese is "from Wisconsin") so a city filter doesn't
+  // model them well. The filter logic also bypasses city for tastings, but flipping
+  // the dropdown here keeps the UI honest about what's being shown.
+  if (type === 'tasting' && currentCity !== 'All') {
+    currentCity = 'All';
+    const sel = document.getElementById('citySelect');
+    if (sel) sel.value = 'All';
+    const selBar = document.getElementById('citySelectBar');
+    if (selBar) selBar.value = 'All';
+  }
   // Sync both button sets: sort panel (type-*) and main bar shortcuts (etype-*)
   ['all','restaurant','tasting','recipe'].forEach(t => {
     document.getElementById('type-' + t)?.classList.toggle('active', t === type);
@@ -5087,7 +5099,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.07</span>
+  Philinity Eats ©️ <span>Rev 11.08</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
