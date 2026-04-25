@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.06</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.07</div>
   </div>
 </div>
 
@@ -3871,9 +3871,15 @@ function updateCategoryDropdown() {
   renderCategoryPicker(selectedCategories || []);
 }
 
+// v11.07: Track originals so we can detect renames and propagate them to entries.
+// Each editing row carries an `_origIndex` referring to its position in this snapshot
+// (or -1 if it's a brand-new row added during this edit session).
+let originalCategoriesSnapshot = [];
+
 function openCatManager() {
   // Default to alphabetical order (users can still drag to reorder inside modal if they want)
-  editingCategories = categories.map(c => ({...c})).sort((a, b) =>
+  originalCategoriesSnapshot = categories.map(c => ({ name: c.name, emoji: c.emoji }));
+  editingCategories = categories.map((c, idx) => ({ ...c, _origIndex: idx })).sort((a, b) =>
     String(a.name || '').toLowerCase().localeCompare(String(b.name || '').toLowerCase())
   );
   renderCatGrid();
@@ -3887,7 +3893,7 @@ function closeCatManager() {
 function renderCatGrid() {
   const grid = document.getElementById('catGrid');
   grid.innerHTML = editingCategories.map((c, i) => `
-    <div class="cat-item" draggable="true" data-index="${i}"
+    <div class="cat-item" draggable="true" data-index="${i}" data-orig="${typeof c._origIndex === 'number' ? c._origIndex : -1}"
       ondragstart="catDragStart(event, ${i})"
       ondragover="catDragOver(event)"
       ondragleave="catDragLeave(event)"
@@ -3953,25 +3959,77 @@ function removeCategory(index) {
 }
 
 async function saveCategories() {
-  // Collect latest values from inputs
+  // v11.07: Collect latest values + the original-index attribute so we can detect
+  // renames and propagate them to every entry that references the old name.
   const items = document.querySelectorAll('#catGrid .cat-item');
-  editingCategories = Array.from(items).map((item, i) => ({
+  const finalRows = Array.from(items).map((item) => ({
     emoji: item.querySelectorAll('input')[0].value.trim() || '🍽',
-    name: item.querySelectorAll('input')[1].value.trim()
-  })).filter(c => c.name);
-  
+    name: item.querySelectorAll('input')[1].value.trim(),
+    origIndex: parseInt(item.getAttribute('data-orig'), 10)
+  })).filter(r => r.name);
+
+  // Build rename map: oldName → newName, only when origIndex points to a real
+  // original entry AND the name actually changed.
+  const renames = {};
+  finalRows.forEach(r => {
+    if (Number.isInteger(r.origIndex) && r.origIndex >= 0 && r.origIndex < originalCategoriesSnapshot.length) {
+      const orig = originalCategoriesSnapshot[r.origIndex];
+      if (orig && orig.name && orig.name !== r.name) {
+        renames[orig.name] = r.name;
+      }
+    }
+  });
+
+  editingCategories = finalRows.map(r => ({ emoji: r.emoji, name: r.name }));
   categories = [...editingCategories];
-  // Write as object with slug keys (matches the migrated format: "Fine Dining" → "Fine-Dining")
+
+  // Build the slug-keyed object for /eats/categories (existing format)
   const obj = {};
   editingCategories.forEach(c => {
     const slug = String(c.name).trim().replace(/\s+/g, '-');
     obj[slug] = { emoji: c.emoji || '🍽', name: c.name };
   });
-  await dbSet('eats/categories', obj);
+
+  // Stage all DB writes in one update so categories + renamed entries land atomically
+  const dbUpdates = { 'eats/categories': obj };
+  let renamedEntryCount = 0;
+
+  if (Object.keys(renames).length) {
+    allRestaurants.forEach(r => {
+      if (!r.id) return;
+      const cats = Array.isArray(r.category) ? r.category : (r.category ? [r.category] : []);
+      let touched = false;
+      const next = [];
+      cats.forEach(c => {
+        if (renames[c]) {
+          touched = true;
+          // Dedupe: only push the new name if it isn't already present
+          if (!next.includes(renames[c])) next.push(renames[c]);
+        } else {
+          if (!next.includes(c)) next.push(c);
+        }
+      });
+      if (touched) {
+        dbUpdates['eats/' + r.id + '/category'] = next;
+        // Update local cache so applyFilters reflects renames immediately on close
+        r.category = next;
+        renamedEntryCount++;
+      }
+    });
+  }
+
+  await dbUpdate(dbUpdates);
   renderCatChips();
   updateCategoryDropdown();
+  applyFilters();
   closeCatManager();
-  showToast('✅ Categories saved!');
+
+  if (renamedEntryCount > 0) {
+    const renameSummary = Object.entries(renames).map(([o, n]) => `${o} → ${n}`).join(', ');
+    showToast(`✅ Categories saved · ${renamedEntryCount} entr${renamedEntryCount === 1 ? 'y' : 'ies'} updated (${renameSummary})`);
+  } else {
+    showToast('✅ Categories saved!');
+  }
 }
 
 
@@ -5029,7 +5087,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.06</span>
+  Philinity Eats ©️ <span>Rev 11.07</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
