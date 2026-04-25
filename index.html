@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.08</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.09</div>
   </div>
 </div>
 
@@ -1729,6 +1729,16 @@ function setCat(cat, el) {
     currentCat = cat;
     document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
     if (el) el.classList.add('active');
+    // v11.09: If this category is flagged allCities (e.g., Vineyard, Wine), auto-switch
+    // city dropdown to "All" so entries spread across multiple cities are visible.
+    const meta = categories.find(c => c.name === cat);
+    if (meta && meta.allCities && currentCity !== 'All') {
+      currentCity = 'All';
+      const sel = document.getElementById('citySelect');
+      if (sel) sel.value = 'All';
+      const selBar = document.getElementById('citySelectBar');
+      if (selBar) selBar.value = 'All';
+    }
   }
   applyFilters();
 }
@@ -1959,7 +1969,11 @@ function sanitizeValue(value) {
 function sanitizeCategoryObj(cat) {
   return {
     emoji: stripHTML((cat && cat.emoji) || ''),
-    name: stripHTML((cat && cat.name) || '')
+    name: stripHTML((cat && cat.name) || ''),
+    // v11.09: When true, clicking this category chip auto-switches city to "All".
+    // Useful for origin-based categories (Vineyard, Wine, Cheese) where entries
+    // are spread across many cities.
+    allCities: !!(cat && cat.allCities)
   };
 }
 
@@ -3900,11 +3914,17 @@ function renderCatGrid() {
       ondragleave="catDragLeave(event)"
       ondrop="catDrop(event, ${i})"
       ondragend="catDragEnd(event)"
+      oncontextmenu="openCatRowMenu(event, ${i})"
+      ontouchstart="catRowTouchStart(event, ${i})"
+      ontouchend="catRowTouchEnd()"
+      ontouchmove="catRowTouchEnd()"
+      ontouchcancel="catRowTouchEnd()"
+      title="Right-click (or long-press) for options"
       style="cursor:grab">
       <span style="color:var(--text-muted);font-size:16px;margin-right:2px;cursor:grab">⠿</span>
       <input class="cat-emoji-input" type="text" value="${escapeAttr(c.emoji)}" maxlength="2" onchange="editingCategories[${i}].emoji=this.value">
       <input type="text" value="${escapeAttr(c.name)}" onchange="editingCategories[${i}].name=this.value">
-      <button class="cat-delete" onclick="removeCategory(${i})">✕</button>
+      ${c.allCities ? '<span title="Shows across all cities" style="font-size:14px;color:var(--amber-light);margin-left:4px">🌍</span>' : ''}
     </div>
   `).join('');
 }
@@ -3959,15 +3979,133 @@ function removeCategory(index) {
   renderCatGrid();
 }
 
+// v11.09: Context menu for each category row in Edit Categories modal.
+// Right-click on desktop, long-press (~500ms) on mobile.
+let catRowMenuEl = null;
+let catRowLongPressTimer = null;
+let catRowLongPressDidFire = false;
+
+function openCatRowMenu(event, index) {
+  event.preventDefault();
+  event.stopPropagation();
+  closeCatRowMenu();
+  const cat = editingCategories[index];
+  if (!cat) return;
+
+  // Read coords — handle both mouse (event.clientX) and touch
+  let x = event.clientX, y = event.clientY;
+  if ((!x || !y) && event.touches && event.touches[0]) {
+    x = event.touches[0].clientX;
+    y = event.touches[0].clientY;
+  } else if ((!x || !y) && event.changedTouches && event.changedTouches[0]) {
+    x = event.changedTouches[0].clientX;
+    y = event.changedTouches[0].clientY;
+  }
+
+  const menu = document.createElement('div');
+  menu.style.cssText = `
+    position:fixed;left:${x}px;top:${y}px;z-index:9999;
+    background:var(--surface);border:1px solid var(--border-amber);border-radius:8px;
+    padding:4px;min-width:200px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.5);
+    font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);
+  `;
+
+  const itemBtn = (label, onclick, color) => {
+    const b = document.createElement('button');
+    b.style.cssText = `
+      display:flex;align-items:center;gap:8px;width:100%;text-align:left;
+      background:transparent;border:none;color:${color || 'var(--text)'};
+      padding:8px 12px;border-radius:4px;cursor:pointer;font-size:13px;
+      font-family:'DM Sans',sans-serif;
+    `;
+    b.innerHTML = label;
+    b.onmouseover = () => b.style.background = 'var(--surface2)';
+    b.onmouseout = () => b.style.background = 'transparent';
+    b.onclick = (e) => { e.stopPropagation(); onclick(); closeCatRowMenu(); };
+    return b;
+  };
+
+  const allCitiesLabel = cat.allCities
+    ? '<span style="font-size:14px">✅</span> All Cities <span style="color:var(--text-muted);font-size:11px;margin-left:auto">(on)</span>'
+    : '<span style="font-size:14px;opacity:0.4">☐</span> All Cities <span style="color:var(--text-muted);font-size:11px;margin-left:auto">(off)</span>';
+  menu.appendChild(itemBtn(allCitiesLabel, () => {
+    editingCategories[index].allCities = !editingCategories[index].allCities;
+    renderCatGrid();
+  }));
+
+  // Subtle divider
+  const sep = document.createElement('div');
+  sep.style.cssText = 'height:1px;background:var(--border);margin:4px 8px';
+  menu.appendChild(sep);
+
+  menu.appendChild(itemBtn(
+    '<span style="font-size:14px">🗑</span> Delete',
+    () => {
+      if (confirm(`Delete category "${cat.name}"?\n\nEntries that reference it won't be modified — use the 🧹 Junk Scan tool to clean up after.`)) {
+        removeCategory(index);
+      }
+    },
+    'var(--red)'
+  ));
+
+  // Keep menu within viewport
+  document.body.appendChild(menu);
+  const rect = menu.getBoundingClientRect();
+  if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 8) + 'px';
+  if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 8) + 'px';
+  catRowMenuEl = menu;
+
+  // Close on outside click
+  setTimeout(() => {
+    document.addEventListener('click', closeCatRowMenuOutside, { once: true });
+  }, 0);
+}
+
+function closeCatRowMenu() {
+  if (catRowMenuEl) {
+    catRowMenuEl.remove();
+    catRowMenuEl = null;
+  }
+}
+
+function closeCatRowMenuOutside(e) {
+  if (catRowMenuEl && !catRowMenuEl.contains(e.target)) closeCatRowMenu();
+}
+
+function catRowTouchStart(event, index) {
+  catRowLongPressDidFire = false;
+  catRowTouchEnd(); // clear any prior timer
+  catRowLongPressTimer = setTimeout(() => {
+    catRowLongPressDidFire = true;
+    openCatRowMenu(event, index);
+  }, 500);
+}
+
+function catRowTouchEnd() {
+  if (catRowLongPressTimer) {
+    clearTimeout(catRowLongPressTimer);
+    catRowLongPressTimer = null;
+  }
+}
+
 async function saveCategories() {
   // v11.07: Collect latest values + the original-index attribute so we can detect
   // renames and propagate them to every entry that references the old name.
+  // v11.09: Also carry the allCities flag from the editingCategories cache (set
+  // via context menu); the DOM rows don't have a checkbox, the flag lives on the
+  // editingCategories objects directly.
   const items = document.querySelectorAll('#catGrid .cat-item');
-  const finalRows = Array.from(items).map((item) => ({
-    emoji: item.querySelectorAll('input')[0].value.trim() || '🍽',
-    name: item.querySelectorAll('input')[1].value.trim(),
-    origIndex: parseInt(item.getAttribute('data-orig'), 10)
-  })).filter(r => r.name);
+  const finalRows = Array.from(items).map((item) => {
+    const idx = parseInt(item.getAttribute('data-index'), 10);
+    const original = editingCategories[idx] || {};
+    return {
+      emoji: item.querySelectorAll('input')[0].value.trim() || '🍽',
+      name: item.querySelectorAll('input')[1].value.trim(),
+      allCities: !!original.allCities,
+      origIndex: parseInt(item.getAttribute('data-orig'), 10)
+    };
+  }).filter(r => r.name);
 
   // Build rename map: oldName → newName, only when origIndex points to a real
   // original entry AND the name actually changed.
@@ -3981,14 +4119,14 @@ async function saveCategories() {
     }
   });
 
-  editingCategories = finalRows.map(r => ({ emoji: r.emoji, name: r.name }));
+  editingCategories = finalRows.map(r => ({ emoji: r.emoji, name: r.name, allCities: r.allCities }));
   categories = [...editingCategories];
 
   // Build the slug-keyed object for /eats/categories (existing format)
   const obj = {};
   editingCategories.forEach(c => {
     const slug = String(c.name).trim().replace(/\s+/g, '-');
-    obj[slug] = { emoji: c.emoji || '🍽', name: c.name };
+    obj[slug] = { emoji: c.emoji || '🍽', name: c.name, allCities: !!c.allCities };
   });
 
   // Stage all DB writes in one update so categories + renamed entries land atomically
@@ -4572,6 +4710,9 @@ window.closeCatManager = closeCatManager;
 window.saveCategories = saveCategories;
 window.addCategory = addCategory;
 window.removeCategory = removeCategory;
+window.openCatRowMenu = openCatRowMenu;
+window.catRowTouchStart = catRowTouchStart;
+window.catRowTouchEnd = catRowTouchEnd;
 // openDetail already exported below
 window.closeDetailModal = closeDetailModal;
 window.editFromDetail = editFromDetail;
@@ -5099,7 +5240,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.08</span>
+  Philinity Eats ©️ <span>Rev 11.09</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
