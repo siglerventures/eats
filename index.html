@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.09</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.10</div>
   </div>
 </div>
 
@@ -1758,10 +1758,16 @@ function applyFilters() {
   const search = document.getElementById('searchInput').value.toLowerCase().trim();
   let filtered = [...allRestaurants];
 
+  // v11.10: If the active category is flagged allTypes, override the hide rules
+  // below so recipes and tastings in that category are visible. Lookup once.
+  const activeCatMeta = currentCat !== 'All' ? categories.find(c => c.name === currentCat) : null;
+  const catWantsAllTypes = !!(activeCatMeta && activeCatMeta.allTypes);
+
   // v10.99: Hide recipes by default — shown only when Recipes chip active or searching.
   // v11.00: Same rule now applies to tastings.
-  const showRecipes = currentEntryType === 'recipe' || search.length > 0;
-  const showTastings = currentEntryType === 'tasting' || search.length > 0;
+  // v11.10: Also honored when the active category has allTypes:true.
+  const showRecipes = currentEntryType === 'recipe' || search.length > 0 || catWantsAllTypes;
+  const showTastings = currentEntryType === 'tasting' || search.length > 0 || catWantsAllTypes;
   if (!showRecipes) filtered = filtered.filter(r => r.entry_type !== 'recipe');
   if (!showTastings) filtered = filtered.filter(r => r.entry_type !== 'tasting');
 
@@ -1973,7 +1979,12 @@ function sanitizeCategoryObj(cat) {
     // v11.09: When true, clicking this category chip auto-switches city to "All".
     // Useful for origin-based categories (Vineyard, Wine, Cheese) where entries
     // are spread across many cities.
-    allCities: !!(cat && cat.allCities)
+    allCities: !!(cat && cat.allCities),
+    // v11.10: When true, this category includes recipes and tastings even though
+    // those entry types are hidden from the main grid by default. Useful for
+    // categories that span entry types (e.g., Alcohol contains both bar drinks
+    // on restaurant entries AND home-bar recipes).
+    allTypes: !!(cat && cat.allTypes)
   };
 }
 
@@ -3925,6 +3936,7 @@ function renderCatGrid() {
       <input class="cat-emoji-input" type="text" value="${escapeAttr(c.emoji)}" maxlength="2" onchange="editingCategories[${i}].emoji=this.value">
       <input type="text" value="${escapeAttr(c.name)}" onchange="editingCategories[${i}].name=this.value">
       ${c.allCities ? '<span title="Shows across all cities" style="font-size:14px;color:var(--amber-light);margin-left:4px">🌍</span>' : ''}
+      ${c.allTypes ? '<span title="Includes recipes and tastings" style="font-size:14px;color:var(--amber-light);margin-left:4px">🎭</span>' : ''}
     </div>
   `).join('');
 }
@@ -4034,6 +4046,14 @@ function openCatRowMenu(event, index) {
     renderCatGrid();
   }));
 
+  const allTypesLabel = cat.allTypes
+    ? '<span style="font-size:14px">✅</span> All Types <span style="color:var(--text-muted);font-size:11px;margin-left:auto">(on)</span>'
+    : '<span style="font-size:14px;opacity:0.4">☐</span> All Types <span style="color:var(--text-muted);font-size:11px;margin-left:auto">(off)</span>';
+  menu.appendChild(itemBtn(allTypesLabel, () => {
+    editingCategories[index].allTypes = !editingCategories[index].allTypes;
+    renderCatGrid();
+  }));
+
   // Subtle divider
   const sep = document.createElement('div');
   sep.style.cssText = 'height:1px;background:var(--border);margin:4px 8px';
@@ -4103,6 +4123,7 @@ async function saveCategories() {
       emoji: item.querySelectorAll('input')[0].value.trim() || '🍽',
       name: item.querySelectorAll('input')[1].value.trim(),
       allCities: !!original.allCities,
+      allTypes: !!original.allTypes,
       origIndex: parseInt(item.getAttribute('data-orig'), 10)
     };
   }).filter(r => r.name);
@@ -4119,14 +4140,14 @@ async function saveCategories() {
     }
   });
 
-  editingCategories = finalRows.map(r => ({ emoji: r.emoji, name: r.name, allCities: r.allCities }));
+  editingCategories = finalRows.map(r => ({ emoji: r.emoji, name: r.name, allCities: r.allCities, allTypes: r.allTypes }));
   categories = [...editingCategories];
 
   // Build the slug-keyed object for /eats/categories (existing format)
   const obj = {};
   editingCategories.forEach(c => {
     const slug = String(c.name).trim().replace(/\s+/g, '-');
-    obj[slug] = { emoji: c.emoji || '🍽', name: c.name, allCities: !!c.allCities };
+    obj[slug] = { emoji: c.emoji || '🍽', name: c.name, allCities: !!c.allCities, allTypes: !!c.allTypes };
   });
 
   // Stage all DB writes in one update so categories + renamed entries land atomically
@@ -5240,7 +5261,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.09</span>
+  Philinity Eats ©️ <span>Rev 11.10</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
