@@ -1294,7 +1294,7 @@
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
     <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.05</div>
+    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.06</div>
   </div>
 </div>
 
@@ -2499,13 +2499,14 @@ function openDetail(id) {
       </div>
     </div>
     <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}</div>
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div id="detailStars" style="font-size:24px;display:flex;gap:2px;cursor:pointer">
         ${[1,2,3,4,5].map(n => `<span onclick="setDetailRating('${r.id}',${n})" style="color:${(r.rating||0)>=n?'var(--amber)':'var(--border-amber)'};transition:color 0.1s" onmouseover="hoverDetailStars(${n})" onmouseout="resetDetailStars(${r.rating||0})">★</span>`).join('')}
       </div>
       <span style="font-size:11px;color:var(--text-muted)">click to rate</span>
+      ${renderVisitHistoryTrigger(r)}
     </div>
-    ${renderVisitHistorySection(r)}
+    ${renderVisitHistoryBody(r)}
     ${ds ? `<div class="card-server" style="margin-bottom:14px">👤 Ask for <strong>${ds}</strong></div>` : ''}
     ${(dprep || dcook) ? `<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">${dprep ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">⏱ Prep: <strong>${dprep}</strong></span>` : ''}${dcook ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">🔥 Cook: <strong>${dcook}</strong></span>` : ''}</div>` : ''}
     ${section('🥣 Ingredients', dingredients)}
@@ -3608,46 +3609,97 @@ async function setDetailRating(id, rating) {
 // v11.02: Visit history functions. Visits are stored as an array on the entry:
 // { date, notes, who } — sorted newest-first by the sanitizer.
 
-function renderVisitHistorySection(r) {
-  // v11.03: Show Visit History on all entries (not just tried) so user can log
-  // visits anywhere. Default-open if there are any visits so the date fields are
-  // immediately visible and editable without an extra click.
+// v11.06: Split into a small inline trigger pill (sits next to stars) + a
+// collapsed body. Default state is COLLAPSED on every detail open.
+function renderVisitHistoryTrigger(r) {
   const visits = Array.isArray(r.visits) ? r.visits : [];
   const count = visits.length;
-  const defaultOpen = count > 0;
+  const label = count > 0 ? `✨ Visit History (${count})` : '✨ Add Visit';
+  return `<button onclick="toggleVisitHistory()" style="margin-left:auto;background:transparent;border:1px dashed var(--amber-dim);color:var(--amber-light);padding:5px 11px;border-radius:14px;font-size:11px;font-family:'DM Sans',sans-serif;cursor:pointer;display:inline-flex;align-items:center;gap:6px;letter-spacing:0.5px;transition:all 0.15s" onmouseover="this.style.borderColor='var(--amber)'" onmouseout="this.style.borderColor='var(--amber-dim)'"><span id="visitHistoryChevron" style="display:inline-block;transition:transform 0.15s;transform:rotate(0deg)">▶</span> ${label}</button>`;
+}
+
+function renderVisitHistoryBody(r) {
+  const visits = Array.isArray(r.visits) ? r.visits : [];
   const listHtml = visits.map((v, i) => {
     const dateVal = new Date(v.date);
     const dateStr = dateVal.getFullYear() + '-' + String(dateVal.getMonth()+1).padStart(2,'0') + '-' + String(dateVal.getDate()).padStart(2,'0');
-    // v11.04: Wrap the date input in a <label> so the whole dashed box is the
-    // click target. onclick fallback calls showPicker() for Chrome desktop where
-    // a label click alone doesn't always open the native picker.
-    return `<div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:6px">
+    // Chip helper — matches .detail-list li styling, with double-click to edit inline.
+    // The data attrs let the dblclick handler know which entry/visit/field to update.
+    const chip = (field, value, placeholder) => {
+      const display = value ? escapeHTML(value) : `<span style="color:var(--text-muted);font-style:italic">+ ${placeholder}</span>`;
+      return `<span class="visit-chip" data-id="${escapeAttr(r.id)}" data-index="${i}" data-field="${field}" ondblclick="editVisitChip(this)" title="Double-click to edit" style="background:var(--surface2);border:1px solid var(--border-amber);padding:4px 12px;border-radius:20px;font-size:13px;color:var(--text-dim);cursor:pointer;user-select:none">${display}</span>`;
+    };
+    return `<div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:8px;padding:10px;display:flex;flex-direction:column;gap:8px">
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <label style="display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--amber-dim);border-radius:4px;padding:3px 8px;cursor:pointer;color:var(--amber-light);font-size:12px" onclick="const inp=this.querySelector('input');if(inp.showPicker)try{inp.showPicker()}catch(_){inp.click()}else inp.click()">
           <input type="date" value="${dateStr}" onchange="updateVisitDate('${r.id}', ${i}, this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:none;padding:0;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;pointer-events:none" />
         </label>
         <button onclick="removeVisit('${r.id}', ${i})" title="Remove visit" style="margin-left:auto;background:transparent;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;padding:2px 6px;border-radius:4px">🗑</button>
       </div>
-      <input type="text" placeholder="Who went? (Phil, Trinity, guests...)" value="${escapeAttr(v.who || '')}" onchange="updateVisitField('${r.id}', ${i}, 'who', this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none" />
-      <input type="text" placeholder="Notes (e.g. anniversary dinner)" value="${escapeAttr(v.notes || '')}" onchange="updateVisitField('${r.id}', ${i}, 'notes', this.value)" style="background:var(--surface);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;outline:none" />
+      <div style="display:flex;flex-wrap:wrap;gap:6px">
+        ${chip('who', v.who, 'Who went?')}
+        ${chip('notes', v.notes, 'Add notes')}
+      </div>
     </div>`;
   }).join('');
-  return `<div class="detail-section" style="margin-bottom:16px">
-    <div onclick="toggleVisitHistory()" style="cursor:pointer;display:flex;align-items:center;gap:8px;user-select:none;padding:6px 0">
-      <span id="visitHistoryChevron" style="color:var(--amber);font-size:12px;transition:transform 0.15s;transform:${defaultOpen ? 'rotate(90deg)' : 'rotate(0deg)'}">▶</span>
-      <h4 style="margin:0;font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--amber);font-weight:500">✨ Visit History${count ? ` (${count})` : ''}</h4>
+  return `<div id="visitHistoryBody" style="display:none;margin-bottom:16px;flex-direction:column;gap:10px">
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <button onclick="addVisitToday('${r.id}')" class="btn btn-amber" style="font-size:12px;padding:6px 12px">+ Today</button>
+      <span style="font-size:11px;color:var(--text-muted)">or pick a past date:</span>
+      <label style="display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--amber-dim);border-radius:4px;padding:4px 10px;cursor:pointer;color:var(--amber-light);font-size:12px" onclick="const inp=this.querySelector('input');if(inp.showPicker)try{inp.showPicker()}catch(_){inp.click()}else inp.click()">
+        <input type="date" id="addPastVisitInput" onchange="addPastVisit('${r.id}', this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:none;padding:0;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;pointer-events:none" />
+      </label>
     </div>
-    <div id="visitHistoryBody" style="display:${defaultOpen ? 'flex' : 'none'};margin-top:10px;flex-direction:column;gap:10px">
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <button onclick="addVisitToday('${r.id}')" class="btn btn-amber" style="font-size:12px;padding:6px 12px">+ Today</button>
-        <span style="font-size:11px;color:var(--text-muted)">or pick a past date:</span>
-        <label style="display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--amber-dim);border-radius:4px;padding:4px 10px;cursor:pointer;color:var(--amber-light);font-size:12px" onclick="const inp=this.querySelector('input');if(inp.showPicker)try{inp.showPicker()}catch(_){inp.click()}else inp.click()">
-          <input type="date" id="addPastVisitInput" onchange="addPastVisit('${r.id}', this.value)" style="font-size:12px;color:var(--amber-light);background:transparent;border:none;padding:0;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none;color-scheme:dark;pointer-events:none" />
-        </label>
-      </div>
-      ${listHtml || '<div style="font-size:12px;color:var(--text-muted);font-style:italic;padding:8px">No visits logged yet.</div>'}
-    </div>
+    ${listHtml || '<div style="font-size:12px;color:var(--text-muted);font-style:italic;padding:8px">No visits logged yet.</div>'}
   </div>`;
+}
+
+// Double-click a chip to edit it inline. Replaces the chip with an input,
+// commits on Enter or blur, cancels on Escape.
+function editVisitChip(chipEl) {
+  const id = chipEl.getAttribute('data-id');
+  const index = parseInt(chipEl.getAttribute('data-index'), 10);
+  const field = chipEl.getAttribute('data-field');
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  const visit = (r.visits || [])[index];
+  if (!visit) return;
+  const currentValue = visit[field] || '';
+
+  const input = document.createElement('input');
+  input.type = 'text';
+  input.value = currentValue;
+  input.placeholder = field === 'who' ? 'Who went?' : 'Add notes';
+  input.style.cssText = 'background:var(--surface);border:1px solid var(--amber);color:var(--text);padding:4px 12px;border-radius:20px;font-size:13px;font-family:\'DM Sans\',sans-serif;outline:none;min-width:140px';
+  chipEl.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let committed = false;
+  const commit = async () => {
+    if (committed) return;
+    committed = true;
+    const newVal = input.value.trim();
+    if (newVal !== currentValue) {
+      await updateVisitField(id, index, field, newVal);
+    } else {
+      // No change — just re-render to put the chip back
+      openDetail(id);
+      // Reopen the visit history body since openDetail collapses it
+      toggleVisitHistory();
+    }
+  };
+  const cancel = () => {
+    if (committed) return;
+    committed = true;
+    openDetail(id);
+    toggleVisitHistory();
+  };
+  input.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); commit(); }
+    else if (e.key === 'Escape') { e.preventDefault(); cancel(); }
+  });
+  input.addEventListener('blur', commit);
 }
 
 function toggleVisitHistory() {
@@ -3679,8 +3731,11 @@ async function persistVisits(id, visits) {
     [`${EATS_PATH}/${id}/visits`]: visits,
     [`${EATS_PATH}/${id}/lastUpdated`]: newestVisit
   });
-  // Re-render detail modal (visit section auto-opens when visits exist) and main grid
+  // Preserve whether the visit history body was open before we re-render
+  const bodyEl = document.getElementById('visitHistoryBody');
+  const wasOpen = bodyEl && bodyEl.style.display !== 'none';
   openDetail(id);
+  if (wasOpen) toggleVisitHistory();
   applyFilters();
 }
 
@@ -4594,6 +4649,7 @@ window.addPastVisit = addPastVisit;
 window.removeVisit = removeVisit;
 window.updateVisitDate = updateVisitDate;
 window.updateVisitField = updateVisitField;
+window.editVisitChip = editVisitChip;
 window.clearHighlight = clearHighlight;
 
 
@@ -4973,7 +5029,7 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.05</span>
+  Philinity Eats ©️ <span>Rev 11.06</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
