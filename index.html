@@ -1284,17 +1284,56 @@
   }
 
 </style>
+<!-- ── VERSION: single source of truth ─────────────────────── -->
+<meta name="app-rev" content="11.13">
+<script>
+// Cache-bust bootstrap + version injection (reads the app-rev meta above).
+(function(){
+  var rev = (document.querySelector('meta[name="app-rev"]')||{}).content || '';
+  try {
+    if (rev && localStorage.getItem('eats_lastRev') !== rev) {
+      localStorage.setItem('eats_lastRev', rev);
+      var u = new URL(window.location.href);
+      if (u.searchParams.get('v') !== rev) {
+        u.searchParams.set('v', rev);
+        window.location.replace(u.toString());
+        return;
+      }
+    }
+  } catch(e){ /* private mode / no storage — non-fatal */ }
+  document.addEventListener('DOMContentLoaded', function(){
+    document.querySelectorAll('[data-app-rev]').forEach(function(el){ el.textContent = 'Rev ' + rev; });
+  });
+})();
+</script>
 </head>
 <body>
 <!-- AUTH GATE -->
 <div id="auth-gate">
   <div class="auth-box">
     <div class="auth-logo">Philinity <span>Eats</span> 🍽</div>
-    <div class="auth-subtitle">Sign in with Google</div>
+    <div class="auth-subtitle">Sign in to continue</div>
     <button type="button" class="btn btn-amber" onclick="signInWithGoogle()" style="width:100%;justify-content:center;padding:12px">Sign in with Google</button>
+
+    <div style="display:flex;align-items:center;gap:10px;margin:14px 0;color:var(--text-muted);font-size:11px">
+      <span style="flex:1;height:1px;background:var(--border)"></span>OR<span style="flex:1;height:1px;background:var(--border)"></span>
+    </div>
+
+    <input type="email" id="emailField" placeholder="Email" autocomplete="email"
+      style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border-amber);color:var(--text);padding:10px 12px;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:8px">
+    <input type="password" id="passwordField" placeholder="Password" autocomplete="current-password"
+      onkeydown="if(event.key==='Enter') emailAuthSubmit()"
+      style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border-amber);color:var(--text);padding:10px 12px;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none;margin-bottom:10px">
+    <button type="button" id="emailAuthBtn" class="btn btn-amber" onclick="emailAuthSubmit()" style="width:100%;justify-content:center;padding:11px">Sign in</button>
+
+    <div style="display:flex;justify-content:space-between;margin-top:10px;font-size:11px">
+      <span id="emailAuthToggle" style="cursor:pointer;color:var(--amber-light)" onclick="toggleEmailAuthMode()">Create account</span>
+      <span style="cursor:pointer;color:var(--text-muted)" onclick="resetPasswordEmail()">Forgot password?</span>
+    </div>
+
     <div class="auth-error" id="authError" style="margin-top:12px"></div>
-    <div style="margin-top:12px;font-size:11px;color:var(--text-muted)">Firebase Google Sign-In</div>
-    <div style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev 11.12</div>
+    <div style="margin-top:10px;font-size:11px;color:var(--text-muted)">Google or email + password</div>
+    <div data-app-rev style="margin-top:8px;font-size:10px;color:var(--text-muted);letter-spacing:1px">Rev</div>
   </div>
 </div>
 
@@ -1428,7 +1467,7 @@
     <!-- Entry-type shortcuts (v10.94) — moved to end, synced with sort panel Type buttons -->
     <button class="chip entry-type-chip" id="etype-recipe" onclick="setEntryType('recipe')">📖 Recipes</button>
     <button class="chip entry-type-chip" id="etype-tasting" onclick="setEntryType('tasting')">🍷 Tastings</button>
-    <button class="cat-manage-btn" onclick="openCatManager()">⚙️ Edit Categories</button>
+    <button id="catManageBtn" class="cat-manage-btn" onclick="openCatManager()">⚙️ Edit Categories</button>
   </div>
 </div>
 
@@ -1646,7 +1685,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js';
 import { getDatabase, ref, get, set, update, remove, onValue } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js';
 import { getStorage, ref as storageRef, uploadString, getDownloadURL } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js';
-import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyCrW9Lrf7fWVqRxKqsnuPK0tL6UYbd_qds",
@@ -1667,10 +1706,47 @@ provider.setCustomParameters({ prompt: 'select_account' });
 
 const EATS_PATH = 'eats';
 
-// ── AUTHORIZED USERS ──────────────────────────────────────
-// Only these Google account UIDs are allowed. Any other signed-in user
-// will be shown a clear error and kept at the auth gate.
-const ALLOWED_UIDS = ['CuJigrzCbRfFFsM7uqe0mix46xH3', 'g4stabGPKiWAE23NTw6oUsqawWf1'];
+// ── ACCESS MODEL (role + roster) ──────────────────────────
+// Lockout-proof root admins (always 'admin', regardless of roster).
+const ROOT_ADMIN_UIDS = ['CuJigrzCbRfFFsM7uqe0mix46xH3', 'g4stabGPKiWAE23NTw6oUsqawWf1'];
+// Roster lives at eats_access/{emailKey} (a SIBLING of the eats node, NOT under
+// it — the client reads the whole eats node, so a roster child would leak).
+const ACCESS_PATH = 'eats_access';
+const VALID_ROLES = ['admin', 'moderator', 'user'];
+let currentRole = null;   // resolved after sign-in
+
+// Email → roster key. Dots → underscores ONLY, to stay byte-matched with the
+// rules' 6× .replace('.','_') chain (RTDB .replace is first-occurrence-only).
+function emailToKey(email) {
+  return (email || '').trim().toLowerCase().replace(/\./g, '_');
+}
+
+// Resolve a signed-in user's role: root → admin; else roster role; else null.
+async function resolveRole(user) {
+  if (!user) return null;
+  if (ROOT_ADMIN_UIDS.includes(user.uid)) return 'admin';
+  if (!user.email) return null;
+  try {
+    const snap = await dbGet(ACCESS_PATH + '/' + emailToKey(user.email));
+    const rec = snap.val();
+    const role = rec && rec.role;
+    return VALID_ROLES.includes(role) ? role : null;
+  } catch (e) {
+    console.warn('[Eats] role resolution failed:', e);
+    return null;
+  }
+}
+
+const isAdmin = () => currentRole === 'admin';
+const canModerate = () => currentRole === 'admin' || currentRole === 'moderator';
+
+// Show/hide role-gated UI once a role is known.
+function applyRoleUI() {
+  const setDisp = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+  setDisp('footerData', isAdmin());      // Data Manager (backup/restore) — admin only
+  setDisp('footerAccess', isAdmin());    // Manage Access roster — admin only
+  setDisp('catManageBtn', canModerate()); // Edit Categories — admin/moderator
+}
 
 // ── DB HELPERS (modular v10) ──────────────────────────────
 const dbRef = (path) => ref(db, path);
@@ -3976,6 +4052,7 @@ function updateCategoryDropdown() {
 let originalCategoriesSnapshot = [];
 
 function openCatManager() {
+  if (!canModerate()) { showToast('Editing categories is for moderators and admins'); return; }
   // Default to alphabetical order (users can still drag to reorder inside modal if they want)
   originalCategoriesSnapshot = categories.map(c => ({ name: c.name, emoji: c.emoji }));
   editingCategories = categories.map((c, idx) => ({ ...c, _origIndex: idx })).sort((a, b) =>
@@ -4416,22 +4493,70 @@ async function init() {
 }
 
 // ─── AUTH GATE ────────────────────────────────────────────
+function authErr(msg) {
+  const el = document.getElementById('authError');
+  if (el) { el.innerHTML = msg; el.style.display = 'block'; }
+}
+function clearAuthErr() {
+  const el = document.getElementById('authError');
+  if (el) { el.textContent = ''; el.style.display = 'none'; }
+}
+
+// Map Firebase auth error codes to friendly messages.
+function friendlyAuthError(e) {
+  switch (e && e.code) {
+    case 'auth/invalid-credential':
+    case 'auth/wrong-password':
+    case 'auth/user-not-found':      return 'Incorrect email or password.';
+    case 'auth/invalid-email':       return 'That doesn\'t look like a valid email.';
+    case 'auth/email-already-in-use':return 'An account already exists for that email — try signing in.';
+    case 'auth/weak-password':       return 'Password is too weak (use at least 6 characters).';
+    case 'auth/too-many-requests':   return 'Too many attempts. Please wait a moment and try again.';
+    case 'auth/missing-password':    return 'Please enter a password.';
+    default: return (e && e.message) || 'Sign-in failed. Please try again.';
+  }
+}
+
 function signInWithGoogle() {
-  document.getElementById('authError').textContent = '';
-  signInWithPopup(auth, provider).then(result => {
-    if (result && result.user && !ALLOWED_UIDS.includes(result.user.uid)) {
-      const emailShown = result.user.email ? ' (' + result.user.email + ')' : '';
-      const errEl = document.getElementById('authError');
-      if (errEl) {
-        errEl.innerHTML = '⚠️ This Google account' + emailShown + ' is not authorized for Philinity Eats.<br><br>Please sign in with an authorized account.';
-        errEl.style.display = 'block';
-      }
-      signOut(auth);
-    }
-  }).catch(e => {
+  clearAuthErr();
+  // Authorization is enforced centrally in onAuthStateChanged (roster gate) —
+  // a successful popup here just establishes identity; role resolution decides
+  // whether the session is allowed in.
+  signInWithPopup(auth, provider).catch(e => {
     console.error('Google sign-in error:', e);
-    document.getElementById('authError').textContent = e.message || 'Google sign-in failed.';
+    authErr(friendlyAuthError(e));
   });
+}
+
+// Email + password: one button toggles between Sign-in and Create-account.
+let emailAuthMode = 'signin'; // 'signin' | 'create'
+function toggleEmailAuthMode() {
+  emailAuthMode = emailAuthMode === 'signin' ? 'create' : 'signin';
+  const btn = document.getElementById('emailAuthBtn');
+  const tog = document.getElementById('emailAuthToggle');
+  if (btn) btn.textContent = emailAuthMode === 'signin' ? 'Sign in' : 'Create account';
+  if (tog) tog.textContent = emailAuthMode === 'signin' ? 'Create account' : 'Have an account? Sign in';
+  clearAuthErr();
+}
+function emailAuthSubmit() {
+  clearAuthErr();
+  const email = (document.getElementById('emailField').value || '').trim();
+  const pw = document.getElementById('passwordField').value || '';
+  if (!email) { authErr('Please enter your email.'); return; }
+  if (!pw)    { authErr('Please enter your password.'); return; }
+  const fn = emailAuthMode === 'create' ? createUserWithEmailAndPassword : signInWithEmailAndPassword;
+  fn(auth, email, pw).catch(e => {
+    console.error('Email auth error:', e);
+    authErr(friendlyAuthError(e));
+  });
+}
+function resetPasswordEmail() {
+  clearAuthErr();
+  const email = (document.getElementById('emailField').value || '').trim();
+  if (!email) { authErr('Enter your email above first, then tap "Forgot password?"'); return; }
+  sendPasswordResetEmail(auth, email)
+    .then(() => authErr('✅ Password reset email sent to ' + email + '.'))
+    .catch(e => authErr(friendlyAuthError(e)));
 }
 
 async function signOutUser() {
@@ -4444,8 +4569,92 @@ async function signOutUser() {
   }
 }
 
+// ── MANAGE ACCESS (admin roster) ─────────────────────────
+function openAccessModal() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  document.getElementById('accessStatus').textContent = '';
+  document.getElementById('accessEmail').value = '';
+  document.getElementById('accessRole').value = 'user';
+  document.getElementById('accessModal').classList.add('open');
+  renderAccessList();
+}
+function closeAccessModal() {
+  document.getElementById('accessModal').classList.remove('open');
+}
+async function renderAccessList() {
+  const wrap = document.getElementById('accessList');
+  wrap.textContent = 'Loading…';
+  let entries = [];
+  try {
+    const snap = await dbGet(ACCESS_PATH);
+    const val = snap.val() || {};
+    entries = Object.keys(val).map(k => ({ key: k, ...val[k] }));
+  } catch (e) {
+    wrap.textContent = 'Could not load roster: ' + (e.message || e);
+    return;
+  }
+  entries.sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+  wrap.textContent = '';
+  if (!entries.length) { wrap.textContent = 'No one added yet. Root admins always have access.'; return; }
+  entries.forEach(en => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px';
+    const info = document.createElement('div');
+    info.style.cssText = 'flex:1;min-width:0';
+    const em = document.createElement('div');
+    em.textContent = en.email || en.key;
+    em.style.cssText = 'font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis';
+    const rl = document.createElement('div');
+    rl.textContent = en.role || '—';
+    rl.style.cssText = 'font-size:11px;color:var(--text-muted)';
+    info.appendChild(em); info.appendChild(rl);
+    const del = document.createElement('button');
+    del.className = 'btn btn-ghost';
+    del.textContent = 'Remove';
+    del.style.cssText = 'font-size:11px;padding:6px 12px';
+    del.onclick = () => removeAccessEntry(en.key, en.email || en.key);
+    row.appendChild(info); row.appendChild(del);
+    wrap.appendChild(row);
+  });
+}
+async function addAccessEntry() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const status = document.getElementById('accessStatus');
+  const email = (document.getElementById('accessEmail').value || '').trim().toLowerCase();
+  const role = document.getElementById('accessRole').value;
+  if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) { status.textContent = '⚠ Enter a valid email.'; return; }
+  if (!VALID_ROLES.includes(role)) { status.textContent = '⚠ Pick a valid role.'; return; }
+  status.textContent = '⏳ Saving…';
+  try {
+    await dbSet(ACCESS_PATH + '/' + emailToKey(email), {
+      email, role,
+      addedAt: Date.now(),
+      addedBy: (auth.currentUser && auth.currentUser.email) || 'root'
+    });
+    status.textContent = '✅ ' + email + ' added as ' + role + '.';
+    document.getElementById('accessEmail').value = '';
+    renderAccessList();
+  } catch (e) {
+    status.textContent = '❌ ' + (e.message || e);
+  }
+}
+async function removeAccessEntry(key, label) {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  if (!confirm('Remove access for ' + label + '?')) return;
+  const status = document.getElementById('accessStatus');
+  status.textContent = '⏳ Removing…';
+  try {
+    await dbRemove(ACCESS_PATH + '/' + key);
+    status.textContent = '✅ Removed ' + label + '.';
+    renderAccessList();
+  } catch (e) {
+    status.textContent = '❌ ' + (e.message || e);
+  }
+}
+
 // ── DATA MANAGER ─────────────────────────────────────────
 function openDataModal() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
   document.getElementById('data-modal-status').innerHTML = '';
   document.getElementById('restore-filename').textContent = 'No file selected';
   document.getElementById('dataModal').classList.add('open');
@@ -4753,14 +4962,11 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // Check the UID whitelist — if not authorized, force sign-out and show clear error
-  if (!ALLOWED_UIDS.includes(user.uid)) {
-    const errEl = document.getElementById('authError');
+  // ── ROSTER GATE: resolve role; bounce anyone not root and not on the roster ──
+  currentRole = await resolveRole(user);
+  if (!currentRole) {
     const emailShown = user.email ? ' (' + user.email + ')' : '';
-    if (errEl) {
-      errEl.innerHTML = '⚠️ This Google account' + emailShown + ' is not authorized for Philinity Eats.<br><br>Please sign out and sign in with an authorized account.';
-      errEl.style.display = 'block';
-    }
+    authErr('⚠️ This account' + emailShown + ' is not authorized for Philinity Eats.<br><br>Ask an admin to add you, then sign in again.');
     document.getElementById('auth-gate').style.display = 'flex';
     initialized = false;
     signOut(auth).catch(e => console.warn('Forced sign-out failed:', e));
@@ -4783,9 +4989,11 @@ onAuthStateChanged(auth, async (user) => {
     return;
   }
 
-  // Authorized AND token is live — hide gate and initialize
+  // Authorized AND token is live — hide gate, apply role-gated UI, initialize
   document.getElementById('auth-gate').style.display = 'none';
-  document.getElementById('authError').textContent = '';
+  clearAuthErr();
+  const pwEl = document.getElementById('passwordField'); if (pwEl) pwEl.value = '';
+  applyRoleUI();
   if (!initialized) {
     initialized = true;
     init();
@@ -4797,6 +5005,13 @@ document.getElementById('auth-gate').style.display = 'flex';
 
 // Expose functions to global scope for HTML onclick handlers
 window.signInWithGoogle = signInWithGoogle;
+window.emailAuthSubmit = emailAuthSubmit;
+window.toggleEmailAuthMode = toggleEmailAuthMode;
+window.resetPasswordEmail = resetPasswordEmail;
+window.openAccessModal = openAccessModal;
+window.closeAccessModal = closeAccessModal;
+window.addAccessEntry = addAccessEntry;
+window.removeAccessEntry = removeAccessEntry;
 window.signOutUser = signOutUser;
 window.openAddModal = openAddModal;
 window.openCatManager = openCatManager;
@@ -5262,6 +5477,40 @@ function sortRestaurants(arr) {
 </div>
 
 
+<!-- MANAGE ACCESS MODAL (admin only) -->
+<div class="modal-overlay" id="accessModal" onclick="if(event.target===this) closeAccessModal()">
+  <div class="modal" style="max-width:520px">
+    <button class="modal-close" onclick="closeAccessModal()">✕</button>
+    <div class="modal-title">👥 Manage Access</div>
+    <div class="modal-subtitle">Who can sign in to Philinity Eats, and what they can do</div>
+
+    <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:14px;margin-top:12px">
+      <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
+        <input type="email" id="accessEmail" placeholder="person@email.com" autocomplete="off"
+          style="flex:1;min-width:180px;background:var(--surface);border:1px solid var(--border-amber);color:var(--text);padding:9px 12px;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none">
+        <select id="accessRole" style="background:var(--surface);border:1px solid var(--border-amber);color:var(--text);padding:9px 12px;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none">
+          <option value="user">user</option>
+          <option value="moderator">moderator</option>
+          <option value="admin">admin</option>
+        </select>
+        <button class="btn btn-amber" onclick="addAccessEntry()" style="padding:9px 16px">+ Add</button>
+      </div>
+      <div style="font-size:0.68rem;color:var(--text-dim);margin-top:8px;line-height:1.6">
+        <b>user</b> — view + add/edit/rate restaurants · <b>moderator</b> — also edit categories ·
+        <b>admin</b> — also Data Manager + this roster
+      </div>
+    </div>
+
+    <div id="accessList" style="margin-top:14px;display:flex;flex-direction:column;gap:8px;max-height:48vh;overflow-y:auto"></div>
+    <div id="accessStatus" style="margin-top:10px;font-size:0.72rem;color:var(--text-muted);font-family:monospace;min-height:16px"></div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+      <button class="btn btn-ghost" onclick="closeAccessModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- JUNK CATEGORY SCAN RESULTS MODAL (v10.92) -->
 <div class="modal-overlay" id="junkScanModal" onclick="if(event.target===this) closeJunkScanModal()">
   <div class="modal" style="max-width:720px">
@@ -5342,8 +5591,9 @@ function sortRestaurants(arr) {
 
 <!-- FOOTER -->
 <div class="footer">
-  Philinity Eats ©️ <span>Rev 11.12</span>
-  · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
+  Philinity Eats ©️ <span data-app-rev>Rev</span>
+  · <span id="footerAccess" style="display:none;cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openAccessModal()">👥 Access</span>
+  · <span id="footerData" style="display:none;cursor:pointer;color:var(--text-muted);font-size:10px" onclick="openDataModal()">📦 Data</span>
   · <span style="cursor:pointer;color:var(--text-muted);font-size:10px" onclick="signOutUser()">🚪 Sign Out</span>
 </div>
 </body>
