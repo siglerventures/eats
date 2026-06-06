@@ -67,3 +67,9 @@ node_modules/
 
 # dataconnect generated files
 .dataconnect
+
+# Local backups / old revisions / data dumps (history lives in git, not files)
+*.bak
+index_eats_rev*.html
+*-export.json
+eats-restored.json
