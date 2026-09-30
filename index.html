@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebasedatabase.app; script-src-elem 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://firebasestorage.googleapis.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://*.google.com https://www.gstatic.com https://us-central1-philinity-893d2.cloudfunctions.net/askAI; img-src 'self' data: blob: https://images.unsplash.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://i.imgur.com https://upload.wikimedia.org; frame-src https://*.firebaseio.com https://*.firebaseapp.com https://accounts.google.com https://apis.google.com https://*.google.com; manifest-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebasedatabase.app; script-src-elem 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://firebasestorage.googleapis.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://*.google.com https://www.gstatic.com https://us-central1-philinity-893d2.cloudfunctions.net/askAI; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com https://images.unsplash.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://i.imgur.com https://upload.wikimedia.org; frame-src https://*.firebaseio.com https://*.firebaseapp.com https://accounts.google.com https://apis.google.com https://*.google.com; manifest-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self';">
 <title>Philinity Eats</title>
 <!-- Favicon (inline SVG — simple and CSP-safe) -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='52'>🍽</text></svg>">
@@ -864,6 +864,11 @@
     transition: background 0.15s, border-color 0.15s;
   }
   .contact-chip:hover { background: var(--surface3); border-color: var(--amber-light); }
+  /* Map pin in the detail view (Rev 11.24) */
+  .detail-map-wrap { margin-bottom: 14px; }
+  .detail-map { width: 100%; height: 220px; border-radius: 10px; border: 1px solid var(--border-amber); background: var(--surface2); overflow: hidden; }
+  .detail-map-link { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--amber-light); text-decoration: none; }
+  .detail-map-link:hover { text-decoration: underline; }
   .detail-notes {
     background: var(--surface2);
     border: 1px solid var(--border-amber);
@@ -1385,7 +1390,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.23">
+<meta name="app-rev" content="11.24">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -1891,6 +1896,7 @@ async function uploadDataUrlToStorage(dataUrl, path) {
 
 // State
 let allRestaurants = [];
+let appConfig = {};   // eats/_config (e.g. mapsKey) — read from the same snapshot, never rendered as an entry (Rev 11.24)
 
 let chatHistory = [];
 let currentCity = 'Boise';
@@ -2840,6 +2846,7 @@ function openDetail(id) {
     ${renderVisitHistoryBody(r)}
     ${ds ? `<div class="card-server" style="margin-bottom:14px">👤 Ask for <strong>${ds}</strong></div>` : ''}
     ${(daddr || dphone) ? `<div class="detail-contact">${daddr ? `<a class="contact-chip" href="${escapeAttr(contactMapsHref(daddr))}" target="_blank" rel="noopener" title="Get directions">📍 ${escapeHTML(daddr)}</a>` : ''}${dphone ? `<a class="contact-chip" href="${escapeAttr(contactTelHref(dphone))}" title="Call">📞 ${escapeHTML(dphone)}</a>` : ''}</div>` : ''}
+    ${(hasCoords(r) && getMapsKey()) ? `<div class="detail-map-wrap"><div id="detailMap" class="detail-map" aria-label="Map"></div><a class="detail-map-link" href="${escapeAttr(contactMapsHref(daddr || (Number(r.lat) + ',' + Number(r.lng))))}" target="_blank" rel="noopener">Open in Google Maps ↗</a></div>` : ''}
     ${(dprep || dcook) ? `<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">${dprep ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">⏱ Prep: <strong>${dprep}</strong></span>` : ''}${dcook ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">🔥 Cook: <strong>${dcook}</strong></span>` : ''}</div>` : ''}
     ${section('🥣 Ingredients', dingredients)}
     ${numberedSection('📝 Instructions', dinstructions)}
@@ -2856,6 +2863,7 @@ function openDetail(id) {
   `;
 
   document.getElementById('detailModal').classList.add('open');
+  renderDetailMap(r); // async; no-op when there's no map block
 }
 
 function closeDetailModal() {
@@ -4706,7 +4714,8 @@ async function loadDataOnce() {
       console.warn('[Eats] loadDataOnce got null — keeping existing ' + allRestaurants.length + ' restaurants');
       return false;
     }
-    const keys = Object.keys(val).filter(k => k !== 'categories');
+    appConfig = (val._config && typeof val._config === 'object') ? val._config : {};
+    const keys = Object.keys(val).filter(k => k !== 'categories' && !k.startsWith('_'));
     // Guard: empty keys when we had data — keep existing
     if (keys.length === 0 && allRestaurants.length > 0) {
       console.warn('[Eats] loadDataOnce got 0 keys but had ' + allRestaurants.length + ' — keeping');
@@ -4738,7 +4747,8 @@ function subscribeRealtime() {
       console.warn('[Eats] Realtime listener got null — keeping existing data');
       return;
     }
-    const keys = Object.keys(val).filter(k => k !== 'categories');
+    appConfig = (val._config && typeof val._config === 'object') ? val._config : {};
+    const keys = Object.keys(val).filter(k => k !== 'categories' && !k.startsWith('_'));
     // Guard: empty data when we already had some — keep existing
     if (keys.length === 0 && allRestaurants.length > 0) {
       console.warn('[Eats] Realtime listener got empty data — keeping existing');
@@ -5446,6 +5456,63 @@ async function applyGeoScanFixes() {
 
 function closeGeoScanModal() { document.getElementById('geoScanModal').classList.remove('open'); }
 
+// ── 🗺 MAP PIN (Rev 11.24) — Maps JavaScript API, loaded lazily on first use ──
+// Key resolution: eats/_config/mapsKey (saved once by an admin; members-only, never
+// in the repo) -> else the admin's locally saved Places key. Nothing loads until a
+// detail view with coordinates opens (that's also what's billed as a map load).
+function getMapsKey() {
+  return String((appConfig && appConfig.mapsKey) || getPlacesKey() || '').trim();
+}
+let mapsLoadPromise = null;
+function loadGoogleMaps(key) {
+  if (window.google && window.google.maps && window.google.maps.Map) return Promise.resolve();
+  if (mapsLoadPromise) return mapsLoadPromise;
+  mapsLoadPromise = new Promise((resolve, reject) => {
+    window.__eatsMapsReady = () => resolve();
+    const el = document.createElement('script');
+    el.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&loading=async&callback=__eatsMapsReady';
+    el.async = true;
+    el.onerror = () => { mapsLoadPromise = null; reject(new Error('Google Maps failed to load')); };
+    document.head.appendChild(el);
+  });
+  return mapsLoadPromise;
+}
+// Google calls this when the key is rejected (wrong API / referrer / billing): hide the map quietly.
+window.gm_authFailure = function () {
+  console.warn('[Eats] Google Maps rejected the key — check Maps JavaScript API is enabled on it and the referrer restriction.');
+  document.querySelectorAll('.detail-map-wrap').forEach(w => { w.style.display = 'none'; });
+};
+async function renderDetailMap(r) {
+  const el = document.getElementById('detailMap');
+  if (!el || !hasCoords(r)) return;
+  const key = getMapsKey();
+  if (!key) return;
+  try {
+    await loadGoogleMaps(key);
+    if (!document.body.contains(el)) return; // detail re-rendered while loading
+    const pos = { lat: Number(r.lat), lng: Number(r.lng) };
+    const map = new google.maps.Map(el, { center: pos, zoom: 15, mapTypeControl: false, streetViewControl: false, fullscreenControl: false, clickableIcons: false });
+    new google.maps.Marker({ position: pos, map, title: String(r.name || '') });
+  } catch (e) {
+    console.warn('[Eats] map failed:', e);
+    const wrap = el.closest('.detail-map-wrap'); if (wrap) wrap.style.display = 'none';
+  }
+}
+// Admin: save the key to the database so every signed-in member gets maps.
+async function enableMapsForEveryone() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const status = document.getElementById('data-modal-status');
+  const keyEl = document.getElementById('placesKeyInput');
+  const key = ((keyEl && keyEl.value) || getPlacesKey() || '').trim();
+  if (!key) { if (status) status.innerHTML = '<span style="color:var(--red)">⚠ Paste the API key first.</span>'; return; }
+  try {
+    await dbSet(EATS_PATH + '/_config/mapsKey', key);
+    if (status) status.innerHTML = '<span style="color:var(--green)">✅ Maps enabled for everyone — the key is saved in the database (not in the app code) and only signed-in members can read it.</span>';
+  } catch (e) {
+    if (status) status.innerHTML = '<span style="color:var(--red)">❌ ' + escapeHTML(e && e.message ? e.message : String(e)) + '</span>';
+  }
+}
+
 // ── DATA MANAGER ─────────────────────────────────────────
 function openDataModal() {
   if (!isAdmin()) { showToast('Admins only'); return; }
@@ -5850,6 +5917,7 @@ window.applyPlacesScanFixes = applyPlacesScanFixes;
 window.togglePlacesRow = togglePlacesRow;
 window.closePlacesScanModal = closePlacesScanModal;
 window.forgetPlacesKey = forgetPlacesKey;
+window.enableMapsForEveryone = enableMapsForEveryone;
 window.setWithinFilter = setWithinFilter;
 window.geocodeMissingCoords = geocodeMissingCoords;
 window.applyGeoScanFixes = applyGeoScanFixes;
@@ -6297,6 +6365,7 @@ function sortRestaurants(arr) {
           <button onclick="forgetPlacesKey()" class="btn btn-ghost" style="font-size:11px;padding:7px 12px" title="Remove the saved key from this browser">Forget key</button>
         </div>
         <button onclick="lookupMissingContacts()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🌐 Look up</button>
+        <button onclick="enableMapsForEveryone()" class="btn btn-ghost" style="font-size:12px;padding:7px 16px;margin-left:8px" title="Saves this key to the database so all signed-in members see the map pin">🗺 Enable maps for everyone</button>
       </div>
 
       <!-- Geocode: fill missing map coordinates (Rev 11.23) -->
