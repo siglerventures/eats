@@ -58,8 +58,17 @@
     margin: 0 auto;
     display: flex;
     align-items: center;
-    gap: 20px;
+    gap: 14px;
     height: 64px;
+    flex-wrap: nowrap;
+  }
+  /* Search / Ask-AI groups that live in the top row (Rev 11.17) */
+  .topbar-group {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
 
   .logo {
@@ -72,10 +81,9 @@
 
   .logo span { color: var(--gold); font-style: italic; }
 
+  /* Panel-only wrapper now (inputs moved to the header): zero height when closed */
   .search-bar {
-    background: linear-gradient(135deg, var(--surface) 0%, #1e1709 100%);
-    border-bottom: 1px solid var(--border-amber);
-    padding: 12px 24px;
+    padding: 0 24px;
   }
 
   .sort-btn { font-size: 22px; font-weight: 700; color: var(--amber-dim); }
@@ -85,7 +93,12 @@
   .sort-panel {
     max-width: 1400px;
     margin: 8px auto 0;
+    background: linear-gradient(135deg, var(--surface) 0%, #1e1709 100%);
+    border: 1px solid var(--border-amber);
+    border-radius: 10px;
+    padding: 8px 14px 12px;
   }
+  .sort-panel > .sort-panel-inner:first-child { border-top: none; padding-top: 0; }
 
   .sort-panel-inner {
     display: flex;
@@ -231,11 +244,11 @@
   .btn-ghost:hover { border-color: var(--amber); color: var(--text); }
 
   /* AI CHAT BAR */
+  /* Panel-only wrapper now (input moved to the header): zero height when nothing is shown */
   .ai-bar {
-    background: linear-gradient(135deg, var(--surface) 0%, #1e1709 100%);
-    border-bottom: 1px solid var(--border-amber);
-    padding: 12px 24px;
+    padding: 0 24px;
   }
+  .ai-chat-thread:empty { display: none; }
 
   .ai-bar-inner {
     max-width: 1400px;
@@ -848,10 +861,15 @@
     .ai-label { display: none; }
     .form-grid { grid-template-columns: 1fr; }
     .cards-grid { grid-template-columns: 1fr; }
-    header { padding: 0 14px; }
+    header { padding: 0 14px; position: static; }
+    .header-inner { flex-wrap: wrap; height: auto; min-height: 64px; padding: 8px 0; gap: 8px 10px; }
+    .topbar-group { flex: 1 1 100%; order: 3; }
+    .logo { order: 0; }
+    #sortBtn { order: 1; margin-left: auto; }
+    .header-actions { order: 2; margin-left: 0; }
     .main { padding: 14px 14px 60px; }
-    .filters { padding: 10px 14px; }
-    .ai-bar { padding: 10px 14px; }
+    .filters { padding: 10px 14px; position: static; }
+    .ai-bar { padding: 0 14px; }
     .logo { font-size: 18px; }
     .filters-inner { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
     .chip { flex-shrink: 0; padding: 7px 14px; font-size: 13px; min-height: 36px; }
@@ -862,9 +880,8 @@
     .modal { padding: 20px 16px; margin: 10px; }
     .modal-overlay { padding: 10px; }
     .btn { min-height: 40px; }
-    .ai-bar-inner input { font-size: 16px; }
-    .search-bar { padding: 12px 14px; }
-    .ai-bar { padding: 12px 14px; }
+    .topbar-group input { font-size: 16px; }
+    .search-bar { padding: 0 14px; }
     .sort-panel-inner { gap: 6px; }
     .sort-pill { font-size: 13px; min-height: 36px; padding: 6px 12px; }
     .bar-label { display: none; }
@@ -1285,7 +1302,7 @@
 
 </style>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.15">
+<meta name="app-rev" content="11.17">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -1338,24 +1355,32 @@
 </div>
 
 
-<!-- HEADER -->
+<!-- HEADER — single top row: logo | search | ask AI | ≡ | + Add (Rev 11.17) -->
 <header>
   <div class="header-inner">
     <div class="logo" onclick="hardRefresh()" style="cursor:pointer" title="Reload (hard refresh)">Philinity <span>Eats</span> 🍽</div>
+    <div class="topbar-group">
+      <div class="bar-label">🔍 Search</div>
+      <input type="text" id="searchInput" placeholder="Search restaurants, dishes, drinks..." oninput="applyFilters()" onkeydown="if(event.key==='Enter')applyFilters()" enterkeyhint="search" class="unified-input">
+    </div>
+    <div class="topbar-group">
+      <div class="bar-label">🤖 Ask AI</div>
+      <input type="text" id="aiInput" placeholder="Ask anything, or: 'Add North End Pizza we like their Hyde House Combo'" onkeydown="if(event.key==='Enter') askAI()" class="unified-input">
+      <button class="icon-btn" onclick="askAI()" title="Ask AI">🤖</button>
+      <button class="icon-btn" id="aiPhotoToggle" onclick="toggleAIPhotoPanel()" title="Attach photos (up to 4)" style="position:relative">
+      📸
+      <span id="aiPhotoBadge" style="display:none;position:absolute;top:0;right:0;background:var(--amber);color:#0f0c08;font-size:10px;font-weight:700;border-radius:50%;min-width:16px;height:16px;line-height:16px;padding:0 3px">0</span>
+    </button>
+    </div>
+    <button class="icon-btn sort-btn" id="sortBtn" onclick="toggleSortPanel()" title="Sort">≡</button>
     <div class="header-actions">
       <button class="btn btn-ghost" onclick="openAddModal()">+ Add</button>
     </div>
   </div>
 </header>
 
-<!-- SEARCH BAR -->
+<!-- SORT / TYPE / CITY PANEL (opened by ≡ in the header) -->
 <div class="search-bar">
-  <div class="search-bar-inner">
-    <div class="bar-label">🔍 Search</div>
-    <input type="text" id="searchInput" placeholder="Search restaurants, dishes, drinks..." oninput="applyFilters()" onkeydown="if(event.key==='Enter')applyFilters()" enterkeyhint="search" class="unified-input">
-    <button class="icon-btn" onclick="applyFilters()" title="Search">🔍</button>
-    <button class="icon-btn sort-btn" id="sortBtn" onclick="toggleSortPanel()" title="Sort">≡</button>
-  </div>
   <div class="sort-panel" id="sortPanel" style="display:none;">
     <div class="sort-panel-inner">
       <button class="sort-pill active" id="sort-recent" onclick="setSort('recent')">🕐 Recently Updated</button>
@@ -1383,17 +1408,8 @@
   </div>
 </div>
 
-<!-- AI BAR -->
+<!-- AI PANELS (photo attach, highlight, thinking, chat) — input lives in the header -->
 <div class="ai-bar">
-  <div class="ai-bar-inner">
-    <div class="bar-label">🤖 Ask AI</div>
-    <input type="text" id="aiInput" placeholder="Ask anything, or: 'Add North End Pizza we like their Hyde House Combo'" onkeydown="if(event.key==='Enter') askAI()" class="unified-input">
-    <button class="icon-btn" onclick="askAI()" title="Ask AI">🤖</button>
-    <button class="icon-btn" id="aiPhotoToggle" onclick="toggleAIPhotoPanel()" title="Attach photos (up to 4)" style="position:relative">
-      📸
-      <span id="aiPhotoBadge" style="display:none;position:absolute;top:0;right:0;background:var(--amber);color:#0f0c08;font-size:10px;font-weight:700;border-radius:50%;min-width:16px;height:16px;line-height:16px;padding:0 3px">0</span>
-    </button>
-  </div>
   <!-- AI Photo Panel (v10.86) — same options as Edit Entry gallery -->
   <div id="aiPhotoPanel" style="display:none;margin-top:10px;padding:12px;background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;max-width:1400px;margin-left:auto;margin-right:auto">
     <div style="display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap;align-items:center">
@@ -3094,40 +3110,128 @@ document.addEventListener('paste', e => {
   }
 });
 
-// ── PASTE-TO-INGEST (Rev 11.14) ──────────────────────────────
+// ── PASTE-TO-INGEST (Rev 11.16 — VISION) ─────────────────────
 // Paste a restaurant/menu/receipt/storefront image on the MAIN view (no add/edit
-// form and no AI-photo panel open) and Eats reads it automatically, then adds a
-// new entry or updates the matching one — no need to open the AI bot first.
-// Reuses the existing askAI photo pipeline end-to-end (upload → askAI cloud
-// function → processAICommand, including its add/update + disambiguation logic).
-// No new uploader, no new Cloud Function, no Firebase rules change.
-const INGEST_PROMPT = "I just pasted an image — it's a restaurant, a menu, a receipt, or a storefront/sign. Read everything you can (name, city, cuisine, dishes, drinks, prices, server, rating) and either ADD it as a new entry or UPDATE the matching existing entry. If you're not sure which existing entry it matches, ask me before saving. Default city Boise unless the image clearly says otherwise.";
+// form and no AI-photo panel open) and Eats reads it and adds a new entry or
+// updates the matching one — no need to open the AI bot first.
+//
+// The image is sent to Claude as a real base64 VISION block through the shared
+// askAI Cloud Function, which forwards messages[].content unchanged (proven by
+// AutoFlag's Snap Lead / card scan / bill reading through the same function).
+// NEVER send the Firebase Storage URL as text and expect Claude to read it —
+// Claude can't open links (that was the "I can see the URL but can't open it"
+// reply). Client-only: no new Cloud Function, no Firebase rules change.
+const ASKAI_URL = 'https://us-central1-philinity-893d2.cloudfunctions.net/askAI';
+
+// Shrink for vision: <=1600px on the longest side, WHITE fill first (JPEG can't
+// store transparency — transparent areas otherwise come out black), JPEG 0.8.
+// (compressImage() is 600px/0.7 for card thumbnails — too small to read menus.)
+function compressForVision(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1600;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+      else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = () => reject(new Error('Could not decode image'));
+    img.src = dataUrl;
+  });
+}
+
+// Focused system prompt: includes the current entries so the model can match an
+// existing [id:...] for UPDATE vs ADD. Asks for ONE compact JSON action (the
+// eats askAI config caps replies at ~1,000 tokens, so keep output small).
+function buildIngestSystemPrompt() {
+  const context = allRestaurants.slice(0, 500).map(r =>
+    `[id:${r.id}] [${r.entry_type || 'restaurant'}] ${r.name} (${r.city}, ${r.cuisine}) | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating || 'unrated'}`
+  ).join('\n');
+  return `You are the Philinity Eats assistant for Phil & Trinity Sigler. The user pasted a PHOTO of a restaurant, menu, receipt, or storefront/sign. Read everything legible in it.
+
+Current entries (${allRestaurants.length}):
+${context}
+
+Decide:
+- If the place matches an EXISTING entry above, return an UPDATE using that entry's exact id from the list, with ONLY the fields you learned (dishes -> mains/appetizers/desserts arrays, drinks array, prices/details in notes, server, rating 1-5 only if clearly shown).
+- Otherwise return an ADD. entry_type is "restaurant", or "tasting" for wine/oyster/bourbon/beer/cocktail, or "recipe" for a dish with ingredients and steps.
+- Default city "Boise" and state "ID" unless the photo clearly shows otherwise.
+- CATEGORY: only use a category you can clearly infer; if unsure leave the category array EMPTY rather than guessing.
+
+OUTPUT RULES (strict):
+- Reply with ONLY ONE compact JSON object. No prose, no markdown code fences.
+  ADD:    {"action":"add","data":{"entry_type":"restaurant","name":"...","city":"Boise","state":"ID","category":[],"cuisine":"...","status":"tried","mains":["..."],"drinks":["..."],"notes":"..."}}
+  UPDATE: {"action":"update","id":"<exact id from the list>","data":{...only new fields...}}
+- Keep it short.
+- ONLY if you genuinely cannot tell which existing entry it is (e.g. two close matches), reply with ONE short plain-text question instead of JSON.`;
+}
 
 async function ingestPastedImage(file) {
   if (!file) return;
   if (!auth.currentUser) { showToast('Sign in first'); return; }
-  if (aiPendingPhotos.length >= AI_PHOTO_MAX) { showToast('📸 Clear AI photos first'); return; }
-  showToast('📋 Reading image…');
-  // Show the AI panel so any disambiguation question / result is visible.
-  const panel = document.getElementById('aiPhotoPanel');
-  if (panel) panel.style.display = 'block';
-  // Read → compress → push into aiPendingPhotos, AWAITING compression so the
-  // photo is present before askAI() reads aiPendingPhotos.
-  const dataUrl = await new Promise(resolve => {
-    const r = new FileReader();
-    r.onload = e => resolve(e.target.result);
-    r.readAsDataURL(file);
-  });
-  await new Promise(resolve => compressImage(dataUrl, compressed => {
-    aiPendingPhotos.push({ compressed });
-    renderAIPhotoPreview();
-    updateAIPhotoBadge();
-    resolve();
-  }));
-  // Fire the existing AI pipeline with a canned add/update instruction.
-  const input = document.getElementById('aiInput');
-  if (input) input.value = INGEST_PROMPT;
-  askAI();
+  const thinking = document.getElementById('aiThinking');
+  try {
+    showToast('📋 Reading image…');
+    appendUserBubble('📸 Pasted image — read it and add/update the entry');
+    if (thinking) thinking.classList.add('visible');
+
+    const rawDataUrl = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.onerror = () => reject(new Error('Could not read file'));
+      r.readAsDataURL(file);
+    });
+    const dataUrl = await compressForVision(rawDataUrl);
+    const b64 = dataUrl.split(',')[1];           // strip "data:image/jpeg;base64,"
+
+    const idToken = await auth.currentUser.getIdToken(true);
+    const res = await fetch(ASKAI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify({
+        app: 'eats',
+        system: buildIngestSystemPrompt(),
+        // Image block on THIS message only — never resend old image blocks.
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+          { type: 'text', text: 'Read this restaurant / menu / receipt / storefront photo and return the JSON (or one short question if you cannot tell which existing entry it is).' }
+        ] }]
+      })
+    });
+    const data = await res.json();
+    if (thinking) thinking.classList.remove('visible');
+
+    if (!res.ok) {
+      appendAIBubble('AI error: ' + ((data.error && data.error.message) || res.status), 'ai');
+      return;
+    }
+    const text = (data.content || []).map(bk => bk.type === 'text' ? bk.text : '').join('\n').trim();
+    const clean = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+    const jsons = extractActionJSONs(clean);
+    if (jsons.length) {
+      for (const j of jsons) {
+        try { await processAICommand(JSON.parse(j)); }
+        catch (e) {
+          console.warn('[Eats] ingest JSON parse failed:', e, j.slice(0, 120));
+          appendAIBubble('Could not parse the AI result — try again, or use the 🤖 chat.', 'ai');
+        }
+      }
+    } else {
+      // A clarifying question (or nothing actionable) — show it so you can answer in the chat.
+      appendAIBubble(text || 'I could not read anything actionable in that image.', 'ai');
+    }
+  } catch (e) {
+    if (thinking) thinking.classList.remove('visible');
+    console.error('[Eats] ingest failed:', e);
+    appendAIBubble('Could not read the image: ' + (e && e.message ? e.message : e), 'ai');
+  }
 }
 
 // Default-surface paste handler. The two existing handlers take precedence via
