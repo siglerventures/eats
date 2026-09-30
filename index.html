@@ -869,6 +869,10 @@
   .detail-map { width: 100%; height: 220px; border-radius: 10px; border: 1px solid var(--border-amber); background: var(--surface2); overflow: hidden; }
   .detail-map-link { display: inline-block; margin-top: 6px; font-size: 12px; color: var(--amber-light); text-decoration: none; }
   .detail-map-link:hover { text-decoration: underline; }
+  /* Drive-time chip in the detail view (Rev 11.25) */
+  .detail-drive { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; min-height: 0; }
+  .detail-drive:empty { display: none; }
+  .detail-drive button.contact-chip { font-family: inherit; line-height: inherit; cursor: pointer; }
   .detail-notes {
     background: var(--surface2);
     border: 1px solid var(--border-amber);
@@ -1390,7 +1394,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.24">
+<meta name="app-rev" content="11.25">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -2836,6 +2840,7 @@ function openDetail(id) {
       </div>
     </div>
     <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}${(() => { const d = distanceFor(r, userLocation); return d != null ? ' · 📍 ' + fmtMiles(d) : ''; })()}</div>
+    ${(hasCoords(r) && getMapsKey()) ? `<div id="detailDrive" class="detail-drive"></div>` : ''}
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div id="detailStars" style="font-size:24px;display:flex;gap:2px;cursor:pointer">
         ${[1,2,3,4,5].map(n => `<span onclick="setDetailRating('${r.id}',${n})" style="color:${(r.rating||0)>=n?'var(--amber)':'var(--border-amber)'};transition:color 0.1s" onmouseover="hoverDetailStars(${n})" onmouseout="resetDetailStars(${r.rating||0})">★</span>`).join('')}
@@ -2864,6 +2869,7 @@ function openDetail(id) {
 
   document.getElementById('detailModal').classList.add('open');
   renderDetailMap(r); // async; no-op when there's no map block
+  renderDriveTime(r); // async; no-op when there's no drive block
 }
 
 function closeDetailModal() {
@@ -5513,6 +5519,99 @@ async function enableMapsForEveryone() {
   }
 }
 
+// ── 🚗 DRIVE TIME (Rev 11.25) — Routes API, one call per detail open, cached ──
+// Live-traffic drive time from the user's location to the place, shown in the
+// detail view. Location is never requested just for opening a card: if it isn't
+// known yet, a "Drive time from here" button asks on tap. Same Google key as the
+// map (eats/_config/mapsKey -> local Places key). connect-src already allows
+// *.googleapis.com. Results are cached ~10 min per place so reopening is free.
+const ROUTES_URL = 'https://routes.googleapis.com/directions/v2:computeRoutes';
+const ROUTES_FIELD_MASK = 'routes.duration,routes.distanceMeters';
+const DRIVE_CACHE_TTL_MS = 10 * 60 * 1000;
+function buildRoutesBody(origin, dest) {
+  return {
+    origin: { location: { latLng: { latitude: origin.lat, longitude: origin.lng } } },
+    destination: { location: { latLng: { latitude: dest.lat, longitude: dest.lng } } },
+    travelMode: 'DRIVE',
+    routingPreference: 'TRAFFIC_AWARE',
+    units: 'IMPERIAL'
+  };
+}
+// { seconds, meters } from a computeRoutes response, or null when unusable.
+function parseRouteResponse(json) {
+  const r = json && Array.isArray(json.routes) && json.routes[0];
+  if (!r) return null;
+  const secs = parseFloat(String(r.duration || '').replace(/s$/, ''));
+  const meters = Number(r.distanceMeters);
+  if (!Number.isFinite(secs) || secs < 0 || !Number.isFinite(meters) || meters < 0) return null;
+  return { seconds: Math.round(secs), meters };
+}
+function fmtDriveDuration(seconds) {
+  const m = Math.max(1, Math.round(seconds / 60));
+  if (m < 60) return m + ' min';
+  const h = Math.floor(m / 60), rem = m % 60;
+  return rem ? `${h} hr ${rem} min` : `${h} hr`;
+}
+function fmtDriveMiles(meters) {
+  const mi = meters / 1609.344;
+  return (mi < 10 ? mi.toFixed(1) : Math.round(mi).toString()) + ' mi';
+}
+function fmtDrive(seconds, meters) { return fmtDriveDuration(seconds) + ' · ' + fmtDriveMiles(meters); }
+// Cache key: entry id + origin rounded to ~100 m so small GPS jitter still hits the cache.
+function driveCacheKey(id, origin) { return `${id}|${origin.lat.toFixed(3)},${origin.lng.toFixed(3)}`; }
+
+const driveTimeCache = new Map(); // driveCacheKey -> { seconds, meters, at }
+
+async function fetchDriveTime(origin, dest, key) {
+  const res = await fetch(ROUTES_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': ROUTES_FIELD_MASK },
+    body: JSON.stringify(buildRoutesBody(origin, dest))
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) { const err = new Error((json.error && json.error.message) || ('HTTP ' + res.status)); err.status = res.status; throw err; }
+  return parseRouteResponse(json);
+}
+
+async function renderDriveTime(r) {
+  const el = document.getElementById('detailDrive');
+  if (!el || !hasCoords(r)) return;
+  const key = getMapsKey();
+  if (!key) { el.remove(); return; }
+  const dest = { lat: Number(r.lat), lng: Number(r.lng) };
+  const dirHref = contactMapsHref(stripHTML(r.address || '') || (dest.lat + ',' + dest.lng));
+  if (!userLocation) {
+    el.innerHTML = `<button type="button" class="contact-chip" onclick="requestDriveTime('${escapeAttr(r.id)}')" title="Uses your location once to estimate the drive">🚗 Drive time from here</button>`;
+    return;
+  }
+  const ck = driveCacheKey(r.id, userLocation);
+  const hit = driveTimeCache.get(ck);
+  let result = (hit && (Date.now() - hit.at) < DRIVE_CACHE_TTL_MS) ? hit : null;
+  if (!result) {
+    el.innerHTML = `<span class="contact-chip" aria-busy="true">🚗 …</span>`;
+    try {
+      result = await fetchDriveTime(userLocation, dest, key);
+      if (!result) throw new Error('no route');
+      result.at = Date.now();
+      driveTimeCache.set(ck, result);
+    } catch (e) {
+      console.warn('[Eats] drive time failed:', e);
+      if (document.body.contains(el)) el.innerHTML = '';
+      return;
+    }
+    if (!document.body.contains(el)) return; // detail re-rendered while loading
+  }
+  el.innerHTML = `<a class="contact-chip" href="${escapeAttr(dirHref)}" target="_blank" rel="noopener" title="Drive time with current traffic — tap for directions">🚗 ${escapeHTML(fmtDriveDuration(result.seconds))} drive · ${escapeHTML(fmtDriveMiles(result.meters))}</a>`;
+}
+
+function requestDriveTime(id) {
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  requestUserLocation()
+    .then(() => { renderDriveTime(r); applyFilters(); /* cards can now show distance pills too */ })
+    .catch(() => showToast('📍 Location unavailable — allow location access to see drive time'));
+}
+
 // ── DATA MANAGER ─────────────────────────────────────────
 function openDataModal() {
   if (!isAdmin()) { showToast('Admins only'); return; }
@@ -5918,6 +6017,7 @@ window.togglePlacesRow = togglePlacesRow;
 window.closePlacesScanModal = closePlacesScanModal;
 window.forgetPlacesKey = forgetPlacesKey;
 window.enableMapsForEveryone = enableMapsForEveryone;
+window.requestDriveTime = requestDriveTime;
 window.setWithinFilter = setWithinFilter;
 window.geocodeMissingCoords = geocodeMissingCoords;
 window.applyGeoScanFixes = applyGeoScanFixes;
@@ -6365,7 +6465,7 @@ function sortRestaurants(arr) {
           <button onclick="forgetPlacesKey()" class="btn btn-ghost" style="font-size:11px;padding:7px 12px" title="Remove the saved key from this browser">Forget key</button>
         </div>
         <button onclick="lookupMissingContacts()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🌐 Look up</button>
-        <button onclick="enableMapsForEveryone()" class="btn btn-ghost" style="font-size:12px;padding:7px 16px;margin-left:8px" title="Saves this key to the database so all signed-in members see the map pin">🗺 Enable maps for everyone</button>
+        <button onclick="enableMapsForEveryone()" class="btn btn-ghost" style="font-size:12px;padding:7px 16px;margin-left:8px" title="Saves this key to the database so all signed-in members get the map pin and drive times">🗺 Enable maps &amp; drive time for everyone</button>
       </div>
 
       <!-- Geocode: fill missing map coordinates (Rev 11.23) -->
