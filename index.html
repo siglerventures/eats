@@ -1312,7 +1312,7 @@
 
 </style>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.18">
+<meta name="app-rev" content="11.19">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -4861,6 +4861,118 @@ async function removeAccessEntry(key, label) {
   }
 }
 
+// ── CONTACT EXTRACTOR: move phone/address out of Notes (Rev 11.19) ──
+// Deterministic regex (no AI, no cost, nothing invented) + review-before-apply,
+// same pattern as the junk-category scan. Only fills EMPTY phone/address fields.
+const CONTACT_PHONE_RE = /(?:\+?1[\s.\-]?)?(?:\(\d{3}\)\s?|\b\d{3}[\s.\-])\d{3}[\s.\-]\d{4}\b/;
+const CONTACT_ADDR_RE = /\b\d{1,6}[A-Za-z]?\s+(?:(?:[NSEW]|North|South|East|West)\.?\s+)?(?:[A-Za-z0-9.'\-]+\s+){0,4}?(?:St|Street|Ave|Avenue|Rd|Road|Blvd|Boulevard|Dr|Drive|Ln|Lane|Way|Ct|Court|Pl|Place|Pkwy|Parkway|Hwy|Highway|Cir|Circle|Ter|Terrace|Trl|Trail|Loop|Sq|Square)\b\.?(?:\s*(?:#|Suite|Ste\.?|Unit|Apt\.?|Bldg\.?)\s*[\w\-]+)?(?:,?\s*[A-Za-z][A-Za-z .]*?,\s*[A-Z]{2}\s+\d{5}(?:-\d{4})?)?/i;
+function normalizePhone(raw) {
+  const d = String(raw).replace(/\D/g, '').replace(/^1(?=\d{10}$)/, '');
+  return d.length === 10 ? `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}` : String(raw).trim();
+}
+function findContactInNotes(notes) {
+  const text = String(notes || '');
+  const pm = text.match(CONTACT_PHONE_RE);
+  const am = text.match(CONTACT_ADDR_RE);
+  return { phone: pm ? normalizePhone(pm[0]) : '', phoneRaw: pm ? pm[0] : '',
+           address: am ? am[0].replace(/\s+/g, ' ').trim() : '', addressRaw: am ? am[0] : '' };
+}
+function stripContactFromNotes(notes, found) {
+  let t = String(notes || '');
+  const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  if (found.addressRaw) t = t.replace(new RegExp('(?:Address|Addr|Located at|Location)\\s*[:.]?\\s*' + esc(found.addressRaw) + '[.,;]?\\s*', 'i'), ' ')
+                           .replace(new RegExp(esc(found.addressRaw) + '[.,;]?\\s*'), ' ');
+  if (found.phoneRaw)   t = t.replace(new RegExp('(?:Phone|Ph|Tel|Telephone|Call)\\s*[:.]?\\s*' + esc(found.phoneRaw) + '[.,;]?\\s*', 'i'), ' ')
+                           .replace(new RegExp(esc(found.phoneRaw) + '[.,;]?\\s*'), ' ');
+  return t.replace(/\s{2,}/g, ' ')
+          .replace(/^[\s.,;]+/, '')        // leading junk left by a removal
+          .replace(/\s+([.,;])/g, '$1')    // 'word .' -> 'word.'
+          .replace(/([.,;])\1+/g, '$1')    // '..' -> '.'
+          .replace(/[\s,;]+$/, '')         // trailing space/comma/semicolon — keep a final period
+          .trim();
+}
+
+let contactScanCandidates = []; // [{ id, name, phone, address, notesAfter, apply }]
+
+function scanContactFromNotes() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const status = document.getElementById('data-modal-status');
+  contactScanCandidates = [];
+  allRestaurants.forEach(r => {
+    if (!r || !r.notes) return;
+    const needPhone = !(r.phone && String(r.phone).trim());
+    const needAddr  = !(r.address && String(r.address).trim());
+    if (!needPhone && !needAddr) return;
+    const f = findContactInNotes(r.notes);
+    const phone = needPhone ? f.phone : '';
+    const address = needAddr ? f.address : '';
+    if (!phone && !address) return;
+    const used = { phoneRaw: phone ? f.phoneRaw : '', addressRaw: address ? f.addressRaw : '' };
+    contactScanCandidates.push({ id: r.id, name: r.name || r.id, phone, address,
+      notesAfter: stripContactFromNotes(r.notes, used), apply: true });
+  });
+  if (!contactScanCandidates.length) {
+    if (status) status.innerHTML = '<span style="color:var(--green)">✅ Nothing to extract — no phone/address found in Notes for entries missing them.</span>';
+    return;
+  }
+  if (status) status.innerHTML = '';
+  renderContactScan();
+  document.getElementById('contactScanModal').classList.add('open');
+}
+
+function renderContactScan() {
+  const wrap = document.getElementById('contactScanResults');
+  wrap.innerHTML = contactScanCandidates.map((c, i) => `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:${c.apply ? 1 : 0.5}">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+        <input type="checkbox" ${c.apply ? 'checked' : ''} onchange="toggleContactRow(${i}, this.checked)" style="margin-top:3px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;color:var(--text);font-weight:500">${escapeHTML(c.name)}</div>
+          ${c.phone ? `<div style="font-size:12px;color:var(--amber-light);margin-top:4px">📞 ${escapeHTML(c.phone)}</div>` : ''}
+          ${c.address ? `<div style="font-size:12px;color:var(--amber-light);margin-top:2px">📍 ${escapeHTML(c.address)}</div>` : ''}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px"><span style="color:var(--text-dim)">Notes after:</span> ${c.notesAfter ? escapeHTML(c.notesAfter) : '<em>(empty)</em>'}</div>
+        </div>
+      </label>
+    </div>`).join('');
+  const n = contactScanCandidates.filter(c => c.apply).length;
+  document.getElementById('contactScanSummary').textContent = `${n} of ${contactScanCandidates.length} selected`;
+  document.getElementById('contactScanApplyBtn').disabled = n === 0;
+}
+
+function toggleContactRow(i, on) {
+  if (contactScanCandidates[i]) contactScanCandidates[i].apply = !!on;
+  renderContactScan();
+}
+
+async function applyContactScanFixes() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const removeFromNotes = document.getElementById('contactScanRemoveNotes').checked;
+  const selected = contactScanCandidates.filter(c => c.apply);
+  if (!selected.length) return;
+  const updates = {};
+  selected.forEach(c => {
+    if (c.phone)   updates[`${EATS_PATH}/${c.id}/phone`] = c.phone;
+    if (c.address) updates[`${EATS_PATH}/${c.id}/address`] = c.address;
+    if (removeFromNotes) updates[`${EATS_PATH}/${c.id}/notes`] = c.notesAfter;
+    updates[`${EATS_PATH}/${c.id}/lastUpdated`] = Date.now();
+  });
+  try {
+    await dbUpdate(updates);
+    closeContactScanModal();
+    const word = selected.length === 1 ? 'entry' : 'entries';
+    showToast(`✅ Updated ${selected.length} ${word}`);
+    const status = document.getElementById('data-modal-status');
+    if (status) status.innerHTML = `<span style="color:var(--green)">✅ Moved phone/address into fields for ${selected.length} ${word}${removeFromNotes ? ' and cleaned Notes' : ''}.</span>`;
+  } catch (e) {
+    console.error('[Eats] contact apply failed:', e);
+    showToast('❌ ' + (e && e.message ? e.message : e));
+  }
+}
+
+function closeContactScanModal() {
+  document.getElementById('contactScanModal').classList.remove('open');
+}
+
 // ── DATA MANAGER ─────────────────────────────────────────
 function openDataModal() {
   if (!isAdmin()) { showToast('Admins only'); return; }
@@ -5255,6 +5367,10 @@ window.clearAIPhotos = clearAIPhotos;
 window.removeAIPhoto = removeAIPhoto;
 window.scanJunkCategories = scanJunkCategories;
 window.repairMismatchedImages = repairMismatchedImages;
+window.scanContactFromNotes = scanContactFromNotes;
+window.applyContactScanFixes = applyContactScanFixes;
+window.toggleContactRow = toggleContactRow;
+window.closeContactScanModal = closeContactScanModal;
 window.setJunkAction = setJunkAction;
 window.applyJunkScanFixes = applyJunkScanFixes;
 window.closeJunkScanModal = closeJunkScanModal;
@@ -5676,6 +5792,13 @@ function sortRestaurants(arr) {
         <button onclick="repairMismatchedImages()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🖼 Scan & Repair</button>
       </div>
 
+      <!-- Extract Phone & Address from Notes (Rev 11.19) -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">📇 Extract Phone & Address from Notes</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">Finds phone numbers and street addresses written in Notes for entries whose Phone / Address fields are empty, and moves them into the fields (so they become tap-to-call / directions). You review every match before anything is saved.</div>
+        <button onclick="scanContactFromNotes()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">📇 Scan Now</button>
+      </div>
+
     </div>
 
     <div id="data-modal-status" style="margin-top:14px;font-size:0.72rem;color:var(--text-muted);line-height:1.8;font-family:monospace"></div>
@@ -5716,6 +5839,27 @@ function sortRestaurants(arr) {
 
     <div style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn btn-ghost" onclick="closeAccessModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- CONTACT EXTRACT REVIEW MODAL (Rev 11.19) -->
+<div class="modal-overlay" id="contactScanModal" onclick="if(event.target===this) closeContactScanModal()">
+  <div class="modal" style="max-width:720px">
+    <button class="modal-close" onclick="closeContactScanModal()">✕</button>
+    <div class="modal-title">📇 Extract Phone & Address from Notes</div>
+    <div class="modal-subtitle" style="margin-bottom:12px">Found in Notes for entries missing them. Uncheck any you don't want. Nothing changes until you click Apply.</div>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-dim);margin-bottom:10px;cursor:pointer">
+      <input type="checkbox" id="contactScanRemoveNotes" checked> Also remove the extracted text from Notes (the "Notes after" preview on each row)
+    </label>
+    <div id="contactScanResults" style="max-height:55vh;overflow-y:auto;padding-right:4px"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);gap:8px">
+      <div id="contactScanSummary" style="font-size:11px;color:var(--text-dim);align-self:center"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closeContactScanModal()">Cancel</button>
+        <button id="contactScanApplyBtn" class="btn btn-amber" onclick="applyContactScanFixes()">Apply</button>
+      </div>
     </div>
   </div>
 </div>
