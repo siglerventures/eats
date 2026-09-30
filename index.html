@@ -1312,7 +1312,7 @@
 
 </style>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.19">
+<meta name="app-rev" content="11.20">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -4973,11 +4973,186 @@ function closeContactScanModal() {
   document.getElementById('contactScanModal').classList.remove('open');
 }
 
+// ── PLACES LOOKUP: fill missing phone/address from Google Places (Rev 11.20) ──
+// Browser -> Places API (New) Text Search with a referrer-restricted key the admin
+// pastes in (kept in localStorage only; never in the repo). Review-then-apply;
+// only EMPTY fields are filled. CSP connect-src already allows *.googleapis.com.
+const PLACES_SEARCH_URL = 'https://places.googleapis.com/v1/places:searchText';
+const PLACES_FIELD_MASK = 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.internationalPhoneNumber';
+const PLACES_STOPWORDS = new Set(['the','a','an','and','of','restaurant','cafe','bar','grill','kitchen','co','inc','llc']);
+function placesQueryFor(r) {
+  return [r.name, r.city, r.state].map(x => String(x || '').trim()).filter(Boolean).join(', ');
+}
+function placesNameTokens(s) {
+  return String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(t => t && !PLACES_STOPWORDS.has(t));
+}
+// 1.0 when the shorter name is fully contained in the longer ("Cafe Rio" vs "Cafe Rio Mexican Grill")
+function placesNameSimilarity(a, b) {
+  const A = new Set(placesNameTokens(a)), B = new Set(placesNameTokens(b));
+  if (!A.size || !B.size) return 0;
+  let hit = 0; A.forEach(t => { if (B.has(t)) hit++; });
+  return hit / Math.min(A.size, B.size);
+}
+function parsePlacesResponse(json) {
+  const places = (json && Array.isArray(json.places)) ? json.places : [];
+  return places.map(p => ({
+    id: p.id || '',
+    name: (p.displayName && p.displayName.text) || '',
+    address: String(p.formattedAddress || '').replace(/,\s*(USA|United States)\s*$/i, '').trim(),
+    phone: p.nationalPhoneNumber || p.internationalPhoneNumber || ''
+  })).filter(p => p.name);
+}
+// Only fills EMPTY fields; never overwrites. Returns {} when nothing to write.
+function buildPlacesUpdates(entry, match, base) {
+  const u = {};
+  const empty = v => !(v && String(v).trim());
+  if (match.phone && empty(entry.phone))     u[`${base}/${entry.id}/phone`] = match.phone;
+  if (match.address && empty(entry.address)) u[`${base}/${entry.id}/address`] = match.address;
+  if (Object.keys(u).length) u[`${base}/${entry.id}/lastUpdated`] = Date.now();
+  return u;
+}
+
+const PLACES_KEY_LS = 'eats_placesKey';
+function getPlacesKey() { try { return localStorage.getItem(PLACES_KEY_LS) || ''; } catch (e) { return ''; } }
+function setPlacesKey(k) { try { if (k) localStorage.setItem(PLACES_KEY_LS, k); else localStorage.removeItem(PLACES_KEY_LS); } catch (e) {} }
+function forgetPlacesKey() {
+  setPlacesKey('');
+  const el = document.getElementById('placesKeyInput'); if (el) el.value = '';
+  showToast('Places key removed from this browser');
+}
+
+let placesScanCandidates = []; // [{ id, name, entry, query, match, sim, apply, error }]
+
+async function placesSearch(query, key) {
+  const res = await fetch(PLACES_SEARCH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': PLACES_FIELD_MASK },
+    body: JSON.stringify({ textQuery: query, regionCode: 'US', languageCode: 'en', pageSize: 3 })
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error((json.error && json.error.message) || ('HTTP ' + res.status));
+    err.status = res.status;
+    throw err;
+  }
+  return parsePlacesResponse(json);
+}
+
+async function lookupMissingContacts() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const status = document.getElementById('data-modal-status');
+  const keyEl = document.getElementById('placesKeyInput');
+  const key = ((keyEl && keyEl.value) || getPlacesKey() || '').trim();
+  if (!key) { if (status) status.innerHTML = '<span style="color:var(--red)">⚠ Paste your Google Places API key first.</span>'; return; }
+  setPlacesKey(key);
+  const isEmpty = v => !(v && String(v).trim());
+  const targets = allRestaurants.filter(r => r && r.name && (r.entry_type || 'restaurant') === 'restaurant' && (isEmpty(r.phone) || isEmpty(r.address)));
+  if (!targets.length) { if (status) status.innerHTML = '<span style="color:var(--green)">✅ Every restaurant already has a phone and address.</span>'; return; }
+  placesScanCandidates = [];
+  let fatal = null;
+  for (let i = 0; i < targets.length; i++) {
+    const r = targets[i];
+    if (status) status.innerHTML = `<span style="color:var(--amber)">⏳ Looking up ${i + 1} of ${targets.length}: ${escapeHTML(r.name)}…</span>`;
+    const query = placesQueryFor(r);
+    try {
+      const results = await placesSearch(query, key);
+      let best = null, bestSim = -1;
+      results.forEach(pl => { const sv = placesNameSimilarity(r.name, pl.name); if (sv > bestSim) { best = pl; bestSim = sv; } });
+      const sim = best ? bestSim : 0;
+      const fills = best ? Object.keys(buildPlacesUpdates(r, best, EATS_PATH)).length > 0 : false;
+      placesScanCandidates.push({ id: r.id, name: r.name, entry: r, query, match: best, sim, fills, apply: fills && sim >= 0.5, error: '' });
+    } catch (e) {
+      // Key / permission / quota problems will fail every call — stop early and explain.
+      if ([400, 401, 403, 429].includes(e.status)) { fatal = e; break; }
+      placesScanCandidates.push({ id: r.id, name: r.name, entry: r, query, match: null, sim: 0, fills: false, apply: false, error: e.message || String(e) });
+    }
+    await new Promise(res => setTimeout(res, 120)); // gentle pacing
+  }
+  if (fatal) {
+    if (status) status.innerHTML = `<span style="color:var(--red)">❌ Google Places rejected the request: ${escapeHTML(fatal.message)}. Check that the key is for “Places API (New)”, restricted to https://siglerventures.github.io/*, and that billing is enabled on the project.</span>`;
+    if (!placesScanCandidates.length) return;
+  } else if (status) {
+    status.innerHTML = '';
+  }
+  renderPlacesScan();
+  document.getElementById('placesScanModal').classList.add('open');
+}
+
+function renderPlacesScan() {
+  const wrap = document.getElementById('placesScanResults');
+  wrap.innerHTML = placesScanCandidates.map((c, i) => {
+    const disabled = !c.fills;
+    let body;
+    if (c.error) {
+      body = `<div style="font-size:12px;color:var(--red);margin-top:4px">❌ ${escapeHTML(c.error)}</div>`;
+    } else if (!c.match) {
+      body = `<div style="font-size:12px;color:var(--text-muted);margin-top:4px">No match found for “${escapeHTML(c.query)}”</div>`;
+    } else {
+      const flag = c.sim >= 0.5
+        ? `<span style="color:var(--green)">✅ good name match</span>`
+        : `<span style="color:var(--amber)">⚠ check this — name doesn't match well</span>`;
+      const willFill = [];
+      if (c.match.phone && !(c.entry.phone && String(c.entry.phone).trim())) willFill.push('phone');
+      if (c.match.address && !(c.entry.address && String(c.entry.address).trim())) willFill.push('address');
+      body = `
+          <div style="font-size:12px;color:var(--text);margin-top:4px">→ <strong>${escapeHTML(c.match.name)}</strong> &nbsp;<span style="font-size:11px">${flag}</span></div>
+          ${c.match.address ? `<div style="font-size:12px;color:var(--amber-light);margin-top:2px">📍 ${escapeHTML(c.match.address)}</div>` : ''}
+          ${c.match.phone ? `<div style="font-size:12px;color:var(--amber-light);margin-top:2px">📞 ${escapeHTML(c.match.phone)}</div>` : ''}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${willFill.length ? 'Fills: ' + willFill.join(' + ') : 'Nothing to fill (Google has no new info)'}</div>`;
+    }
+    return `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:${c.apply ? 1 : 0.6}">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:${disabled ? 'default' : 'pointer'}">
+        <input type="checkbox" ${c.apply ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="togglePlacesRow(${i}, this.checked)" style="margin-top:3px">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:14px;color:var(--text);font-weight:500">${escapeHTML(c.name)}</div>
+          ${body}
+        </div>
+      </label>
+    </div>`;
+  }).join('');
+  const n = placesScanCandidates.filter(c => c.apply).length;
+  const found = placesScanCandidates.filter(c => c.match).length;
+  document.getElementById('placesScanSummary').textContent = `${n} selected · ${found} of ${placesScanCandidates.length} matched`;
+  document.getElementById('placesScanApplyBtn').disabled = n === 0;
+}
+
+function togglePlacesRow(i, on) {
+  const c = placesScanCandidates[i];
+  if (c && c.fills) c.apply = !!on;
+  renderPlacesScan();
+}
+
+async function applyPlacesScanFixes() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const selected = placesScanCandidates.filter(c => c.apply && c.match);
+  if (!selected.length) return;
+  const updates = {};
+  selected.forEach(c => Object.assign(updates, buildPlacesUpdates(c.entry, c.match, EATS_PATH)));
+  if (!Object.keys(updates).length) { showToast('Nothing to apply'); return; }
+  try {
+    await dbUpdate(updates);
+    closePlacesScanModal();
+    const word = selected.length === 1 ? 'entry' : 'entries';
+    showToast(`✅ Filled contact info for ${selected.length} ${word}`);
+    const status = document.getElementById('data-modal-status');
+    if (status) status.innerHTML = `<span style="color:var(--green)">✅ Filled phone/address from Google Places for ${selected.length} ${word}.</span>`;
+  } catch (e) {
+    console.error('[Eats] places apply failed:', e);
+    showToast('❌ ' + (e && e.message ? e.message : e));
+  }
+}
+
+function closePlacesScanModal() {
+  document.getElementById('placesScanModal').classList.remove('open');
+}
+
 // ── DATA MANAGER ─────────────────────────────────────────
 function openDataModal() {
   if (!isAdmin()) { showToast('Admins only'); return; }
   document.getElementById('data-modal-status').innerHTML = '';
   document.getElementById('restore-filename').textContent = 'No file selected';
+  const pk = document.getElementById('placesKeyInput'); if (pk) pk.value = getPlacesKey();
   document.getElementById('dataModal').classList.add('open');
 }
 
@@ -5371,6 +5546,11 @@ window.scanContactFromNotes = scanContactFromNotes;
 window.applyContactScanFixes = applyContactScanFixes;
 window.toggleContactRow = toggleContactRow;
 window.closeContactScanModal = closeContactScanModal;
+window.lookupMissingContacts = lookupMissingContacts;
+window.applyPlacesScanFixes = applyPlacesScanFixes;
+window.togglePlacesRow = togglePlacesRow;
+window.closePlacesScanModal = closePlacesScanModal;
+window.forgetPlacesKey = forgetPlacesKey;
 window.setJunkAction = setJunkAction;
 window.applyJunkScanFixes = applyJunkScanFixes;
 window.closeJunkScanModal = closeJunkScanModal;
@@ -5799,6 +5979,17 @@ function sortRestaurants(arr) {
         <button onclick="scanContactFromNotes()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">📇 Scan Now</button>
       </div>
 
+      <!-- Look up missing Phone & Address via Google Places (Rev 11.20) -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">🌐 Look up missing Phone &amp; Address (Google Places)</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">For restaurants with no phone or address anywhere, asks Google Places for the real ones. You review every match before anything is saved; only empty fields are filled. Your key is kept in this browser only (never in the app code) — restrict it to <code>https://siglerventures.github.io/*</code> in Google Cloud.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:10px">
+          <input type="password" id="placesKeyInput" placeholder="Google Places API key" autocomplete="off" style="flex:1;min-width:220px;background:var(--surface);border:1px solid var(--border-amber);color:var(--text);padding:8px 12px;border-radius:8px;font-size:13px;font-family:'DM Mono',monospace;outline:none">
+          <button onclick="forgetPlacesKey()" class="btn btn-ghost" style="font-size:11px;padding:7px 12px" title="Remove the saved key from this browser">Forget key</button>
+        </div>
+        <button onclick="lookupMissingContacts()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🌐 Look up</button>
+      </div>
+
     </div>
 
     <div id="data-modal-status" style="margin-top:14px;font-size:0.72rem;color:var(--text-muted);line-height:1.8;font-family:monospace"></div>
@@ -5839,6 +6030,24 @@ function sortRestaurants(arr) {
 
     <div style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn btn-ghost" onclick="closeAccessModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- PLACES LOOKUP REVIEW MODAL (Rev 11.20) -->
+<div class="modal-overlay" id="placesScanModal" onclick="if(event.target===this) closePlacesScanModal()">
+  <div class="modal" style="max-width:760px">
+    <button class="modal-close" onclick="closePlacesScanModal()">✕</button>
+    <div class="modal-title">🌐 Google Places matches</div>
+    <div class="modal-subtitle" style="margin-bottom:12px">Strong name matches are pre-checked; ⚠ weak ones are unchecked — please eyeball those (chains can have several locations). Only empty fields are filled. Nothing changes until you click Apply.</div>
+    <div id="placesScanResults" style="max-height:55vh;overflow-y:auto;padding-right:4px"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);gap:8px">
+      <div id="placesScanSummary" style="font-size:11px;color:var(--text-dim);align-self:center"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closePlacesScanModal()">Cancel</button>
+        <button id="placesScanApplyBtn" class="btn btn-amber" onclick="applyPlacesScanFixes()">Apply</button>
+      </div>
     </div>
   </div>
 </div>
