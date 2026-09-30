@@ -1285,7 +1285,7 @@
 
 </style>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.14">
+<meta name="app-rev" content="11.15">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -1341,7 +1341,7 @@
 <!-- HEADER -->
 <header>
   <div class="header-inner">
-    <div class="logo" onclick="resetHome()" style="cursor:pointer">Philinity <span>Eats</span> 🍽</div>
+    <div class="logo" onclick="hardRefresh()" style="cursor:pointer" title="Reload (hard refresh)">Philinity <span>Eats</span> 🍽</div>
     <div class="header-actions">
       <button class="btn btn-ghost" onclick="openAddModal()">+ Add</button>
     </div>
@@ -3727,6 +3727,19 @@ function clearChat() {
   showToast('💬 Chat cleared');
 }
 
+// Hard refresh — force a fresh fetch of index.html (bypass GitHub Pages cache),
+// so a click on the logo always pulls the latest deploy. A unique query param
+// the cache-bust bootstrap ignores guarantees a network re-fetch in one reload.
+function hardRefresh() {
+  try {
+    const u = new URL(window.location.href);
+    u.searchParams.set('_', Date.now());
+    window.location.replace(u.toString());
+  } catch (e) {
+    window.location.reload();
+  }
+}
+
 function resetHome() {
   // Close sort panel
   const sortPanel = document.getElementById('sortPanel');
@@ -5108,6 +5121,7 @@ window.setJunkAction = setJunkAction;
 window.applyJunkScanFixes = applyJunkScanFixes;
 window.closeJunkScanModal = closeJunkScanModal;
 window.resetHome = resetHome;
+window.hardRefresh = hardRefresh;
 window.setCity = setCity;
 window.setCat = setCat;
 window.setStarFilter = setStarFilter;
