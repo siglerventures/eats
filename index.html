@@ -1285,7 +1285,7 @@
 
 </style>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.13">
+<meta name="app-rev" content="11.14">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -3089,6 +3089,64 @@ document.addEventListener('paste', e => {
       reader.readAsDataURL(file);
       e.preventDefault();
       showToast('📋 Pasted!');
+      break;
+    }
+  }
+});
+
+// ── PASTE-TO-INGEST (Rev 11.14) ──────────────────────────────
+// Paste a restaurant/menu/receipt/storefront image on the MAIN view (no add/edit
+// form and no AI-photo panel open) and Eats reads it automatically, then adds a
+// new entry or updates the matching one — no need to open the AI bot first.
+// Reuses the existing askAI photo pipeline end-to-end (upload → askAI cloud
+// function → processAICommand, including its add/update + disambiguation logic).
+// No new uploader, no new Cloud Function, no Firebase rules change.
+const INGEST_PROMPT = "I just pasted an image — it's a restaurant, a menu, a receipt, or a storefront/sign. Read everything you can (name, city, cuisine, dishes, drinks, prices, server, rating) and either ADD it as a new entry or UPDATE the matching existing entry. If you're not sure which existing entry it matches, ask me before saving. Default city Boise unless the image clearly says otherwise.";
+
+async function ingestPastedImage(file) {
+  if (!file) return;
+  if (!auth.currentUser) { showToast('Sign in first'); return; }
+  if (aiPendingPhotos.length >= AI_PHOTO_MAX) { showToast('📸 Clear AI photos first'); return; }
+  showToast('📋 Reading image…');
+  // Show the AI panel so any disambiguation question / result is visible.
+  const panel = document.getElementById('aiPhotoPanel');
+  if (panel) panel.style.display = 'block';
+  // Read → compress → push into aiPendingPhotos, AWAITING compression so the
+  // photo is present before askAI() reads aiPendingPhotos.
+  const dataUrl = await new Promise(resolve => {
+    const r = new FileReader();
+    r.onload = e => resolve(e.target.result);
+    r.readAsDataURL(file);
+  });
+  await new Promise(resolve => compressImage(dataUrl, compressed => {
+    aiPendingPhotos.push({ compressed });
+    renderAIPhotoPreview();
+    updateAIPhotoBadge();
+    resolve();
+  }));
+  // Fire the existing AI pipeline with a canned add/update instruction.
+  const input = document.getElementById('aiInput');
+  if (input) input.value = INGEST_PROMPT;
+  askAI();
+}
+
+// Default-surface paste handler. The two existing handlers take precedence via
+// these guards: the add/edit form handler (when formModal is open) and the
+// AI-photo-panel handler (when aiPhotoPanel is open). Only image items are
+// touched, so ordinary text paste is never affected.
+document.addEventListener('paste', e => {
+  const formModal = document.getElementById('formModal');
+  if (formModal && formModal.classList.contains('open')) return;            // form handler owns it
+  const panel = document.getElementById('aiPhotoPanel');
+  if (panel && panel.style.display && panel.style.display !== 'none') return; // AI-photo handler owns it
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type && item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (!file) continue;
+      e.preventDefault();
+      ingestPastedImage(file);
       break;
     }
   }
