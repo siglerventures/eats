@@ -643,6 +643,8 @@
     text-overflow: ellipsis;
   }
   .card-contact a:hover { text-decoration: underline; }
+  /* Distance pill on cards (Rev 11.23) */
+  .card-dist { font-size: 10px; padding: 3px 8px; border-radius: 8px; background: var(--surface3); border: 1px solid var(--border-amber); color: var(--amber-light); white-space: nowrap; }
 
   .card-tags {
     display: flex;
@@ -958,6 +960,7 @@
     .icon-btn { font-size: 24px; min-width: 48px; min-height: 48px; }
     .header-inner { gap: 10px; }
     #starSelect { font-size: 13px; min-height: 36px; flex-shrink: 0; }
+    #withinSelect { font-size: 13px; min-height: 36px; flex-shrink: 0; }
   }
 
   /* Touch-friendly tap targets */
@@ -1382,7 +1385,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.22">
+<meta name="app-rev" content="11.23">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -1469,6 +1472,7 @@
       <button class="sort-pill" id="sort-rating" onclick="setSort('rating')">⭐ Highest Rated</button>
       <button class="sort-pill" id="sort-totry" onclick="setSort('totry')">🔖 To Try First</button>
       <button class="sort-pill" id="sort-az" onclick="setSort('az')">🔤 A–Z</button>
+      <button class="sort-pill" id="sort-nearest" onclick="setSort('nearest')">📍 Nearest</button>
     </div>
     <div class="sort-panel-divider"></div>
     <div class="sort-panel-inner" style="align-items:center;gap:8px;flex-wrap:wrap;">
@@ -1559,6 +1563,16 @@
       <option value="3">⭐⭐⭐ 3 Stars only</option>
       <option value="2">⭐⭐ 2 Stars only</option>
       <option value="1">⭐ 1 Star only</option>
+    </select>
+    <div class="filter-sep"></div>
+    <select id="withinSelect" onchange="setWithinFilter(this.value)" title="Straight-line distance from your location" style="background:var(--surface2);border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none">
+      <option value="0">📍 Any distance</option>
+      <option value="1">📍 Within 1 mi</option>
+      <option value="2">📍 Within 2 mi</option>
+      <option value="3">📍 Within 3 mi</option>
+      <option value="5">📍 Within 5 mi</option>
+      <option value="10">📍 Within 10 mi</option>
+      <option value="15">📍 Within 15 mi</option>
     </select>
     <div class="filter-sep"></div>
     <button class="chip status-chip" id="toTryChip" onclick="toggleToTry()">🔖 To Try</button>
@@ -1883,6 +1897,8 @@ let currentCity = 'Boise';
 let currentCat = 'All';
 let showToTryOnly = false;
 let starFilter = 0;
+let withinMiles = 0;      // 📍 Within radius filter; 0 = Any (Rev 11.23)
+let userLocation = null;  // { lat, lng } from the browser, requested lazily
 let editingId = null;
 let currentRating = 0;
 let currentDetailId = null;
@@ -1930,6 +1946,33 @@ function setStarFilter(val) {
   applyFilters();
 }
 
+// ── 📍 DISTANCE (Rev 11.23) — pure on-device math; no API calls ─────────────
+// Location is requested lazily (first radius pick or "Nearest" sort). Straight-line
+// miles ("as the crow flies") — the right tool for a filter: instant and free.
+function requestUserLocation() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) { reject(new Error('unsupported')); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; resolve(userLocation); },
+      err => reject(err),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
+    );
+  });
+}
+function setWithinFilter(val) {
+  withinMiles = parseInt(val) || 0;
+  if (withinMiles > 0 && !userLocation) {
+    requestUserLocation().then(applyFilters).catch(() => {
+      withinMiles = 0;
+      const sel = document.getElementById('withinSelect'); if (sel) sel.value = '0';
+      showToast('📍 Location unavailable — allow location access to filter by distance');
+      applyFilters();
+    });
+    return;
+  }
+  applyFilters();
+}
+
 function toggleToTry() {
   showToTryOnly = !showToTryOnly;
   document.getElementById('toTryChip').classList.toggle('active', showToTryOnly);
@@ -1967,6 +2010,7 @@ function applyFilters() {
   });
   if (showToTryOnly) filtered = filtered.filter(r => r.status === 'to-try');
   if (starFilter > 0) filtered = filtered.filter(r => (r.rating || 0) === starFilter);
+  if (withinMiles > 0) filtered = filtered.filter(r => withinRadius(r, userLocation, withinMiles));
 
   if (search) {
     filtered = filtered.filter(r => {
@@ -2676,6 +2720,7 @@ function renderCard(r) {
   const safeServer = stripHTML(r.server);
   const safePhone = stripHTML(r.phone || '');
   const safeAddress = stripHTML(r.address || '');
+  const dist = distanceFor(r, userLocation);
   const safeTags = stripHTMLArray(r.tags);
   const picks = stripHTMLArray(r.phil_picks || []).slice(0, 3);
   const trinityPicks = stripHTMLArray(r.trinity_picks || []).filter(p => p);
@@ -2707,6 +2752,7 @@ function renderCard(r) {
         <div class="card-badges">
           ${r.entry_type === 'tasting' ? '<span style="background:rgba(139,90,180,0.2);border:1px solid rgba(139,90,180,0.5);color:#c084fc;font-size:9px;padding:2px 7px;border-radius:6px;font-weight:600;letter-spacing:0.5px;">🍷 Tasting</span>' : ''}
           ${r.entry_type === 'recipe' ? '<span style="background:rgba(52,168,83,0.18);border:1px solid rgba(52,168,83,0.5);color:#6ee7a0;font-size:9px;padding:2px 7px;border-radius:6px;font-weight:600;letter-spacing:0.5px;">📖 Recipe</span>' : ''}
+          ${dist != null ? `<span class="card-dist" title="Straight-line distance from you">📍 ${fmtMiles(dist)}</span>` : ''}
           <span class="badge-status ${statusClass}">${statusLabel}</span>
         </div>
       </div>
@@ -2783,7 +2829,7 @@ function openDetail(id) {
         })()}</span>
       </div>
     </div>
-    <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}</div>
+    <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}${(() => { const d = distanceFor(r, userLocation); return d != null ? ' · 📍 ' + fmtMiles(d) : ''; })()}</div>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div id="detailStars" style="font-size:24px;display:flex;gap:2px;cursor:pointer">
         ${[1,2,3,4,5].map(n => `<span onclick="setDetailRating('${r.id}',${n})" style="color:${(r.rating||0)>=n?'var(--amber)':'var(--border-amber)'};transition:color 0.1s" onmouseover="hoverDetailStars(${n})" onmouseout="resetDetailStars(${r.rating||0})">★</span>`).join('')}
@@ -3965,7 +4011,7 @@ function resetHome() {
   const sortBtn = document.getElementById('sortBtn');
   if (sortBtn) sortBtn.classList.remove('active');
   currentSort = 'recent';
-  ['recent','rating','totry','az'].forEach(m => {
+  ['recent','rating','totry','az','nearest'].forEach(m => {
     document.getElementById('sort-' + m)?.classList.toggle('active', m === 'recent');
   });
   // Reset type filter
@@ -4001,6 +4047,7 @@ function resetHome() {
   // Reset to try
   showToTryOnly = false;
   starFilter = 0;
+  withinMiles = 0; { const ws = document.getElementById('withinSelect'); if (ws) ws.value = '0'; }
   document.getElementById('starSelect').value = '0';
   document.getElementById('toTryChip').classList.remove('active');
 
@@ -5227,6 +5274,178 @@ function closePlacesScanModal() {
   document.getElementById('placesScanModal').classList.remove('open');
 }
 
+// ── 🗺 GEOCODE: fill missing lat/lng via Google Places (Rev 11.23) ────────────
+// Places API (New) Text Search returns places.location and is browser-callable with
+// the same referrer-restricted key — so the Geocoding web service (server-only, not
+// CORS-enabled) isn't needed. Review-then-apply; only fills entries with NO coords.
+const GEO_FIELD_MASK = 'places.id,places.displayName,places.formattedAddress,places.location';
+function hasCoords(r) {
+  if (!r) return false;
+  const lat = r.lat, lng = r.lng;
+  // Reject null/undefined/'' explicitly — Number(null) is 0, which would pass isFinite.
+  if (lat === null || lat === undefined || lat === '' || lng === null || lng === undefined || lng === '') return false;
+  const a = Number(lat), b = Number(lng);
+  return Number.isFinite(a) && Number.isFinite(b) && !(a === 0 && b === 0);
+}
+// Straight-line ("as the crow flies") distance in miles — pure on-device math.
+function distMiles(aLat, aLng, bLat, bLng) {
+  const R = 3958.7613, toR = d => d * Math.PI / 180;
+  const dLat = toR(bLat - aLat), dLng = toR(bLng - aLng);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(toR(aLat)) * Math.cos(toR(bLat)) * Math.sin(dLng / 2) ** 2;
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+}
+function distanceFor(r, loc) {
+  if (!loc || !hasCoords(r)) return null;
+  return distMiles(loc.lat, loc.lng, Number(r.lat), Number(r.lng));
+}
+function fmtMiles(m) {
+  if (m == null) return '';
+  return (m < 10 ? m.toFixed(1) : Math.round(m).toString()) + ' mi';
+}
+// Within-radius predicate: radius 0 = Any. Entries without coords are hidden when a radius is set.
+function withinRadius(r, loc, radius) {
+  if (!radius) return true;
+  const d = distanceFor(r, loc);
+  return d != null && d <= radius;
+}
+// Nearest-first comparator: known distances ascending, unknown last (stable by name).
+function nearestComparator(loc) {
+  return (a, b) => {
+    const da = distanceFor(a, loc), db = distanceFor(b, loc);
+    if (da == null && db == null) return String(a.name || '').localeCompare(String(b.name || ''));
+    if (da == null) return 1;
+    if (db == null) return -1;
+    return da - db;
+  };
+}
+// Geocode query: prefer the street address (append city/state if the address lacks them), else name + city + state.
+function geoQueryFor(r) {
+  const addr = String(r.address || '').trim();
+  if (addr) {
+    const hasCity = r.city && addr.toLowerCase().includes(String(r.city).toLowerCase());
+    return hasCity ? addr : [addr, r.city, r.state].filter(Boolean).join(', ');
+  }
+  return [r.name, r.city, r.state].map(x => String(x || '').trim()).filter(Boolean).join(', ');
+}
+function parseGeoResponse(json) {
+  const places = (json && Array.isArray(json.places)) ? json.places : [];
+  return places.map(p => ({
+    id: p.id || '',
+    name: (p.displayName && p.displayName.text) || '',
+    address: String(p.formattedAddress || '').replace(/,\s*(USA|United States)\s*$/i, '').trim(),
+    lat: p.location && Number.isFinite(Number(p.location.latitude)) ? Number(p.location.latitude) : null,
+    lng: p.location && Number.isFinite(Number(p.location.longitude)) ? Number(p.location.longitude) : null
+  })).filter(p => p.lat != null && p.lng != null);
+}
+// Only fills entries that have NO coords yet; never overwrites.
+function buildGeoUpdates(entry, match, base) {
+  const u = {};
+  if (match && match.lat != null && match.lng != null && !hasCoords(entry)) {
+    u[`${base}/${entry.id}/lat`] = match.lat;
+    u[`${base}/${entry.id}/lng`] = match.lng;
+    u[`${base}/${entry.id}/lastUpdated`] = Date.now();
+  }
+  return u;
+}
+
+let geoScanCandidates = []; // [{ id, name, entry, query, byAddress, match, sim, apply, error }]
+
+async function geoPlacesSearch(query, key) {
+  const res = await fetch(PLACES_SEARCH_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': GEO_FIELD_MASK },
+    body: JSON.stringify({ textQuery: query, regionCode: 'US', languageCode: 'en', pageSize: 3 })
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) { const err = new Error((json.error && json.error.message) || ('HTTP ' + res.status)); err.status = res.status; throw err; }
+  return parseGeoResponse(json);
+}
+
+async function geocodeMissingCoords() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const status = document.getElementById('data-modal-status');
+  const keyEl = document.getElementById('placesKeyInput');
+  const key = ((keyEl && keyEl.value) || getPlacesKey() || '').trim();
+  if (!key) { if (status) status.innerHTML = '<span style="color:var(--red)">⚠ Paste your Google Places API key (in the card above) first.</span>'; return; }
+  setPlacesKey(key);
+  const targets = allRestaurants.filter(r => r && r.name && (r.entry_type || 'restaurant') === 'restaurant' && !hasCoords(r));
+  if (!targets.length) { if (status) status.innerHTML = '<span style="color:var(--green)">✅ Every restaurant already has map coordinates.</span>'; return; }
+  geoScanCandidates = [];
+  let fatal = null;
+  for (let i = 0; i < targets.length; i++) {
+    const r = targets[i];
+    if (status) status.innerHTML = `<span style="color:var(--amber)">⏳ Locating ${i + 1} of ${targets.length}: ${escapeHTML(r.name)}…</span>`;
+    const query = geoQueryFor(r);
+    const byAddress = !!(r.address && String(r.address).trim());
+    try {
+      const results = await geoPlacesSearch(query, key);
+      let best = null, sim = 0;
+      if (byAddress) { best = results[0] || null; sim = best ? 1 : 0; }
+      else { let bestSim = -1; results.forEach(pl => { const sv = placesNameSimilarity(r.name, pl.name); if (sv > bestSim) { best = pl; bestSim = sv; } }); sim = best ? bestSim : 0; }
+      geoScanCandidates.push({ id: r.id, name: r.name, entry: r, query, byAddress, match: best, sim, apply: !!best && sim >= 0.5, error: '' });
+    } catch (e) {
+      if ([400, 401, 403, 429].includes(e.status)) { fatal = e; break; }
+      geoScanCandidates.push({ id: r.id, name: r.name, entry: r, query, byAddress, match: null, sim: 0, apply: false, error: e.message || String(e) });
+    }
+    await new Promise(res => setTimeout(res, 120));
+  }
+  if (fatal) {
+    if (status) status.innerHTML = `<span style="color:var(--red)">❌ Google Places rejected the request: ${escapeHTML(fatal.message)}. Check the key is for “Places API (New)”, restricted to https://siglerventures.github.io/*, and billing is enabled.</span>`;
+    if (!geoScanCandidates.length) return;
+  } else if (status) { status.innerHTML = ''; }
+  renderGeoScan();
+  document.getElementById('geoScanModal').classList.add('open');
+}
+
+function renderGeoScan() {
+  const wrap = document.getElementById('geoScanResults');
+  wrap.innerHTML = geoScanCandidates.map((c, i) => {
+    const disabled = !c.match;
+    let body;
+    if (c.error) body = `<div style="font-size:12px;color:var(--red);margin-top:4px">❌ ${escapeHTML(c.error)}</div>`;
+    else if (!c.match) body = `<div style="font-size:12px;color:var(--text-muted);margin-top:4px">No location found for “${escapeHTML(c.query)}”</div>`;
+    else {
+      const flag = c.byAddress ? `<span style="color:var(--green)">✅ matched by street address</span>`
+        : (c.sim >= 0.5 ? `<span style="color:var(--green)">✅ good name match</span>` : `<span style="color:var(--amber)">⚠ check this — name doesn't match well</span>`);
+      body = `
+          <div style="font-size:12px;color:var(--text);margin-top:4px">→ <strong>${escapeHTML(c.match.name)}</strong> &nbsp;<span style="font-size:11px">${flag}</span></div>
+          ${c.match.address ? `<div style="font-size:12px;color:var(--amber-light);margin-top:2px">📍 ${escapeHTML(c.match.address)}</div>` : ''}
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;font-family:'DM Mono',monospace">${c.match.lat.toFixed(5)}, ${c.match.lng.toFixed(5)}</div>`;
+    }
+    return `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:${c.apply ? 1 : 0.6}">
+      <label style="display:flex;align-items:flex-start;gap:10px;cursor:${disabled ? 'default' : 'pointer'}">
+        <input type="checkbox" ${c.apply ? 'checked' : ''} ${disabled ? 'disabled' : ''} onchange="toggleGeoRow(${i}, this.checked)" style="margin-top:3px">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;color:var(--text);font-weight:500">${escapeHTML(c.name)}</div>${body}</div>
+      </label>
+    </div>`;
+  }).join('');
+  const n = geoScanCandidates.filter(c => c.apply).length, found = geoScanCandidates.filter(c => c.match).length;
+  document.getElementById('geoScanSummary').textContent = `${n} selected · ${found} of ${geoScanCandidates.length} located`;
+  document.getElementById('geoScanApplyBtn').disabled = n === 0;
+}
+
+function toggleGeoRow(i, on) { const c = geoScanCandidates[i]; if (c && c.match) c.apply = !!on; renderGeoScan(); }
+
+async function applyGeoScanFixes() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const selected = geoScanCandidates.filter(c => c.apply && c.match);
+  if (!selected.length) return;
+  const updates = {};
+  selected.forEach(c => Object.assign(updates, buildGeoUpdates(c.entry, c.match, EATS_PATH)));
+  if (!Object.keys(updates).length) { showToast('Nothing to apply'); return; }
+  try {
+    await dbUpdate(updates);
+    closeGeoScanModal();
+    const word = selected.length === 1 ? 'entry' : 'entries';
+    showToast(`✅ Saved coordinates for ${selected.length} ${word}`);
+    const status = document.getElementById('data-modal-status');
+    if (status) status.innerHTML = `<span style="color:var(--green)">✅ Saved map coordinates for ${selected.length} ${word}. "📍 Within" and "Nearest" now work for them.</span>`;
+  } catch (e) { console.error('[Eats] geocode apply failed:', e); showToast('❌ ' + (e && e.message ? e.message : e)); }
+}
+
+function closeGeoScanModal() { document.getElementById('geoScanModal').classList.remove('open'); }
+
 // ── DATA MANAGER ─────────────────────────────────────────
 function openDataModal() {
   if (!isAdmin()) { showToast('Admins only'); return; }
@@ -5631,6 +5850,11 @@ window.applyPlacesScanFixes = applyPlacesScanFixes;
 window.togglePlacesRow = togglePlacesRow;
 window.closePlacesScanModal = closePlacesScanModal;
 window.forgetPlacesKey = forgetPlacesKey;
+window.setWithinFilter = setWithinFilter;
+window.geocodeMissingCoords = geocodeMissingCoords;
+window.applyGeoScanFixes = applyGeoScanFixes;
+window.toggleGeoRow = toggleGeoRow;
+window.closeGeoScanModal = closeGeoScanModal;
 window.setJunkAction = setJunkAction;
 window.applyJunkScanFixes = applyJunkScanFixes;
 window.closeJunkScanModal = closeJunkScanModal;
@@ -5848,7 +6072,7 @@ function buildCityDropdown() {
 function setSort(mode) {
   currentSort = mode;
   // Update pill styles
-  ['recent','rating','totry','az'].forEach(m => {
+  ['recent','rating','totry','az','nearest'].forEach(m => {
     document.getElementById('sort-' + m)?.classList.toggle('active', m === mode);
   });
   // Show amber on sort btn when non-default sort is active
@@ -5856,6 +6080,9 @@ function setSort(mode) {
   // Auto-close the sort panel after picking
   const panel = document.getElementById('sortPanel');
   if (panel) panel.style.display = 'none';
+  if (mode === 'nearest' && !userLocation) {
+    requestUserLocation().then(applyFilters).catch(() => showToast('📍 Location unavailable — allow location access to sort by distance'));
+  }
   applyFilters();
 }
 
@@ -5873,6 +6100,8 @@ function sortRestaurants(arr) {
     });
   } else if (currentSort === 'az') {
     copy.sort((a, b) => a.name.localeCompare(b.name));
+  } else if (currentSort === 'nearest') {
+    copy.sort(nearestComparator(userLocation)); // known distances first, unknown last
   }
   return copy;
 }
@@ -6070,6 +6299,13 @@ function sortRestaurants(arr) {
         <button onclick="lookupMissingContacts()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🌐 Look up</button>
       </div>
 
+      <!-- Geocode: fill missing map coordinates (Rev 11.23) -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">🗺 Fill in map coordinates (for "Within X mi" &amp; Nearest)</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">Looks up the map location of every restaurant that doesn't have one yet — by its street address when we have it, otherwise by name + city — using the same Google Places key as above. You review every match before anything is saved; only entries with no coordinates are filled. Re-run any time after adding new places.</div>
+        <button onclick="geocodeMissingCoords()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🗺 Find coordinates</button>
+      </div>
+
     </div>
 
     <div id="data-modal-status" style="margin-top:14px;font-size:0.72rem;color:var(--text-muted);line-height:1.8;font-family:monospace"></div>
@@ -6110,6 +6346,24 @@ function sortRestaurants(arr) {
 
     <div style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn btn-ghost" onclick="closeAccessModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- GEOCODE REVIEW MODAL (Rev 11.23) -->
+<div class="modal-overlay" id="geoScanModal" onclick="if(event.target===this) closeGeoScanModal()">
+  <div class="modal" style="max-width:760px">
+    <button class="modal-close" onclick="closeGeoScanModal()">✕</button>
+    <div class="modal-title">🗺 Map coordinate matches</div>
+    <div class="modal-subtitle" style="margin-bottom:12px">Matches by street address are pre-checked. Name-only matches are pre-checked when the name matches well, otherwise ⚠ unchecked — please eyeball those. Nothing changes until you click Apply.</div>
+    <div id="geoScanResults" style="max-height:55vh;overflow-y:auto;padding-right:4px"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);gap:8px">
+      <div id="geoScanSummary" style="font-size:11px;color:var(--text-dim);align-self:center"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closeGeoScanModal()">Cancel</button>
+        <button id="geoScanApplyBtn" class="btn btn-amber" onclick="applyGeoScanFixes()">Apply</button>
+      </div>
     </div>
   </div>
 </div>
