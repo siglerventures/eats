@@ -30,6 +30,47 @@
     --green: #27ae60;
     --border: #2d2518;
     --border-amber: #4a3510;
+    /* Role variables added for the light/dark toggle (Rev 11.22); dark values unchanged */
+    --ink: #0f0c08;            /* text on amber/gold fills (buttons, active chips) */
+    --green-light: #4eca7e;    /* success / "tried" text */
+    --surface-deep: #1e1709;   /* gradient end for panels + AI bubbles */
+    --header-top: #1a1208;     /* header gradient start */
+    --green-bg: rgba(39,174,96,0.15);
+    --green-bg-soft: rgba(39,174,96,0.12);
+    --green-border: rgba(39,174,96,0.3);
+    --amber-bg: rgba(212,134,10,0.15);
+    --amber-bg-soft: rgba(212,134,10,0.08);
+    --amber-border: rgba(212,134,10,0.3);
+    --amber-glow: rgba(212,134,10,0.2);
+    --red-bg: rgba(192,57,43,0.1);
+    --red-border: rgba(192,57,43,0.4);
+    --red-solid: rgba(192,57,43,0.85);
+  }
+
+  /* ── LIGHT THEME (☀️/🌙 toggle, Rev 11.22). Warm cream; accents ~2 shades darker for contrast.
+     Shadows, photo overlays and modal scrims intentionally stay dark in both themes. */
+  :root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #f7f1e3;
+    --surface: #fbf6ea;
+    --surface2: #f1e8d3;
+    --surface3: #e7dcc2;
+    --surface-deep: #efe4cc;
+    --header-top: #f3ead6;
+    --amber: #b5700a;
+    --amber-light: #9a5c05;
+    --amber-dim: #d3a55a;
+    --gold: #9c7418;
+    --gold-light: #7d5c0f;
+    --text: #2b2114;
+    --text-dim: #5f4d33;
+    --text-muted: #8c7a5e;
+    --red: #b3261e;
+    --green: #1e7a45;
+    --green-light: #1a6b3d;
+    --border: #e2d6bc;
+    --border-amber: #d8b877;
+    --ink: #fbf6ea;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -44,7 +85,7 @@
 
   /* HEADER */
   header {
-    background: linear-gradient(180deg, #1a1208 0%, var(--bg) 100%);
+    background: linear-gradient(180deg, var(--header-top) 0%, var(--bg) 100%);
     border-bottom: 1px solid var(--border-amber);
     padding: 0 24px;
     position: sticky;
@@ -93,7 +134,7 @@
   .sort-panel {
     max-width: 1400px;
     margin: 8px auto 0;
-    background: linear-gradient(135deg, var(--surface) 0%, #1e1709 100%);
+    background: linear-gradient(135deg, var(--surface) 0%, var(--surface-deep) 100%);
     border: 1px solid var(--border-amber);
     border-radius: 10px;
     padding: 8px 14px 12px;
@@ -121,7 +162,7 @@
     white-space: nowrap;
   }
   .sort-pill:hover { border-color: var(--amber); color: var(--text); }
-  .sort-pill.active { background: var(--amber); border-color: var(--amber); color: #0f0c08; font-weight: 600; }
+  .sort-pill.active { background: var(--amber); border-color: var(--amber); color: var(--ink); font-weight: 600; }
 
   .sort-panel-divider {
     height: 1px;
@@ -232,7 +273,7 @@
 
   .btn-amber {
     background: var(--amber);
-    color: #0f0c08;
+    color: var(--ink);
   }
   .btn-amber:hover { background: var(--amber-light); }
 
@@ -322,7 +363,7 @@
   }
 
   .chat-bubble.ai {
-    background: linear-gradient(135deg, #1e1709, #231d14);
+    background: linear-gradient(135deg, var(--surface-deep), var(--surface2));
     border: 1px solid var(--border-amber);
     color: var(--text);
     align-self: flex-start;
@@ -330,9 +371,9 @@
   }
 
   .chat-bubble.success {
-    background: rgba(39,174,96,0.12);
-    border: 1px solid rgba(39,174,96,0.3);
-    color: #4eca7e;
+    background: var(--green-bg-soft);
+    border: 1px solid var(--green-border);
+    color: var(--green-light);
     align-self: flex-start;
   }
 
@@ -413,11 +454,11 @@
   }
 
   .chip:hover { border-color: var(--amber); color: var(--text); }
-  .chip.active { background: var(--amber); border-color: var(--amber); color: #0f0c08; }
+  .chip.active { background: var(--amber); border-color: var(--amber); color: var(--ink); }
 
   /* Entry-type shortcut chips (v10.93) — subtly distinct from category chips */
   .entry-type-chip { border-style: dashed; }
-  .entry-type-chip.active { background: var(--amber); border-color: var(--amber); color: #0f0c08; border-style: solid; }
+  .entry-type-chip.active { background: var(--amber); border-color: var(--amber); color: var(--ink); border-style: solid; }
 
   .filter-sep {
     width: 1px;
@@ -544,8 +585,8 @@
     text-transform: uppercase;
   }
 
-  .status-tried { background: rgba(39,174,96,0.15); color: #4eca7e; border: 1px solid rgba(39,174,96,0.3); }
-  .status-to-try { background: rgba(212,134,10,0.15); color: var(--amber-light); border: 1px solid rgba(212,134,10,0.3); }
+  .status-tried { background: var(--green-bg); color: var(--green-light); border: 1px solid var(--green-border); }
+  .status-to-try { background: var(--amber-bg); color: var(--amber-light); border: 1px solid var(--amber-border); }
 
   .stars {
     font-size: 11px;
@@ -776,10 +817,10 @@
   .btn-danger {
     background: transparent;
     color: var(--red);
-    border: 1px solid rgba(192,57,43,0.4);
+    border: 1px solid var(--red-border);
   }
 
-  .btn-danger:hover { background: rgba(192,57,43,0.1); }
+  .btn-danger:hover { background: var(--red-bg); }
 
   /* DETAIL MODAL */
   .detail-section {
@@ -945,7 +986,7 @@
 
   .drop-zone.drag-over {
     border-color: var(--amber-light);
-    background: rgba(212,134,10,0.08);
+    background: var(--amber-bg-soft);
     transform: scale(1.01);
   }
 
@@ -982,7 +1023,7 @@
     position: absolute;
     top: 4px;
     right: 4px;
-    background: rgba(192,57,43,0.85);
+    background: var(--red-solid);
     border: none;
     color: white;
     width: 22px;
@@ -1170,7 +1211,7 @@
   }
   .dd-zone.drag-over {
     border-color: var(--amber-light);
-    background: rgba(212,134,10,0.08);
+    background: var(--amber-bg-soft);
   }
   .dd-zone.empty::after {
     content: 'Drop items here';
@@ -1230,7 +1271,7 @@
   .cat-picker-chip.selected {
     background: var(--amber);
     border-color: var(--amber);
-    color: #0f0c08;
+    color: var(--ink);
     font-weight: 600;
   }
 
@@ -1238,14 +1279,14 @@
   /* HIGHLIGHT */
   .card.highlighted {
     border-color: var(--amber) !important;
-    box-shadow: 0 0 0 2px var(--amber-dim), 0 8px 24px rgba(212,134,10,0.2) !important;
+    box-shadow: 0 0 0 2px var(--amber-dim), 0 8px 24px var(--amber-glow) !important;
   }
   .card.dimmed {
     opacity: 0.25;
     pointer-events: none;
   }
   .highlight-bar {
-    background: linear-gradient(90deg, rgba(212,134,10,0.15), transparent);
+    background: linear-gradient(90deg, var(--amber-bg), transparent);
     border-left: 3px solid var(--amber);
     padding: 6px 12px;
     font-size: 12px;
@@ -1329,8 +1370,19 @@
   }
 
 </style>
+<!-- ── THEME: ☀️/🌙 boot — runs before first paint so there is no dark-flash ─── -->
+<script>
+  try { if (localStorage.getItem('eats_theme') === 'light') document.documentElement.setAttribute('data-theme', 'light'); } catch (e) {}
+  window.toggleTheme = function () {
+    var wasLight = document.documentElement.getAttribute('data-theme') === 'light';
+    if (wasLight) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', 'light');
+    try { localStorage.setItem('eats_theme', wasLight ? 'dark' : 'light'); } catch (e) {}
+    var b = document.getElementById('themeBtn'); if (b) b.textContent = wasLight ? '☀️' : '🌙';
+  };
+</script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.21">
+<meta name="app-rev" content="11.22">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -1397,10 +1449,12 @@
       <button class="icon-btn" onclick="askAI()" title="Ask AI">🤖</button>
       <button class="icon-btn" id="aiPhotoToggle" onclick="toggleAIPhotoPanel()" title="Attach photos (up to 4)" style="position:relative">
       📸
-      <span id="aiPhotoBadge" style="display:none;position:absolute;top:0;right:0;background:var(--amber);color:#0f0c08;font-size:10px;font-weight:700;border-radius:50%;min-width:16px;height:16px;line-height:16px;padding:0 3px">0</span>
+      <span id="aiPhotoBadge" style="display:none;position:absolute;top:0;right:0;background:var(--amber);color:var(--ink);font-size:10px;font-weight:700;border-radius:50%;min-width:16px;height:16px;line-height:16px;padding:0 3px">0</span>
     </button>
     </div>
     <button class="icon-btn sort-btn" id="sortBtn" onclick="toggleSortPanel()" title="Sort">≡</button>
+    <button class="icon-btn" id="themeBtn" onclick="toggleTheme()" title="Switch light / dark mode">☀️</button>
+    <script>try{ if(localStorage.getItem('eats_theme')==='light'){ document.getElementById('themeBtn').textContent='🌙'; } }catch(e){}</script>
     <div class="header-actions">
       <button class="btn btn-ghost" onclick="openAddModal()">+ Add</button>
     </div>
@@ -3714,12 +3768,12 @@ function renderGalleryEdit() {
   const mainSrc = document.getElementById('previewImg').src;
   const items = editingPhotos.map((p, i) => {
     const isMain = p === document.getElementById('fImageFile').dataset.base64;
-    const mainBadge = isMain ? '<div style="position:absolute;bottom:4px;left:4px;background:var(--amber);color:#0f0c08;font-size:9px;padding:2px 6px;border-radius:8px;font-weight:700">MAIN</div>' : '';
+    const mainBadge = isMain ? '<div style="position:absolute;bottom:4px;left:4px;background:var(--amber);color:var(--ink);font-size:9px;padding:2px 6px;border-radius:8px;font-weight:700">MAIN</div>' : '';
     return '<div class="gallery-item">' +
       '<img src="' + p + '" alt="Food photo">' +
       mainBadge +
       '<div style="position:absolute;bottom:4px;left:4px;right:26px;display:none" class="gallery-actions">' +
-        '<button onclick="setAsMain(' + i + ')" style="background:rgba(212,134,10,0.9);border:none;color:#0f0c08;font-size:9px;padding:2px 6px;border-radius:8px;cursor:pointer;font-weight:700;width:100%">⭐ Set Main</button>' +
+        '<button onclick="setAsMain(' + i + ')" style="background:rgba(212,134,10,0.9);border:none;color:var(--ink);font-size:9px;padding:2px 6px;border-radius:8px;cursor:pointer;font-weight:700;width:100%">⭐ Set Main</button>' +
       '</div>' +
       '<button class="remove-photo" onclick="removeGalleryPhoto(' + i + ')">✕</button>' +
     '</div>';
