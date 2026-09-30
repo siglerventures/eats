@@ -1285,7 +1285,7 @@
 
 </style>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.15">
+<meta name="app-rev" content="11.16">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -3094,40 +3094,128 @@ document.addEventListener('paste', e => {
   }
 });
 
-// ── PASTE-TO-INGEST (Rev 11.14) ──────────────────────────────
+// ── PASTE-TO-INGEST (Rev 11.16 — VISION) ─────────────────────
 // Paste a restaurant/menu/receipt/storefront image on the MAIN view (no add/edit
-// form and no AI-photo panel open) and Eats reads it automatically, then adds a
-// new entry or updates the matching one — no need to open the AI bot first.
-// Reuses the existing askAI photo pipeline end-to-end (upload → askAI cloud
-// function → processAICommand, including its add/update + disambiguation logic).
-// No new uploader, no new Cloud Function, no Firebase rules change.
-const INGEST_PROMPT = "I just pasted an image — it's a restaurant, a menu, a receipt, or a storefront/sign. Read everything you can (name, city, cuisine, dishes, drinks, prices, server, rating) and either ADD it as a new entry or UPDATE the matching existing entry. If you're not sure which existing entry it matches, ask me before saving. Default city Boise unless the image clearly says otherwise.";
+// form and no AI-photo panel open) and Eats reads it and adds a new entry or
+// updates the matching one — no need to open the AI bot first.
+//
+// The image is sent to Claude as a real base64 VISION block through the shared
+// askAI Cloud Function, which forwards messages[].content unchanged (proven by
+// AutoFlag's Snap Lead / card scan / bill reading through the same function).
+// NEVER send the Firebase Storage URL as text and expect Claude to read it —
+// Claude can't open links (that was the "I can see the URL but can't open it"
+// reply). Client-only: no new Cloud Function, no Firebase rules change.
+const ASKAI_URL = 'https://us-central1-philinity-893d2.cloudfunctions.net/askAI';
+
+// Shrink for vision: <=1600px on the longest side, WHITE fill first (JPEG can't
+// store transparency — transparent areas otherwise come out black), JPEG 0.8.
+// (compressImage() is 600px/0.7 for card thumbnails — too small to read menus.)
+function compressForVision(dataUrl) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => {
+      const MAX = 1600;
+      let w = img.width, h = img.height;
+      if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
+      else       { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, w, h);
+      ctx.drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = () => reject(new Error('Could not decode image'));
+    img.src = dataUrl;
+  });
+}
+
+// Focused system prompt: includes the current entries so the model can match an
+// existing [id:...] for UPDATE vs ADD. Asks for ONE compact JSON action (the
+// eats askAI config caps replies at ~1,000 tokens, so keep output small).
+function buildIngestSystemPrompt() {
+  const context = allRestaurants.slice(0, 500).map(r =>
+    `[id:${r.id}] [${r.entry_type || 'restaurant'}] ${r.name} (${r.city}, ${r.cuisine}) | Notes: ${r.notes || ''} | Status: ${r.status} | Rating: ${r.rating || 'unrated'}`
+  ).join('\n');
+  return `You are the Philinity Eats assistant for Phil & Trinity Sigler. The user pasted a PHOTO of a restaurant, menu, receipt, or storefront/sign. Read everything legible in it.
+
+Current entries (${allRestaurants.length}):
+${context}
+
+Decide:
+- If the place matches an EXISTING entry above, return an UPDATE using that entry's exact id from the list, with ONLY the fields you learned (dishes -> mains/appetizers/desserts arrays, drinks array, prices/details in notes, server, rating 1-5 only if clearly shown).
+- Otherwise return an ADD. entry_type is "restaurant", or "tasting" for wine/oyster/bourbon/beer/cocktail, or "recipe" for a dish with ingredients and steps.
+- Default city "Boise" and state "ID" unless the photo clearly shows otherwise.
+- CATEGORY: only use a category you can clearly infer; if unsure leave the category array EMPTY rather than guessing.
+
+OUTPUT RULES (strict):
+- Reply with ONLY ONE compact JSON object. No prose, no markdown code fences.
+  ADD:    {"action":"add","data":{"entry_type":"restaurant","name":"...","city":"Boise","state":"ID","category":[],"cuisine":"...","status":"tried","mains":["..."],"drinks":["..."],"notes":"..."}}
+  UPDATE: {"action":"update","id":"<exact id from the list>","data":{...only new fields...}}
+- Keep it short.
+- ONLY if you genuinely cannot tell which existing entry it is (e.g. two close matches), reply with ONE short plain-text question instead of JSON.`;
+}
 
 async function ingestPastedImage(file) {
   if (!file) return;
   if (!auth.currentUser) { showToast('Sign in first'); return; }
-  if (aiPendingPhotos.length >= AI_PHOTO_MAX) { showToast('📸 Clear AI photos first'); return; }
-  showToast('📋 Reading image…');
-  // Show the AI panel so any disambiguation question / result is visible.
-  const panel = document.getElementById('aiPhotoPanel');
-  if (panel) panel.style.display = 'block';
-  // Read → compress → push into aiPendingPhotos, AWAITING compression so the
-  // photo is present before askAI() reads aiPendingPhotos.
-  const dataUrl = await new Promise(resolve => {
-    const r = new FileReader();
-    r.onload = e => resolve(e.target.result);
-    r.readAsDataURL(file);
-  });
-  await new Promise(resolve => compressImage(dataUrl, compressed => {
-    aiPendingPhotos.push({ compressed });
-    renderAIPhotoPreview();
-    updateAIPhotoBadge();
-    resolve();
-  }));
-  // Fire the existing AI pipeline with a canned add/update instruction.
-  const input = document.getElementById('aiInput');
-  if (input) input.value = INGEST_PROMPT;
-  askAI();
+  const thinking = document.getElementById('aiThinking');
+  try {
+    showToast('📋 Reading image…');
+    appendUserBubble('📸 Pasted image — read it and add/update the entry');
+    if (thinking) thinking.classList.add('visible');
+
+    const rawDataUrl = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = e => resolve(e.target.result);
+      r.onerror = () => reject(new Error('Could not read file'));
+      r.readAsDataURL(file);
+    });
+    const dataUrl = await compressForVision(rawDataUrl);
+    const b64 = dataUrl.split(',')[1];           // strip "data:image/jpeg;base64,"
+
+    const idToken = await auth.currentUser.getIdToken(true);
+    const res = await fetch(ASKAI_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+      body: JSON.stringify({
+        app: 'eats',
+        system: buildIngestSystemPrompt(),
+        // Image block on THIS message only — never resend old image blocks.
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+          { type: 'text', text: 'Read this restaurant / menu / receipt / storefront photo and return the JSON (or one short question if you cannot tell which existing entry it is).' }
+        ] }]
+      })
+    });
+    const data = await res.json();
+    if (thinking) thinking.classList.remove('visible');
+
+    if (!res.ok) {
+      appendAIBubble('AI error: ' + ((data.error && data.error.message) || res.status), 'ai');
+      return;
+    }
+    const text = (data.content || []).map(bk => bk.type === 'text' ? bk.text : '').join('\n').trim();
+    const clean = text.replace(/```(?:json)?\s*/gi, '').replace(/```/g, '');
+    const jsons = extractActionJSONs(clean);
+    if (jsons.length) {
+      for (const j of jsons) {
+        try { await processAICommand(JSON.parse(j)); }
+        catch (e) {
+          console.warn('[Eats] ingest JSON parse failed:', e, j.slice(0, 120));
+          appendAIBubble('Could not parse the AI result — try again, or use the 🤖 chat.', 'ai');
+        }
+      }
+    } else {
+      // A clarifying question (or nothing actionable) — show it so you can answer in the chat.
+      appendAIBubble(text || 'I could not read anything actionable in that image.', 'ai');
+    }
+  } catch (e) {
+    if (thinking) thinking.classList.remove('visible');
+    console.error('[Eats] ingest failed:', e);
+    appendAIBubble('Could not read the image: ' + (e && e.message ? e.message : e), 'ai');
+  }
 }
 
 // Default-surface paste handler. The two existing handlers take precedence via
