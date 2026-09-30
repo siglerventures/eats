@@ -585,6 +585,24 @@
     gap: 5px;
   }
 
+  /* Clickable phone / address on the card (Rev 11.21) */
+  .card-contact {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    margin-top: 8px;
+    font-size: 12px;
+    min-width: 0;
+  }
+  .card-contact a {
+    color: var(--amber-light);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .card-contact a:hover { text-decoration: underline; }
+
   .card-tags {
     display: flex;
     flex-wrap: wrap;
@@ -1312,7 +1330,7 @@
 
 </style>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.20">
+<meta name="app-rev" content="11.21">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -2586,12 +2604,24 @@ function starsHTML(rating) {
   return '★'.repeat(rating) + '☆'.repeat(5 - rating);
 }
 
+// Clickable contact links, shared by the card and the detail view (Rev 11.21):
+// address -> Google Maps directions, phone -> tel: normalized to +1XXXXXXXXXX.
+function contactTelHref(ph) {
+  const d = String(ph).replace(/\D/g, '');
+  return 'tel:' + (d.length === 10 ? '+1' + d : (d.length === 11 && d.startsWith('1') ? '+' + d : d));
+}
+function contactMapsHref(a) {
+  return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(a);
+}
+
 function renderCard(r) {
   // Sanitize ALL fields before rendering — prevents XSS from Firebase data
   const safeName = stripHTML(r.name) || ('⚠️ [No name — id: ' + stripHTML(r.id) + ']');
   const safeCuisine = stripHTML(r.cuisine);
   const safeNotes = stripHTML(r.notes);
   const safeServer = stripHTML(r.server);
+  const safePhone = stripHTML(r.phone || '');
+  const safeAddress = stripHTML(r.address || '');
   const safeTags = stripHTMLArray(r.tags);
   const picks = stripHTMLArray(r.phil_picks || []).slice(0, 3);
   const trinityPicks = stripHTMLArray(r.trinity_picks || []).filter(p => p);
@@ -2634,6 +2664,7 @@ function renderCard(r) {
         }).join('')}
       </div>
       ${r.rating ? `<div class="stars">${starsHTML(r.rating)}</div>` : ''}
+      ${(safeAddress || safePhone) ? `<div class="card-contact">${safeAddress ? `<a href="${escapeAttr(contactMapsHref(safeAddress))}" target="_blank" rel="noopener" title="Get directions" onclick="event.stopPropagation()">📍 ${escapeHTML(safeAddress)}</a>` : ''}${safePhone ? `<a href="${escapeAttr(contactTelHref(safePhone))}" title="Call" onclick="event.stopPropagation()">📞 ${escapeHTML(safePhone)}</a>` : ''}</div>` : ''}
       ${picks.length ? `<div class="card-picks" style="margin-top:8px"><strong>Phil's Picks</strong><br>${picks.join(', ')}</div>` : ''}
       ${trinityPicks.length ? `<div class="card-picks" style="margin-top:4px"><strong>Trinity's Picks</strong><br>${trinityPicks.join(', ')}</div>` : ''}
       ${safeServer ? `<div class="card-server">👤 ${safeServer}</div>` : ''}
@@ -2659,12 +2690,7 @@ function openDetail(id) {
   const ds = stripHTML(r.server);
   const dphone = stripHTML(r.phone || '');
   const daddr = stripHTML(r.address || '');
-  // Clickable contact: address -> Google Maps directions, phone -> tel: (normalized to +1...)
-  const telHref = (ph) => {
-    const d = String(ph).replace(/\D/g, '');
-    return 'tel:' + (d.length === 10 ? '+1' + d : (d.length === 11 && d.startsWith('1') ? '+' + d : d));
-  };
-  const mapsHref = (a) => 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(a);
+  // Contact links use the shared contactTelHref / contactMapsHref helpers.
   const dno = stripHTML(r.notes);
   const ddrinks = stripHTMLArray(r.drinks);
   const dapps = stripHTMLArray(r.appetizers);
@@ -2713,7 +2739,7 @@ function openDetail(id) {
     </div>
     ${renderVisitHistoryBody(r)}
     ${ds ? `<div class="card-server" style="margin-bottom:14px">👤 Ask for <strong>${ds}</strong></div>` : ''}
-    ${(daddr || dphone) ? `<div class="detail-contact">${daddr ? `<a class="contact-chip" href="${escapeAttr(mapsHref(daddr))}" target="_blank" rel="noopener" title="Get directions">📍 ${escapeHTML(daddr)}</a>` : ''}${dphone ? `<a class="contact-chip" href="${escapeAttr(telHref(dphone))}" title="Call">📞 ${escapeHTML(dphone)}</a>` : ''}</div>` : ''}
+    ${(daddr || dphone) ? `<div class="detail-contact">${daddr ? `<a class="contact-chip" href="${escapeAttr(contactMapsHref(daddr))}" target="_blank" rel="noopener" title="Get directions">📍 ${escapeHTML(daddr)}</a>` : ''}${dphone ? `<a class="contact-chip" href="${escapeAttr(contactTelHref(dphone))}" title="Call">📞 ${escapeHTML(dphone)}</a>` : ''}</div>` : ''}
     ${(dprep || dcook) ? `<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">${dprep ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">⏱ Prep: <strong>${dprep}</strong></span>` : ''}${dcook ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">🔥 Cook: <strong>${dcook}</strong></span>` : ''}</div>` : ''}
     ${section('🥣 Ingredients', dingredients)}
     ${numberedSection('📝 Instructions', dinstructions)}
