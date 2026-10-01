@@ -1422,7 +1422,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.31">
+<meta name="app-rev" content="11.32">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -6095,6 +6095,12 @@ function downloadBlob(blob, name) {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
 }
+async function copyCommand(id) {
+  const el = document.getElementById(id); if (!el) return;
+  const text = el.textContent.trim();
+  try { await navigator.clipboard.writeText(text); showToast('📋 Copied — paste it into Cloud Shell and press Enter'); }
+  catch (e) { const r = document.createRange(); r.selectNodeContents(el); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(r); showToast('Select-all is done — press Ctrl+C to copy'); }
+}
 function setBackupStatus(html) { const el = document.getElementById('appBackupStatus'); if (el) el.innerHTML = html; }
 function restoreReadme(date, manifest) {
   return `PHILINITY EATS — RESTORE README  (backup of ${date})
@@ -6613,6 +6619,7 @@ window.toggleDateRow = toggleDateRow;
 window.closeDateRestoreModal = closeDateRestoreModal;
 window.appBackup = appBackup;
 window.appPhotosBackup = appPhotosBackup;
+window.copyCommand = copyCommand;
 // Reflect the saved origin mode in the header controls on load (Rev 11.29)
 { const sel = document.getElementById('originSelect'); if (sel) sel.value = originMode; if (originMode === 'home' && homeLocation) setLocStatus('🏠 from home', 'ok'); }
 window.setWithinFilter = setWithinFilter;
@@ -7024,13 +7031,18 @@ function sortRestaurants(arr) {
         <div id="appBackupStatus" style="margin-top:10px;font-size:0.72rem;color:var(--text-muted);font-family:monospace;min-height:16px;white-space:pre-wrap"></div>
         <div id="corsHelp" style="display:none;margin-top:12px;padding:12px;background:var(--surface);border:1px solid var(--border-amber);border-radius:8px;font-size:0.72rem;color:var(--text-dim);line-height:1.6">
           <div style="color:var(--amber);font-weight:500;margin-bottom:6px">⚠ One-time photo setup — the shared Storage bucket needs a CORS rule for this site</div>
-          Browsers can only download Storage files after the bucket allows this origin. The bucket is <b>shared with AutoFlag</b>, and <code>gsutil cors set</code> <b>replaces</b> the whole setting — so check what’s there first and <b>list every app’s origin</b>, never just ours. In Google Cloud → Storage → Cloud Shell, <b>one command per step</b>:
+          Browsers can only download Storage files after the bucket allows this origin. The bucket is <b>shared with AutoFlag</b>, and <code>gsutil cors set</code> <b>replaces</b> the whole setting — so check what’s there first and <b>list every app’s origin</b>, never just ours.
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+            <a class="btn btn-amber" style="font-size:12px;padding:7px 14px;text-decoration:none" href="https://shell.cloud.google.com/?project=philinity-893d2&amp;show=terminal" target="_blank" rel="noopener">&gt;_ Open Cloud Shell ↗</a>
+            <a class="btn btn-ghost" style="font-size:12px;padding:7px 14px;text-decoration:none" href="https://console.cloud.google.com/storage/browser/philinity-893d2.firebasestorage.app?project=philinity-893d2" target="_blank" rel="noopener">🪣 Open the bucket in Google Cloud ↗</a>
+          </div>
+          Cloud Shell is the <b>&gt;_</b> terminal at the top of Google Cloud (the first link opens it directly, signed in to the <b>Philinity</b> project). Paste the three commands below <b>one at a time</b>, pressing Enter after each:
           <div style="margin-top:8px">1. See the current setting (keep any origins it lists):</div>
-          <pre style="margin:4px 0 8px;padding:8px;background:var(--surface2);border-radius:6px;overflow-x:auto;white-space:pre-wrap">gsutil cors get gs://philinity-893d2.firebasestorage.app</pre>
+          <div style="display:flex;gap:6px;align-items:flex-start;margin:4px 0 8px"><pre id="corsCmd1" style="flex:1;margin:0;padding:8px;background:var(--surface2);border-radius:6px;overflow-x:auto;white-space:pre-wrap">gsutil cors get gs://philinity-893d2.firebasestorage.app</pre><button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="copyCommand('corsCmd1')">Copy</button></div>
           <div>2. Write the new setting — AutoFlag + Eats (add any other origins step 1 showed):</div>
-          <pre style="margin:4px 0 8px;padding:8px;background:var(--surface2);border-radius:6px;overflow-x:auto;white-space:pre-wrap">echo '[{"origin":["https://autoflag.github.io","https://siglerventures.github.io"],"method":["GET"],"maxAgeSeconds":3600}]' &gt; cors.json</pre>
+          <div style="display:flex;gap:6px;align-items:flex-start;margin:4px 0 8px"><pre id="corsCmd2" style="flex:1;margin:0;padding:8px;background:var(--surface2);border-radius:6px;overflow-x:auto;white-space:pre-wrap">echo '[{"origin":["https://autoflag.github.io","https://siglerventures.github.io"],"method":["GET"],"maxAgeSeconds":3600}]' &gt; cors.json</pre><button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="copyCommand('corsCmd2')">Copy</button></div>
           <div>3. Apply it:</div>
-          <pre style="margin:4px 0 0;padding:8px;background:var(--surface2);border-radius:6px;overflow-x:auto;white-space:pre-wrap">gsutil cors set cors.json gs://philinity-893d2.firebasestorage.app</pre>
+          <div style="display:flex;gap:6px;align-items:flex-start;margin:4px 0 0"><pre id="corsCmd3" style="flex:1;margin:0;padding:8px;background:var(--surface2);border-radius:6px;overflow-x:auto;white-space:pre-wrap">gsutil cors set cors.json gs://philinity-893d2.firebasestorage.app</pre><button class="btn btn-ghost" style="font-size:11px;padding:6px 10px" onclick="copyCommand('corsCmd3')">Copy</button></div>
           <div style="margin-top:8px">GET only; every file still needs its own token. Then click 📷 again.</div>
         </div>
       </div>
