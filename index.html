@@ -486,6 +486,11 @@
     color: var(--text-muted);
     margin-bottom: 16px;
   }
+  /* Results header row (Rev 11.26) */
+  .results-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+  .results-bar .results-count { margin: 0; }
+  .results-bar .city-select { flex: 0 0 auto; width: auto; max-width: none; font-family: 'Playfair Display', serif; font-size: 20px; color: var(--gold); background: var(--surface); border: 1px solid var(--border-amber); border-radius: 10px; padding: 4px 12px; min-height: 42px; letter-spacing: 0.3px; }
+  .main.single-city .city-header { display: none; } /* one city selected: the header row already names it */
 
   .city-section { margin-bottom: 32px; }
 
@@ -873,6 +878,23 @@
   .detail-drive { display: flex; gap: 10px; flex-wrap: wrap; margin: 0 0 14px; min-height: 0; }
   .detail-drive:empty { display: none; }
   .detail-drive button.contact-chip { font-family: inherit; line-height: inherit; cursor: pointer; }
+  /* ℹ️ Update info + hours (Rev 11.27) */
+  .info-btn { background: transparent; border: 1px dashed var(--border-amber); color: var(--amber-light); padding: 6px 12px; border-radius: 20px; font-size: 12px; font-family: inherit; cursor: pointer; }
+  .info-btn:hover { border-style: solid; background: var(--surface2); }
+  .detail-info-panel:empty { display: none; }
+  .detail-info-panel { background: var(--surface2); border: 1px solid var(--border-amber); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; }
+  .detail-info-panel .row { display: flex; gap: 8px; align-items: flex-start; margin-top: 6px; line-height: 1.5; }
+  .detail-info-panel .row .k { color: var(--text-muted); font-size: 11px; min-width: 64px; text-transform: uppercase; letter-spacing: 0.5px; padding-top: 2px; }
+  .detail-info-panel .row .v { color: var(--text); word-break: break-word; }
+  .detail-info-panel .muted { color: var(--text-muted); font-size: 11px; }
+  .open-badge { font-size: 11px; font-weight: 500; padding: 2px 8px; border-radius: 8px; vertical-align: middle; text-transform: none; letter-spacing: 0; }
+  .open-badge.open { background: var(--green-bg); color: var(--green-light); border: 1px solid var(--green-border); }
+  .open-badge.closed { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .card-open { font-size: 10px; padding: 3px 8px; border-radius: 8px; white-space: nowrap; }
+  .card-open.open { background: var(--green-bg); color: var(--green-light); border: 1px solid var(--green-border); }
+  .card-open.closed { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+  .hours-list li.today { color: var(--text); font-weight: 500; }
+  .detail-map-msg { display: flex; align-items: center; justify-content: center; height: 100%; padding: 12px; text-align: center; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
   .detail-notes {
     background: var(--surface2);
     border: 1px solid var(--border-amber);
@@ -1394,7 +1416,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.25">
+<meta name="app-rev" content="11.27">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -1544,11 +1566,6 @@
 <!-- FILTERS -->
 <div class="filters">
   <div class="filters-inner">
-    <span class="filter-label">🌆 City</span>
-    <select id="citySelectBar" onchange="setCityFromSelect(this.value)" class="city-select" style="max-width:140px;padding:4px 10px;font-size:12px;min-height:32px;">
-      <option value="Boise">Boise</option>
-    </select>
-    <div class="filter-sep"></div>
     <span class="filter-label">Type</span>
     <button class="chip active cat-chip" onclick="setCat('All', this)">All</button>
     <div id="catChips" style="display:contents">
@@ -1574,16 +1591,6 @@
       <option value="1">⭐ 1 Star only</option>
     </select>
     <div class="filter-sep"></div>
-    <select id="withinSelect" onchange="setWithinFilter(this.value)" title="Straight-line distance from your location" style="background:var(--surface2);border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none">
-      <option value="0">📍 Any distance</option>
-      <option value="1">📍 Within 1 mi</option>
-      <option value="2">📍 Within 2 mi</option>
-      <option value="3">📍 Within 3 mi</option>
-      <option value="5">📍 Within 5 mi</option>
-      <option value="10">📍 Within 10 mi</option>
-      <option value="15">📍 Within 15 mi</option>
-    </select>
-    <div class="filter-sep"></div>
     <button class="chip status-chip" id="toTryChip" onclick="toggleToTry()">🔖 To Try</button>
     <!-- Entry-type shortcuts (v10.94) — moved to end, synced with sort panel Type buttons -->
     <button class="chip entry-type-chip" id="etype-recipe" onclick="setEntryType('recipe')">📖 Recipes</button>
@@ -1594,7 +1601,22 @@
 
 <!-- MAIN -->
 <div class="main">
-  <div class="results-count" id="resultsCount"></div>
+  <!-- Results header (Rev 11.26): the city heading IS the dropdown; distance filter beside it -->
+  <div class="results-bar">
+    <select id="citySelectBar" onchange="setCityFromSelect(this.value)" class="city-select" title="Choose a city">
+      <option value="Boise">Boise</option>
+    </select>
+    <span class="results-count" id="resultsCount"></span>
+    <select id="withinSelect" onchange="setWithinFilter(this.value)" title="Straight-line distance from your location" style="background:var(--surface2);border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none">
+      <option value="0">📍 Any distance</option>
+      <option value="1">📍 Within 1 mi</option>
+      <option value="2">📍 Within 2 mi</option>
+      <option value="3">📍 Within 3 mi</option>
+      <option value="5">📍 Within 5 mi</option>
+      <option value="10">📍 Within 10 mi</option>
+      <option value="15">📍 Within 15 mi</option>
+    </select>
+  </div>
   <div id="content"></div>
 </div>
 
@@ -1969,13 +1991,21 @@ function requestUserLocation() {
     );
   });
 }
+// Say WHICH location problem it was — blocked is the common desktop case and has a fix.
+function locationErrorMessage(err) {
+  const code = err && err.code;
+  if (code === 1) return '📍 Location is blocked for this site — click the lock icon in the address bar, allow Location, then try again.';
+  if (code === 2) return '📍 Location unavailable — turn on location services for your device/browser and try again.';
+  if (code === 3) return '📍 Location request timed out — try again.';
+  return '📍 This browser can\'t share your location.';
+}
 function setWithinFilter(val) {
   withinMiles = parseInt(val) || 0;
   if (withinMiles > 0 && !userLocation) {
-    requestUserLocation().then(applyFilters).catch(() => {
+    requestUserLocation().then(applyFilters).catch(err => {
       withinMiles = 0;
       const sel = document.getElementById('withinSelect'); if (sel) sel.value = '0';
-      showToast('📍 Location unavailable — allow location access to filter by distance');
+      showToast(locationErrorMessage(err));
       applyFilters();
     });
     return;
@@ -2057,6 +2087,7 @@ function renderContent(restaurants) {
   const container = document.getElementById('content');
   document.getElementById('resultsCount').textContent = `${restaurants.length} place${restaurants.length !== 1 ? 's' : ''}`;
   buildCityDropdown();
+  document.querySelector('.main').classList.toggle('single-city', currentCity !== 'All');
 
   if (restaurants.length === 0) {
     container.innerHTML = `<div class="empty-state"><div class="icon">🍽</div><h3>No results found</h3><p>Try adjusting your filters or search</p></div>`;
@@ -2763,6 +2794,7 @@ function renderCard(r) {
           ${r.entry_type === 'tasting' ? '<span style="background:rgba(139,90,180,0.2);border:1px solid rgba(139,90,180,0.5);color:#c084fc;font-size:9px;padding:2px 7px;border-radius:6px;font-weight:600;letter-spacing:0.5px;">🍷 Tasting</span>' : ''}
           ${r.entry_type === 'recipe' ? '<span style="background:rgba(52,168,83,0.18);border:1px solid rgba(52,168,83,0.5);color:#6ee7a0;font-size:9px;padding:2px 7px;border-radius:6px;font-weight:600;letter-spacing:0.5px;">📖 Recipe</span>' : ''}
           ${dist != null ? `<span class="card-dist" title="Straight-line distance from you">📍 ${fmtMiles(dist)}</span>` : ''}
+          ${(() => { const os = openStatus(r.hours, Date.now()); return os ? `<span class="card-open ${os.open ? 'open' : 'closed'}" title="${escapeAttr(os.label)}">${os.open ? '🟢 Open' : '🔴 Closed'}</span>` : ''; })()}
           <span class="badge-status ${statusClass}">${statusLabel}</span>
         </div>
       </div>
@@ -2800,6 +2832,8 @@ function openDetail(id) {
   const ds = stripHTML(r.server);
   const dphone = stripHTML(r.phone || '');
   const daddr = stripHTML(r.address || '');
+  const dweb = (typeof r.website === 'string' && /^https?:\/\//i.test(r.website)) ? r.website : '';
+  const st = openStatus(r.hours, Date.now()); // live open/closed from stored hours (null if unknown)
   // Contact links use the shared contactTelHref / contactMapsHref helpers.
   const dno = stripHTML(r.notes);
   const ddrinks = stripHTMLArray(r.drinks);
@@ -2839,7 +2873,7 @@ function openDetail(id) {
         })()}</span>
       </div>
     </div>
-    <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}${(() => { const d = distanceFor(r, userLocation); return d != null ? ' · 📍 ' + fmtMiles(d) : ''; })()}</div>
+    <div class="modal-subtitle">${dc} · ${escapeHTML(r.city)}, ${escapeHTML(r.state)}${(() => { const d = distanceFor(r, userLocation); return d != null ? ' · 📍 ' + fmtMiles(d) : ''; })()}${st ? ` · <span class="open-badge ${st.open ? 'open' : 'closed'}" title="${escapeAttr(st.label)}">${st.open ? '🟢 Open' : '🔴 Closed'}</span>` : ''}</div>
     ${(hasCoords(r) && getMapsKey()) ? `<div id="detailDrive" class="detail-drive"></div>` : ''}
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap">
       <div id="detailStars" style="font-size:24px;display:flex;gap:2px;cursor:pointer">
@@ -2847,12 +2881,19 @@ function openDetail(id) {
       </div>
       <span style="font-size:11px;color:var(--text-muted)">click to rate</span>
       ${renderVisitHistoryTrigger(r)}
+      ${getMapsKey() ? `<button type="button" class="info-btn" onclick="fetchPlaceInfo('${escapeAttr(r.id)}')" title="Pull the latest phone, address, website and hours for this place from Google">ℹ️ Update info</button>` : ''}
     </div>
     ${renderVisitHistoryBody(r)}
+    <div id="detailInfoPanel" class="detail-info-panel"></div>
     ${ds ? `<div class="card-server" style="margin-bottom:14px">👤 Ask for <strong>${ds}</strong></div>` : ''}
-    ${(daddr || dphone) ? `<div class="detail-contact">${daddr ? `<a class="contact-chip" href="${escapeAttr(contactMapsHref(daddr))}" target="_blank" rel="noopener" title="Get directions">📍 ${escapeHTML(daddr)}</a>` : ''}${dphone ? `<a class="contact-chip" href="${escapeAttr(contactTelHref(dphone))}" title="Call">📞 ${escapeHTML(dphone)}</a>` : ''}</div>` : ''}
+    ${(daddr || dphone || dweb) ? `<div class="detail-contact">${daddr ? `<a class="contact-chip" href="${escapeAttr(contactMapsHref(daddr))}" target="_blank" rel="noopener" title="Get directions">📍 ${escapeHTML(daddr)}</a>` : ''}${dphone ? `<a class="contact-chip" href="${escapeAttr(contactTelHref(dphone))}" title="Call">📞 ${escapeHTML(dphone)}</a>` : ''}${dweb ? `<a class="contact-chip" href="${escapeAttr(dweb)}" target="_blank" rel="noopener" title="Website">🌐 Website</a>` : ''}</div>` : ''}
     ${(hasCoords(r) && getMapsKey()) ? `<div class="detail-map-wrap"><div id="detailMap" class="detail-map" aria-label="Map"></div><a class="detail-map-link" href="${escapeAttr(contactMapsHref(daddr || (Number(r.lat) + ',' + Number(r.lng))))}" target="_blank" rel="noopener">Open in Google Maps ↗</a></div>` : ''}
     ${(dprep || dcook) ? `<div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">${dprep ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">⏱ Prep: <strong>${dprep}</strong></span>` : ''}${dcook ? `<span style="background:var(--surface2);border:1px solid var(--border-amber);padding:6px 12px;border-radius:8px;font-size:12px">🔥 Cook: <strong>${dcook}</strong></span>` : ''}</div>` : ''}
+    ${(r.hours && Array.isArray(r.hours.weekday) && r.hours.weekday.length) ? (() => {
+      const todayIdx = Math.floor(placeNowMinutes(r.hours, Date.now()) / 1440); // 0 = Sunday (place-local)
+      const names = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      return `<div class="detail-section"><h4>🕒 Hours${st ? ` <span class="open-badge ${st.open ? 'open' : 'closed'}">${st.open ? '🟢' : '🔴'} ${escapeHTML(st.label)}</span>` : ''}</h4><ul class="detail-list hours-list">${r.hours.weekday.map(l => `<li class="${String(l).startsWith(names[todayIdx] + ':') ? 'today' : ''}">${escapeHTML(String(l))}</li>`).join('')}</ul></div>`;
+    })() : ''}
     ${section('🥣 Ingredients', dingredients)}
     ${numberedSection('📝 Instructions', dinstructions)}
     ${section('🥃 Drinks', ddrinks)}
@@ -5470,29 +5511,37 @@ function getMapsKey() {
   return String((appConfig && appConfig.mapsKey) || getPlacesKey() || '').trim();
 }
 let mapsLoadPromise = null;
+let mapsAuthFailed = false; // set by Google's gm_authFailure callback
 function loadGoogleMaps(key) {
   if (window.google && window.google.maps && window.google.maps.Map) return Promise.resolve();
   if (mapsLoadPromise) return mapsLoadPromise;
   mapsLoadPromise = new Promise((resolve, reject) => {
-    window.__eatsMapsReady = () => resolve();
+    // If Google's bootstrap loads but never calls back (typically a key problem), don't sit blank forever.
+    const timer = setTimeout(() => { mapsLoadPromise = null; reject(new Error("Google Maps didn't finish loading (usually an API-key problem — see the browser console)")); }, 15000);
+    window.__eatsMapsReady = () => { clearTimeout(timer); resolve(); };
     const el = document.createElement('script');
     el.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(key) + '&loading=async&callback=__eatsMapsReady';
     el.async = true;
-    el.onerror = () => { mapsLoadPromise = null; reject(new Error('Google Maps failed to load')); };
+    el.onerror = () => { clearTimeout(timer); mapsLoadPromise = null; reject(new Error("couldn't load Google Maps (blocked or offline)")); };
     document.head.appendChild(el);
   });
   return mapsLoadPromise;
 }
+function showMapMessage(el, text) {
+  if (el && document.body.contains(el)) el.innerHTML = '<div class="detail-map-msg">🗺 Map unavailable — ' + escapeHTML(text) + '</div>';
+}
 // Google calls this when the key is rejected (wrong API / referrer / billing): hide the map quietly.
 window.gm_authFailure = function () {
+  mapsAuthFailed = true;
   console.warn('[Eats] Google Maps rejected the key — check Maps JavaScript API is enabled on it and the referrer restriction.');
-  document.querySelectorAll('.detail-map-wrap').forEach(w => { w.style.display = 'none'; });
+  document.querySelectorAll('#detailMap').forEach(el => showMapMessage(el, 'Google rejected the API key (enable “Maps JavaScript API” on it and check the website restriction)'));
 };
 async function renderDetailMap(r) {
   const el = document.getElementById('detailMap');
   if (!el || !hasCoords(r)) return;
   const key = getMapsKey();
   if (!key) return;
+  if (mapsAuthFailed) { showMapMessage(el, 'Google rejected the API key (enable “Maps JavaScript API” on it and check the website restriction)'); return; }
   try {
     await loadGoogleMaps(key);
     if (!document.body.contains(el)) return; // detail re-rendered while loading
@@ -5501,7 +5550,7 @@ async function renderDetailMap(r) {
     new google.maps.Marker({ position: pos, map, title: String(r.name || '') });
   } catch (e) {
     console.warn('[Eats] map failed:', e);
-    const wrap = el.closest('.detail-map-wrap'); if (wrap) wrap.style.display = 'none';
+    showMapMessage(el, (e && e.message) ? e.message : 'unknown error');
   }
 }
 // Admin: save the key to the database so every signed-in member gets maps.
@@ -5609,7 +5658,172 @@ function requestDriveTime(id) {
   if (!r) return;
   requestUserLocation()
     .then(() => { renderDriveTime(r); applyFilters(); /* cards can now show distance pills too */ })
-    .catch(() => showToast('📍 Location unavailable — allow location access to see drive time'));
+    .catch(err => showToast(locationErrorMessage(err)));
+}
+
+// ── ℹ️ UPDATE INFO + 🕒 HOURS (Rev 11.27) ───────────────────────────────────
+// One Places (New) Text Search per click pulls phone, address, website, hours and
+// coordinates for the open place; the user reviews, then Apply writes them.
+// Open/closed is computed on-device from the stored hours in the PLACE's local
+// time (utcOffsetMinutes), so it's never stale and works while travelling.
+const INFO_FIELD_MASK = 'places.id,places.displayName,places.formattedAddress,places.nationalPhoneNumber,places.websiteUri,places.googleMapsUri,places.regularOpeningHours,places.utcOffsetMinutes,places.location';
+// Normalize one Places (New) result into the fields we store/show.
+function parsePlaceInfo(p) {
+  if (!p || !p.displayName) return null;
+  const roh = p.regularOpeningHours || null;
+  const hours = roh && (Array.isArray(roh.weekdayDescriptions) || Array.isArray(roh.periods)) ? {
+    weekday: Array.isArray(roh.weekdayDescriptions) ? roh.weekdayDescriptions.slice(0, 7) : [],
+    periods: Array.isArray(roh.periods) ? roh.periods.map(x => ({
+      open:  x.open  ? { day: Number(x.open.day),  hour: Number(x.open.hour || 0),  minute: Number(x.open.minute || 0) }  : null,
+      close: x.close ? { day: Number(x.close.day), hour: Number(x.close.hour || 0), minute: Number(x.close.minute || 0) } : null
+    })).filter(x => x.open) : [],
+    utcOffsetMinutes: Number.isFinite(Number(p.utcOffsetMinutes)) ? Number(p.utcOffsetMinutes) : null
+  } : null;
+  return {
+    placeId: p.id || '',
+    name: (p.displayName && p.displayName.text) || '',
+    address: String(p.formattedAddress || '').replace(/,\s*(USA|United States)\s*$/i, '').trim(),
+    phone: p.nationalPhoneNumber || '',
+    website: p.websiteUri || '',
+    mapsUri: p.googleMapsUri || '',
+    lat: p.location && Number.isFinite(Number(p.location.latitude)) ? Number(p.location.latitude) : null,
+    lng: p.location && Number.isFinite(Number(p.location.longitude)) ? Number(p.location.longitude) : null,
+    hours
+  };
+}
+function fmtClock(h, m) {
+  const hh = ((h % 12) || 12), ampm = h < 12 ? 'AM' : 'PM';
+  return m ? `${hh}:${String(m).padStart(2, '0')} ${ampm}` : `${hh} ${ampm}`;
+}
+// Minutes-of-week in the PLACE's local time (0 = Sunday 00:00), using the stored UTC offset
+// so a Boise restaurant is judged by Boise time even if you're travelling.
+function placeNowMinutes(hours, nowMs) {
+  const off = (hours && Number.isFinite(hours.utcOffsetMinutes)) ? hours.utcOffsetMinutes : -new Date(nowMs).getTimezoneOffset();
+  const d = new Date(nowMs + off * 60000); // shift so UTC getters read place-local time
+  return d.getUTCDay() * 1440 + d.getUTCHours() * 60 + d.getUTCMinutes();
+}
+// { open: bool, label } — null when hours are unknown. Handles periods that cross midnight and 24h.
+function openStatus(hours, nowMs) {
+  if (!hours || !Array.isArray(hours.periods) || !hours.periods.length) return null;
+  const now = placeNowMinutes(hours, nowMs);
+  const WEEK = 7 * 1440;
+  // 24h: a single period with open but no close
+  if (hours.periods.length === 1 && hours.periods[0].open && !hours.periods[0].close) return { open: true, label: 'Open 24 hours' };
+  let nextOpen = null;
+  for (const per of hours.periods) {
+    if (!per.open || !per.close) continue;
+    let o = per.open.day * 1440 + per.open.hour * 60 + per.open.minute;
+    let c = per.close.day * 1440 + per.close.hour * 60 + per.close.minute;
+    if (c <= o) c += WEEK; // crosses the week boundary (e.g. Sat night -> Sun)
+    for (const shift of [0, -WEEK, WEEK]) { // check the period as it falls this week, last week, next week
+      const oo = o + shift, cc = c + shift;
+      if (now >= oo && now < cc) return { open: true, label: `Open now · closes ${fmtClock(per.close.hour, per.close.minute)}` };
+      if (oo > now && (nextOpen === null || oo < nextOpen.at)) nextOpen = { at: oo, per };
+    }
+  }
+  if (!nextOpen) return { open: false, label: 'Closed' };
+  const daysAhead = Math.floor(nextOpen.at / 1440) - Math.floor(now / 1440);
+  const dayName = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][nextOpen.per.open.day];
+  const when = fmtClock(nextOpen.per.open.hour, nextOpen.per.open.minute);
+  return { open: false, label: daysAhead <= 0 ? `Closed · opens ${when}` : (daysAhead === 1 ? `Closed · opens tomorrow ${when}` : `Closed · opens ${dayName} ${when}`) };
+}
+// Fields to write for an entry from a parsed place: fill-if-empty for phone/address/coords; refresh website/hours/placeId.
+function buildInfoUpdates(entry, info, base) {
+  const u = {}; const empty = v => !(v && String(v).trim());
+  if (info.phone && empty(entry.phone)) u[`${base}/${entry.id}/phone`] = info.phone;
+  if (info.address && empty(entry.address)) u[`${base}/${entry.id}/address`] = info.address;
+  if (info.lat != null && info.lng != null && !(entry.lat && entry.lng)) { u[`${base}/${entry.id}/lat`] = info.lat; u[`${base}/${entry.id}/lng`] = info.lng; }
+  if (info.website) u[`${base}/${entry.id}/website`] = info.website;
+  if (info.hours) u[`${base}/${entry.id}/hours`] = info.hours;
+  if (info.placeId) u[`${base}/${entry.id}/placeId`] = info.placeId;
+  if (Object.keys(u).length) { u[`${base}/${entry.id}/infoUpdatedAt`] = Date.now(); u[`${base}/${entry.id}/lastUpdated`] = Date.now(); }
+  return u;
+}
+
+let pendingPlaceInfo = null; // { id, info, sim, byAddress }
+
+async function fetchPlaceInfo(id) {
+  const r = allRestaurants.find(x => x.id === id);
+  const panel = document.getElementById('detailInfoPanel');
+  if (!r || !panel) return;
+  const key = getMapsKey();
+  if (!key) { panel.innerHTML = '<span class="muted">No Google key available.</span>'; return; }
+  panel.innerHTML = '<span class="muted">⏳ Checking Google for the latest info…</span>';
+  const query = geoQueryFor(r);
+  const byAddress = !!(r.address && String(r.address).trim());
+  try {
+    const res = await fetch(PLACES_SEARCH_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Goog-Api-Key': key, 'X-Goog-FieldMask': INFO_FIELD_MASK },
+      body: JSON.stringify({ textQuery: query, regionCode: 'US', languageCode: 'en', pageSize: 3 })
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error((json.error && json.error.message) || ('HTTP ' + res.status));
+    const places = (json && Array.isArray(json.places)) ? json.places : [];
+    let best = null, sim = 0;
+    if (byAddress) { best = places[0] || null; sim = best ? 1 : 0; }
+    else { let bs = -1; places.forEach(pl => { const nm = (pl.displayName && pl.displayName.text) || ''; const sv = placesNameSimilarity(r.name, nm); if (sv > bs) { best = pl; bs = sv; } }); sim = best ? bs : 0; }
+    const info = parsePlaceInfo(best);
+    if (!info) { panel.innerHTML = `<span class="muted">Google found nothing for “${escapeHTML(query)}”.</span> <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin-left:8px" onclick="cancelPlaceInfo()">Close</button>`; return; }
+    pendingPlaceInfo = { id, info, sim, byAddress };
+    renderPlaceInfoPanel(r);
+  } catch (e) {
+    console.warn('[Eats] update info failed:', e);
+    panel.innerHTML = `<span class="muted">❌ ${escapeHTML(e && e.message ? e.message : String(e))}</span> <button type="button" class="btn btn-ghost" style="font-size:11px;padding:4px 10px;margin-left:8px" onclick="cancelPlaceInfo()">Close</button>`;
+  }
+}
+
+function renderPlaceInfoPanel(r) {
+  const panel = document.getElementById('detailInfoPanel');
+  if (!panel || !pendingPlaceInfo) return;
+  const { info, sim, byAddress } = pendingPlaceInfo;
+  const empty = v => !(v && String(v).trim());
+  const flag = byAddress ? '<span style="color:var(--green)">✅ matched by street address</span>'
+    : (sim >= 0.5 ? '<span style="color:var(--green)">✅ good name match</span>' : '<span style="color:var(--amber)">⚠ check this — name doesn’t match well</span>');
+  const row = (k, v, note) => v ? `<div class="row"><span class="k">${k}</span><span class="v">${v}${note ? ` <span class="muted">${note}</span>` : ''}</span></div>` : '';
+  const keepNote = (field) => !empty(r[field]) ? '(keeping yours)' : '(new)';
+  const hoursHtml = info.hours && info.hours.weekday.length ? info.hours.weekday.map(l => escapeHTML(l)).join('<br>') : '';
+  const stNow = openStatus(info.hours, Date.now());
+  panel.innerHTML = `
+    <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+      <div><strong>${escapeHTML(info.name)}</strong> <span style="font-size:11px">${flag}</span></div>
+      <span class="muted">from Google</span>
+    </div>
+    ${row('📞 Phone', info.phone ? escapeHTML(info.phone) : '', info.phone ? keepNote('phone') : '')}
+    ${row('📍 Address', info.address ? escapeHTML(info.address) : '', info.address ? keepNote('address') : '')}
+    ${row('🌐 Website', info.website ? `<a href="${escapeAttr(info.website)}" target="_blank" rel="noopener" style="color:var(--amber-light)">${escapeHTML(info.website.replace(/^https?:\/\//, '').replace(/\/$/, ''))}</a>` : '')}
+    ${row('🕒 Hours', hoursHtml, stNow ? `· ${escapeHTML(stNow.label)}` : '')}
+    ${!info.phone && !info.address && !info.website && !hoursHtml ? '<div class="muted" style="margin-top:6px">Google has no contact details or hours for this match.</div>' : ''}
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px">
+      <button type="button" class="btn btn-ghost" style="font-size:12px;padding:6px 12px" onclick="cancelPlaceInfo()">Cancel</button>
+      <button type="button" class="btn btn-amber" style="font-size:12px;padding:6px 14px" onclick="applyPlaceInfo()">Apply</button>
+    </div>`;
+}
+
+async function applyPlaceInfo() {
+  if (!pendingPlaceInfo) return;
+  const { id, info } = pendingPlaceInfo;
+  const r = allRestaurants.find(x => x.id === id);
+  if (!r) return;
+  const updates = buildInfoUpdates(r, info, EATS_PATH);
+  if (!Object.keys(updates).length) { showToast('Nothing new to add'); cancelPlaceInfo(); return; }
+  try {
+    await dbUpdate(updates);
+    // Reflect immediately (the realtime listener will confirm shortly)
+    Object.entries(updates).forEach(([path, v]) => { const field = path.split('/').pop(); if (field !== 'lastUpdated') r[field] = v; });
+    pendingPlaceInfo = null;
+    showToast('✅ Info updated from Google');
+    openDetail(id);
+    applyFilters();
+  } catch (e) {
+    console.error('[Eats] apply info failed:', e);
+    showToast('❌ ' + (e && e.message ? e.message : e));
+  }
+}
+
+function cancelPlaceInfo() {
+  pendingPlaceInfo = null;
+  const panel = document.getElementById('detailInfoPanel'); if (panel) panel.innerHTML = '';
 }
 
 // ── DATA MANAGER ─────────────────────────────────────────
@@ -6018,6 +6232,9 @@ window.closePlacesScanModal = closePlacesScanModal;
 window.forgetPlacesKey = forgetPlacesKey;
 window.enableMapsForEveryone = enableMapsForEveryone;
 window.requestDriveTime = requestDriveTime;
+window.fetchPlaceInfo = fetchPlaceInfo;
+window.applyPlaceInfo = applyPlaceInfo;
+window.cancelPlaceInfo = cancelPlaceInfo;
 window.setWithinFilter = setWithinFilter;
 window.geocodeMissingCoords = geocodeMissingCoords;
 window.applyGeoScanFixes = applyGeoScanFixes;
@@ -6249,7 +6466,7 @@ function setSort(mode) {
   const panel = document.getElementById('sortPanel');
   if (panel) panel.style.display = 'none';
   if (mode === 'nearest' && !userLocation) {
-    requestUserLocation().then(applyFilters).catch(() => showToast('📍 Location unavailable — allow location access to sort by distance'));
+    requestUserLocation().then(applyFilters).catch(err => showToast(locationErrorMessage(err)));
   }
   applyFilters();
 }
