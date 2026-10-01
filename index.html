@@ -489,6 +489,9 @@
   /* Results header row (Rev 11.26) */
   .results-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
   .results-bar .results-count { margin: 0; }
+  .loc-status { font-size: 11px; color: var(--text-muted); }
+  .loc-status.ok { color: var(--green-light); }
+  .loc-status.err { color: var(--red); }
   .results-bar .city-select { flex: 0 0 auto; width: auto; max-width: none; font-family: 'Playfair Display', serif; font-size: 20px; color: var(--gold); background: var(--surface); border: 1px solid var(--border-amber); border-radius: 10px; padding: 4px 12px; min-height: 42px; letter-spacing: 0.3px; }
   .main.single-city .city-header { display: none; } /* one city selected: the header row already names it */
 
@@ -1416,7 +1419,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.27">
+<meta name="app-rev" content="11.28">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -1616,6 +1619,7 @@
       <option value="10">📍 Within 10 mi</option>
       <option value="15">📍 Within 15 mi</option>
     </select>
+    <span id="locStatus" class="loc-status" aria-live="polite"></span>
   </div>
   <div id="content"></div>
 </div>
@@ -1712,6 +1716,10 @@
       <div class="form-group full">
         <label>📍 Address</label>
         <input type="text" id="fAddress" placeholder="7610 W State St #130, Boise, ID 83714" autocomplete="off">
+      </div>
+      <div class="form-group full">
+        <label>🌐 Website</label>
+        <input type="url" id="fWebsite" placeholder="https://mrthaiboise.com" autocomplete="off" inputmode="url">
       </div>
       <div class="form-group full">
         <div id="dd-fields-container">
@@ -1981,12 +1989,21 @@ function setStarFilter(val) {
 // ── 📍 DISTANCE (Rev 11.23) — pure on-device math; no API calls ─────────────
 // Location is requested lazily (first radius pick or "Nearest" sort). Straight-line
 // miles ("as the crow flies") — the right tool for a filter: instant and free.
+function setLocStatus(text, kind) {
+  const el = document.getElementById('locStatus');
+  if (!el) return;
+  el.textContent = text || '';
+  el.className = 'loc-status' + (kind ? ' ' + kind : '');
+}
 function requestUserLocation() {
   return new Promise((resolve, reject) => {
-    if (!navigator.geolocation) { reject(new Error('unsupported')); return; }
+    if (!navigator.geolocation) { setLocStatus('📍 no location support', 'err'); reject(new Error('unsupported')); return; }
+    setLocStatus('📍 getting location…');
+    // Chrome tucks the permission prompt into the address bar; nudge if it's taking a moment.
+    const nudge = setTimeout(() => showToast('📍 Waiting for your location — if your browser is asking, allow it (look near the address bar)'), 1500);
     navigator.geolocation.getCurrentPosition(
-      pos => { userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; resolve(userLocation); },
-      err => reject(err),
+      pos => { clearTimeout(nudge); userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; setLocStatus('📍 located', 'ok'); resolve(userLocation); },
+      err => { clearTimeout(nudge); const code = err && err.code; setLocStatus(code === 1 ? '📍 location blocked' : code === 3 ? '📍 location timed out' : '📍 location unavailable', 'err'); reject(err); },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
     );
   });
@@ -2752,6 +2769,13 @@ function contactTelHref(ph) {
 function contactMapsHref(a) {
   return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(a);
 }
+// Website as typed -> stored URL: trims, adds https:// when the scheme is left off, rejects non-http schemes.
+function normalizeWebsite(v) {
+  v = String(v || '').trim();
+  if (!v) return '';
+  if (!/^[a-z][a-z0-9+.-]*:/i.test(v)) v = 'https://' + v;
+  return /^https?:\/\//i.test(v) ? v : '';
+}
 
 function renderCard(r) {
   // Sanitize ALL fields before rendering — prevents XSS from Firebase data
@@ -2931,7 +2955,7 @@ function openAddModal() {
   document.getElementById('deleteBtn').style.display = 'none';
   clearDDData();
   renderCategoryPicker([]);
-  ['fName','fCity','fState','fCuisine','fStatus','fServer','fPhone','fAddress','fNotes','fTags','fImageUrl'].forEach(id => {
+  ['fName','fCity','fState','fCuisine','fStatus','fServer','fPhone','fAddress','fWebsite','fNotes','fTags','fImageUrl'].forEach(id => {
     const el = document.getElementById(id);
     if (el.tagName === 'SELECT') el.value = el.options[0].value;
     else el.value = '';
@@ -2971,6 +2995,7 @@ function openEditModal(id) {
   document.getElementById('fServer').value = r.server || '';
   document.getElementById('fPhone').value = r.phone || '';
   document.getElementById('fAddress').value = r.address || '';
+  document.getElementById('fWebsite').value = r.website || '';
   loadDDData(r);
   document.getElementById('fNotes').value = r.notes || '';
   document.getElementById('fTags').value = (r.tags || []).join(', ');
@@ -3153,6 +3178,7 @@ async function saveEntry() {
     server: document.getElementById('fServer').value.trim(),
     phone: document.getElementById('fPhone').value.trim(),
     address: document.getElementById('fAddress').value.trim(),
+    website: normalizeWebsite(document.getElementById('fWebsite').value),
     phil_picks: ddData.fPhilPicks || [],
     trinity_picks: ddData.fTrinityPicks || [],
     drinks: ddData.fDrinks || [],
@@ -3372,7 +3398,7 @@ Current entries (${allRestaurants.length}):
 ${context}
 
 Decide:
-- If the place matches an EXISTING entry above, return an UPDATE using that entry's exact id from the list, with ONLY the fields you learned (dishes -> mains/appetizers/desserts arrays, drinks array, prices/details in notes, server, phone, address, rating 1-5 only if clearly shown).
+- If the place matches an EXISTING entry above, return an UPDATE using that entry's exact id from the list, with ONLY the fields you learned (dishes -> mains/appetizers/desserts arrays, drinks array, prices/details in notes, server, phone, address, website, rating 1-5 only if clearly shown).
 - Otherwise return an ADD. entry_type is "restaurant", or "tasting" for wine/oyster/bourbon/beer/cocktail, or "recipe" for a dish with ingredients and steps.
 - Default city "Boise" and state "ID" unless the photo clearly shows otherwise.
 - CATEGORY: only use a category you can clearly infer; if unsure leave the category array EMPTY rather than guessing.
@@ -3380,7 +3406,7 @@ Decide:
 
 OUTPUT RULES (strict):
 - Reply with ONLY ONE compact JSON object. No prose, no markdown code fences.
-  ADD:    {"action":"add","data":{"entry_type":"restaurant","name":"...","city":"Boise","state":"ID","category":[],"cuisine":"...","status":"tried","phone":"...","address":"...","mains":["..."],"drinks":["..."],"notes":"..."}}
+  ADD:    {"action":"add","data":{"entry_type":"restaurant","name":"...","city":"Boise","state":"ID","category":[],"cuisine":"...","status":"tried","phone":"...","address":"...","website":"...","mains":["..."],"drinks":["..."],"notes":"..."}}
   UPDATE: {"action":"update","id":"<exact id from the list>","data":{...only new fields...}}
 - Keep it short.
 - ONLY if you genuinely cannot tell which existing entry it is (e.g. two close matches), reply with ONE short plain-text question instead of JSON.`;
@@ -3626,7 +3652,7 @@ ${context}
 You can:
 1. Answer questions, recommend places, search by cuisine/vibe/occasion/type
 2. Add a RESTAURANT with JSON:
-{"action":"add","data":{"entry_type":"restaurant","name":"...","city":"Boise","state":"ID","category":["Fine Dining"],"cuisine":"...","status":"tried","rating":5,"server":"...","phone":"...","address":"...","phil_picks":["..."],"trinity_picks":["..."],"drinks":["..."],"appetizers":["..."],"mains":["..."],"desserts":["..."],"notes":"...","tags":["..."]}}
+{"action":"add","data":{"entry_type":"restaurant","name":"...","city":"Boise","state":"ID","category":["Fine Dining"],"cuisine":"...","status":"tried","rating":5,"server":"...","phone":"...","address":"...","website":"...","phil_picks":["..."],"trinity_picks":["..."],"drinks":["..."],"appetizers":["..."],"mains":["..."],"desserts":["..."],"notes":"...","tags":["..."]}}
 3. Add a TASTING (wine, oyster, bourbon, beer, etc.) with JSON:
 {"action":"add","data":{"entry_type":"tasting","name":"...","city":"Boise","state":"ID","category":["Oysters"],"varietal":"...","vintage":"...","producer":"...","where_had":"...","status":"tried","rating":5,"phil_picks":["..."],"trinity_picks":["..."],"notes":"...","tags":["..."]}}
 4. Add a RECIPE with JSON:
@@ -5531,17 +5557,21 @@ function showMapMessage(el, text) {
   if (el && document.body.contains(el)) el.innerHTML = '<div class="detail-map-msg">🗺 Map unavailable — ' + escapeHTML(text) + '</div>';
 }
 // Google calls this when the key is rejected (wrong API / referrer / billing): hide the map quietly.
+function mapsKeyRejectedMessage() {
+  const k = getMapsKey();
+  return 'Google rejected the API key' + (k ? ' ending …' + k.slice(-4) : '') + ' — enable “Maps JavaScript API” for the project and on this key (ApiNotActivatedMapError)';
+}
 window.gm_authFailure = function () {
   mapsAuthFailed = true;
   console.warn('[Eats] Google Maps rejected the key — check Maps JavaScript API is enabled on it and the referrer restriction.');
-  document.querySelectorAll('#detailMap').forEach(el => showMapMessage(el, 'Google rejected the API key (enable “Maps JavaScript API” on it and check the website restriction)'));
+  document.querySelectorAll('#detailMap').forEach(el => showMapMessage(el, mapsKeyRejectedMessage()));
 };
 async function renderDetailMap(r) {
   const el = document.getElementById('detailMap');
   if (!el || !hasCoords(r)) return;
   const key = getMapsKey();
   if (!key) return;
-  if (mapsAuthFailed) { showMapMessage(el, 'Google rejected the API key (enable “Maps JavaScript API” on it and check the website restriction)'); return; }
+  if (mapsAuthFailed) { showMapMessage(el, mapsKeyRejectedMessage()); return; }
   try {
     await loadGoogleMaps(key);
     if (!document.body.contains(el)) return; // detail re-rendered while loading
