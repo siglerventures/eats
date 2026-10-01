@@ -1422,7 +1422,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.29">
+<meta name="app-rev" content="11.30">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -5603,6 +5603,13 @@ async function renderDetailMap(r) {
     showMapMessage(el, (e && e.message) ? e.message : 'unknown error');
   }
 }
+function renderMapsEnabledStatus() {
+  const el = document.getElementById('mapsEnabledStatus'); if (!el) return;
+  const k = (appConfig && appConfig.mapsKey) ? String(appConfig.mapsKey) : '';
+  el.innerHTML = k
+    ? `<span style="color:var(--green-light)">✅ Enabled — key ending …${escapeHTML(k.slice(-4))} is saved for all members.</span>`
+    : `<span style="color:var(--amber)">⚠ Not yet enabled — only this browser has the key, so other members won’t see the map, drive time or ℹ️ Update info.</span>`;
+}
 // Admin: save the key to the database so every signed-in member gets maps.
 async function enableMapsForEveryone() {
   if (!isAdmin()) { showToast('Admins only'); return; }
@@ -5612,6 +5619,8 @@ async function enableMapsForEveryone() {
   if (!key) { if (status) status.innerHTML = '<span style="color:var(--red)">⚠ Paste the API key first.</span>'; return; }
   try {
     await dbSet(EATS_PATH + '/_config/mapsKey', key);
+    appConfig = Object.assign({}, appConfig, { mapsKey: key }); // reflect immediately; the realtime listener confirms
+    renderMapsEnabledStatus();
     if (status) status.innerHTML = '<span style="color:var(--green)">✅ Maps enabled for everyone — the key is saved in the database (not in the app code) and only signed-in members can read it.</span>';
   } catch (e) {
     if (status) status.innerHTML = '<span style="color:var(--red)">❌ ' + escapeHTML(e && e.message ? e.message : String(e)) + '</span>';
@@ -6016,6 +6025,7 @@ function openDataModal() {
   document.getElementById('data-modal-status').innerHTML = '';
   document.getElementById('restore-filename').textContent = 'No file selected';
   const pk = document.getElementById('placesKeyInput'); if (pk) pk.value = getPlacesKey();
+  renderMapsEnabledStatus();
   document.getElementById('dataModal').classList.add('open');
 }
 
@@ -6085,7 +6095,7 @@ function eatsRestore(event) {
     try {
       var data = JSON.parse(e.target.result);
       var count = Object.keys(data).length;
-      if (!confirm('Restore ' + count + ' restaurants from "' + file.name + '"?\n\nThis will overwrite existing data.')) {
+      if (!confirm('⚠️ FULL RESTORE — this REPLACES ALL current data with "' + file.name + '" (' + count + ' items).\n\nAnything added or changed since that backup — phone, address, website, hours, map coordinates, new places, visits — will be LOST.\n\nTo fix only the "last updated" dates, press Cancel and use "🗓 Restore last updated dates from a backup" instead.\n\nReplace everything?')) {
         status.innerHTML = '';
         return;
       }
@@ -6820,6 +6830,14 @@ function sortRestaurants(arr) {
 
     <div style="display:flex;flex-direction:column;gap:10px">
 
+      <!-- Google features for everyone (Rev 11.30) -->
+      <div style="background:linear-gradient(135deg,rgba(212,134,10,0.1),rgba(212,134,10,0.05));border:1px solid rgba(212,134,10,0.3);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--amber-light);margin-bottom:3px">🗺 Google features for everyone</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:8px">The map pin, drive time and ℹ️ Update info need the Google key. Your browser has it; other members’ phones don’t until it’s saved to the database (readable only by signed-in members, never in the app code).</div>
+        <div id="mapsEnabledStatus" style="font-size:0.78rem;margin-bottom:12px;font-family:monospace"></div>
+        <button onclick="enableMapsForEveryone()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🗺 Enable maps &amp; drive time for everyone</button>
+      </div>
+
       <!-- Full JSON Backup -->
       <div style="background:linear-gradient(135deg,rgba(212,134,10,0.1),rgba(212,134,10,0.05));border:1px solid rgba(212,134,10,0.3);border-radius:10px;padding:16px">
         <div style="font-size:0.88rem;font-weight:500;color:var(--amber-light);margin-bottom:3px">📦 Full Backup (JSON)</div>
@@ -6877,7 +6895,6 @@ function sortRestaurants(arr) {
           <button onclick="forgetPlacesKey()" class="btn btn-ghost" style="font-size:11px;padding:7px 12px" title="Remove the saved key from this browser">Forget key</button>
         </div>
         <button onclick="lookupMissingContacts()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🌐 Look up</button>
-        <button onclick="enableMapsForEveryone()" class="btn btn-ghost" style="font-size:12px;padding:7px 16px;margin-left:8px" title="Saves this key to the database so all signed-in members get the map pin and drive times">🗺 Enable maps &amp; drive time for everyone</button>
       </div>
 
       <!-- Geocode: fill missing map coordinates (Rev 11.23) -->
