@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebasedatabase.app; script-src-elem 'self' 'unsafe-inline' https://www.gstatic.com https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://firebasestorage.googleapis.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://*.google.com https://www.gstatic.com https://us-central1-philinity-893d2.cloudfunctions.net/askAI; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com https://images.unsplash.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://i.imgur.com https://upload.wikimedia.org; frame-src https://*.firebaseio.com https://*.firebaseapp.com https://accounts.google.com https://apis.google.com https://*.google.com; manifest-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebasedatabase.app; script-src-elem 'self' 'unsafe-inline' https://unpkg.com https://www.gstatic.com https://apis.google.com https://accounts.google.com https://*.googleapis.com https://*.google.com https://*.firebaseio.com https://*.firebasedatabase.app; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; connect-src 'self' https://*.firebasestorage.app https://*.firebaseio.com wss://*.firebaseio.com https://*.firebasedatabase.app wss://*.firebasedatabase.app https://firebasestorage.googleapis.com https://*.googleapis.com https://*.firebaseapp.com https://identitytoolkit.googleapis.com https://securetoken.googleapis.com https://www.googleapis.com https://accounts.google.com https://*.google.com https://www.gstatic.com https://us-central1-philinity-893d2.cloudfunctions.net/askAI; img-src 'self' data: blob: https://*.googleapis.com https://*.gstatic.com https://*.ggpht.com https://images.unsplash.com https://lh3.googleusercontent.com https://firebasestorage.googleapis.com https://storage.googleapis.com https://i.imgur.com https://upload.wikimedia.org; frame-src https://*.firebaseio.com https://*.firebaseapp.com https://accounts.google.com https://apis.google.com https://*.google.com; manifest-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self';">
 <title>Philinity Eats</title>
 <!-- Favicon (inline SVG — simple and CSP-safe) -->
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><text x='50%25' y='50%25' dominant-baseline='central' text-anchor='middle' font-size='52'>🍽</text></svg>">
@@ -1422,7 +1422,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.30">
+<meta name="app-rev" content="11.31">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -6019,6 +6019,179 @@ async function applyDateRestore() {
 }
 function closeDateRestoreModal() { document.getElementById('dateRestoreModal').classList.remove('open'); }
 
+// ── 🗄️ APP BACKUP (ZIP) + 📷 PHOTOS (Rev 11.31) — per philinity-functions/docs/BACKUP-PLAYBOOK.md ──
+// Client-side, admin-only, read-only. Parents are read WHOLE so new children are included
+// automatically; eats/_config (the Google key) is stripped from every file. Restore files are
+// one per section and must be imported at THEIR OWN node — never at the root (RESTORE-README).
+const APP_BACKUP_SENSITIVE = ['_config']; // credentials (the Google key) never go into backups
+const STORAGE_URL_RE = /^https?:\/\/([a-z0-9-]+\.)*(firebasestorage\.googleapis\.com|firebasestorage\.app|storage\.googleapis\.com)\//i;
+// Real Storage path from a download URL, so a restore is "upload back to the same path".
+function storagePathFromUrl(url) {
+  try {
+    const u = new URL(url);
+    const m = u.pathname.match(/\/o\/([^?]+)/);           // …/v0/b/<bucket>/o/<encoded path>
+    if (m) return decodeURIComponent(m[1]);
+    const parts = u.pathname.split('/').filter(Boolean);  // storage.googleapis.com/<bucket>/<path…>
+    if (/^storage\.googleapis\.com$/i.test(u.hostname) && parts.length >= 2) return decodeURIComponent(parts.slice(1).join('/'));
+    return decodeURIComponent(parts.join('/'));
+  } catch (e) { return ''; }
+}
+// Every Storage link anywhere in the tree, with the FIRST database path that uses it.
+function collectStorageUrls(tree) {
+  const seen = new Map();
+  const walk = (node, path) => {
+    if (typeof node === 'string') { if (STORAGE_URL_RE.test(node) && !seen.has(node)) seen.set(node, path); return; }
+    if (Array.isArray(node)) { node.forEach((v, i) => walk(v, path + '/' + i)); return; }
+    if (node && typeof node === 'object') Object.keys(node).forEach(k => walk(node[k], path + '/' + k));
+  };
+  walk(tree, '');
+  return [...seen.entries()].map(([url, dbPath]) => ({ url, dbPath: dbPath.replace(/^\//, '') }));
+}
+function stripSensitive(node, keys) {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return node;
+  const out = {}; Object.keys(node).forEach(k => { if (!keys.includes(k)) out[k] = node[k]; }); return out;
+}
+function countEntries(eats) { return Object.keys(eats || {}).filter(k => k !== 'categories' && !k.startsWith('_')).length; }
+// Section -> the exact database node it is restored at (import the file THERE, never higher up).
+const BACKUP_SECTION_NODES = { entries: 'eats', categories: 'eats/categories', access: 'eats_access' };
+function splitBackupSections(eatsNode, accessNode) {
+  const eats = stripSensitive(eatsNode || {}, APP_BACKUP_SENSITIVE);
+  return { entries: eats, categories: (eats && eats.categories) || {}, access: accessNode || {} };
+}
+function buildManifest(sections, photoCount, date) {
+  const entries = countEntries(sections.entries), cats = Object.keys(sections.categories || {}).length, people = Object.keys(sections.access || {}).length;
+  return [
+    `Philinity Eats backup ${date}: ${entries} entries · ${cats} categories · ${people} roster · ${photoCount} photo links`,
+    '',
+    'Restore files (import each at ITS OWN node — never at the root; see RESTORE-README.txt):',
+    `  restore/eats.entries.json     -> node eats             ${entries} restaurants + categories (eats/_config, the Google key, is excluded on purpose)`,
+    `  restore/eats.categories.json  -> node eats/categories  ${cats} categories`,
+    `  restore/eats.access.json      -> node eats_access      ${people} roster records`,
+    `Photo links found in the data: ${photoCount} (download the files with "📷 Download all photos")`
+  ].join('\n');
+}
+function csvCell(v) { v = String(v == null ? '' : v); return /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+
+const APP_BACKUP_JSZIP = 'https://unpkg.com/jszip@3.10.1/dist/jszip.min.js';
+let jszipPromise = null;
+function loadJSZip() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  if (jszipPromise) return jszipPromise;
+  jszipPromise = new Promise((resolve, reject) => {
+    const el = document.createElement('script');
+    el.src = APP_BACKUP_JSZIP; el.async = true;
+    el.onload = () => window.JSZip ? resolve(window.JSZip) : reject(new Error('ZIP library did not initialise'));
+    el.onerror = () => { jszipPromise = null; reject(new Error("couldn't load the ZIP library (unpkg.com blocked?)")); };
+    document.head.appendChild(el);
+  });
+  return jszipPromise;
+}
+async function appBackupRead() {
+  const [eatsSnap, accessSnap] = await Promise.all([dbGet(EATS_PATH), dbGet(ACCESS_PATH).catch(() => null)]);
+  return splitBackupSections((eatsSnap && eatsSnap.val()) || {}, (accessSnap && accessSnap.val()) || {});
+}
+function backupDateStamp() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+function downloadBlob(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 3000);
+}
+function setBackupStatus(html) { const el = document.getElementById('appBackupStatus'); if (el) el.innerHTML = html; }
+function restoreReadme(date, manifest) {
+  return `PHILINITY EATS — RESTORE README  (backup of ${date})
+${manifest.split('\n')[0]}
+
+⚠ NEVER "Import JSON" at the DATABASE ROOT, and think twice before importing at the app root ("eats").
+  Firebase REPLACES the node you import at with the file. At the database root that would erase every
+  other app. Importing restore/eats.entries.json at "eats" replaces ALL of Eats: anything added since this
+  backup is gone, and eats/_config (the Google key, excluded on purpose) is erased — afterwards open the
+  Data Manager and click "Enable maps & drive time for everyone" again.
+
+✔ Restore ONLY the damaged section, at ITS OWN node:
+  Firebase console → Realtime Database → open the node → ⋮ (three dots) → Import JSON → pick the file.
+    restore/eats.entries.json     → node: eats             (all restaurants + the categories list)
+    restore/eats.categories.json  → node: eats/categories  (just the categories)
+    restore/eats.access.json      → node: eats_access      (the login roster: who may sign in, with roles)
+  To restore ONE restaurant: open eats/<its id> and import only that object (copy it out of the ALL file).
+
+Also in this ZIP:
+  firebase-eats-${date}-ALL.json  everything in one file — for reading and searching only; do not import it.
+  index.html                     the app page as served that day.
+  MANIFEST.txt                   counts per section.
+
+Not in this ZIP:
+  - Database rules: in GitHub — siglerventures/autoflag-installs → access-model/PIECE3-rules-to-deploy.json.
+    Paste the WHOLE file into Firebase → Rules using GitHub's "Copy raw file" button.
+  - Photos: "📷 Download all photos" makes a separate ZIP; files are saved at their real Storage paths, so a
+    restore is uploading each file back to the same path in the philinity-893d2.firebasestorage.app bucket.
+  - Sign-in accounts: not backed up; people sign in again and their roles come back with the roster.
+  - eats/_config (the Google key): excluded on purpose — re-enable from the Data Manager after a full restore.
+`;
+}
+async function appBackup() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  try {
+    setBackupStatus('⏳ Reading the database…');
+    const [JSZip, sections] = await Promise.all([loadJSZip(), appBackupRead()]);
+    const photos = collectStorageUrls(sections.entries);
+    const date = backupDateStamp();
+    const manifest = buildManifest(sections, photos.length, date);
+    const zip = new JSZip();
+    Object.keys(sections).forEach(name => zip.file(`restore/eats.${name}.json`, JSON.stringify(sections[name], null, 2)));
+    zip.file(`firebase-eats-${date}-ALL.json`, JSON.stringify({ eats: sections.entries, eats_access: sections.access }, null, 2));
+    try { const r = await fetch(location.pathname + '?_appbackup=' + Date.now(), { cache: 'no-store' }); if (r.ok) zip.file('index.html', await r.text()); } catch (e) { /* file:// or offline — skip */ }
+    zip.file('MANIFEST.txt', manifest);
+    zip.file('RESTORE-README.txt', restoreReadme(date, manifest));
+    setBackupStatus('⏳ Building the ZIP…');
+    const blob = await zip.generateAsync({ type: 'blob' });
+    downloadBlob(blob, `philinity-eats-backup-${date}.zip`);
+    const first = manifest.split('\n')[0];
+    setBackupStatus('✅ ' + escapeHTML(first) + '\nSaved as philinity-eats-backup-' + date + '.zip — read RESTORE-README.txt inside before restoring anything.');
+    showToast('✅ ' + first);
+  } catch (e) { console.error('[Eats] backup failed:', e); setBackupStatus('❌ ' + escapeHTML(e && e.message ? e.message : String(e))); }
+}
+async function appPhotosBackup() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const help = document.getElementById('corsHelp'); if (help) help.style.display = 'none';
+  try {
+    setBackupStatus('⏳ Finding photo links…');
+    const [JSZip, sections] = await Promise.all([loadJSZip(), appBackupRead()]);
+    const photos = collectStorageUrls(sections.entries);
+    if (!photos.length) { setBackupStatus('No photo links found in the data.'); return; }
+    // Probe the first 3: if ALL fail with a network error the bucket's CORS is blocking us — show the setup, no empty ZIP.
+    const responses = new Map(); let netFails = 0;
+    for (const p of photos.slice(0, 3)) { try { responses.set(p.url, await fetch(p.url)); } catch (e) { netFails++; } }
+    if (netFails === Math.min(3, photos.length)) {
+      if (help) help.style.display = '';
+      setBackupStatus('⚠ Photo downloads are blocked by the bucket’s CORS setting — one-time setup below, then click 📷 again.');
+      return;
+    }
+    const date = backupDateStamp(), zip = new JSZip(), missing = [], index = [['file', 'database path', 'link']];
+    const queue = photos.slice(); let done = 0;
+    const worker = async () => {
+      while (queue.length) {
+        const p = queue.shift(); done++;
+        setBackupStatus(`⏳ Downloading photos ${done} / ${photos.length}…`);
+        const path = storagePathFromUrl(p.url) || ('unknown/photo-' + done + '.jpg');
+        try {
+          const r = responses.get(p.url) || await fetch(p.url);
+          if (!r.ok) { missing.push(`${path}\t${p.dbPath}\tHTTP ${r.status}`); continue; }
+          zip.file(path, await r.blob());
+          index.push([path, p.dbPath, p.url]);
+        } catch (e) { missing.push(`${path}\t${p.dbPath}\t${(e && e.message) || 'network error'}`); }
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]); // 4 at a time
+    zip.file('photo-index.csv', index.map(row => row.map(csvCell).join(',')).join('\n'));
+    zip.file('MISSING.txt', (missing.length ? missing.length + ' link(s) could not be downloaded:\n\n' + missing.join('\n') : 'All photo links downloaded.') +
+      '\n\nHTTP 403 / 404 = a STALE link: the file was replaced or deleted but an old record still points at it. That is not a backup failure — open the entry in Eats and re-attach the photo.\n');
+    setBackupStatus('⏳ Building the ZIP…');
+    const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' }); // photos are already compressed
+    downloadBlob(blob, `philinity-eats-photos-${date}.zip`);
+    setBackupStatus(`✅ ${index.length - 1} photo(s) saved at their Storage paths · ${missing.length} missing (see MISSING.txt) — philinity-eats-photos-${date}.zip`);
+    showToast(`✅ ${index.length - 1} photos saved${missing.length ? ' · ' + missing.length + ' missing' : ''}`);
+  } catch (e) { console.error('[Eats] photo backup failed:', e); setBackupStatus('❌ ' + escapeHTML(e && e.message ? e.message : String(e))); }
+}
+
 // ── DATA MANAGER ─────────────────────────────────────────
 function openDataModal() {
   if (!isAdmin()) { showToast('Admins only'); return; }
@@ -6438,6 +6611,8 @@ window.restoreDatesFromBackup = restoreDatesFromBackup;
 window.applyDateRestore = applyDateRestore;
 window.toggleDateRow = toggleDateRow;
 window.closeDateRestoreModal = closeDateRestoreModal;
+window.appBackup = appBackup;
+window.appPhotosBackup = appPhotosBackup;
 // Reflect the saved origin mode in the header controls on load (Rev 11.29)
 { const sel = document.getElementById('originSelect'); if (sel) sel.value = originMode; if (originMode === 'home' && homeLocation) setLocStatus('🏠 from home', 'ok'); }
 window.setWithinFilter = setWithinFilter;
@@ -6836,6 +7011,28 @@ function sortRestaurants(arr) {
         <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:8px">The map pin, drive time and ℹ️ Update info need the Google key. Your browser has it; other members’ phones don’t until it’s saved to the database (readable only by signed-in members, never in the app code).</div>
         <div id="mapsEnabledStatus" style="font-size:0.78rem;margin-bottom:12px;font-family:monospace"></div>
         <button onclick="enableMapsForEveryone()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🗺 Enable maps &amp; drive time for everyone</button>
+      </div>
+
+      <!-- 🗄️ App Backup → ZIP (Rev 11.31, per philinity-functions/docs/BACKUP-PLAYBOOK.md) -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">🗄️ App Backup (ZIP) &amp; 📷 Photos</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:12px">One ZIP with a <b>restore file per section</b> (restaurants, categories, roster — each imported at its own node), an all-in-one copy for searching, the app page, a MANIFEST and a RESTORE-README. Photos are a second ZIP, saved at their real Storage paths. The Google key is never included.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button onclick="appBackup()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🗄️ Download app backup (.zip)</button>
+          <button onclick="appPhotosBackup()" class="btn btn-ghost" style="font-size:12px;padding:7px 16px">📷 Download all photos (.zip)</button>
+        </div>
+        <div id="appBackupStatus" style="margin-top:10px;font-size:0.72rem;color:var(--text-muted);font-family:monospace;min-height:16px;white-space:pre-wrap"></div>
+        <div id="corsHelp" style="display:none;margin-top:12px;padding:12px;background:var(--surface);border:1px solid var(--border-amber);border-radius:8px;font-size:0.72rem;color:var(--text-dim);line-height:1.6">
+          <div style="color:var(--amber);font-weight:500;margin-bottom:6px">⚠ One-time photo setup — the shared Storage bucket needs a CORS rule for this site</div>
+          Browsers can only download Storage files after the bucket allows this origin. The bucket is <b>shared with AutoFlag</b>, and <code>gsutil cors set</code> <b>replaces</b> the whole setting — so check what’s there first and <b>list every app’s origin</b>, never just ours. In Google Cloud → Storage → Cloud Shell, <b>one command per step</b>:
+          <div style="margin-top:8px">1. See the current setting (keep any origins it lists):</div>
+          <pre style="margin:4px 0 8px;padding:8px;background:var(--surface2);border-radius:6px;overflow-x:auto;white-space:pre-wrap">gsutil cors get gs://philinity-893d2.firebasestorage.app</pre>
+          <div>2. Write the new setting — AutoFlag + Eats (add any other origins step 1 showed):</div>
+          <pre style="margin:4px 0 8px;padding:8px;background:var(--surface2);border-radius:6px;overflow-x:auto;white-space:pre-wrap">echo '[{"origin":["https://autoflag.github.io","https://siglerventures.github.io"],"method":["GET"],"maxAgeSeconds":3600}]' &gt; cors.json</pre>
+          <div>3. Apply it:</div>
+          <pre style="margin:4px 0 0;padding:8px;background:var(--surface2);border-radius:6px;overflow-x:auto;white-space:pre-wrap">gsutil cors set cors.json gs://philinity-893d2.firebasestorage.app</pre>
+          <div style="margin-top:8px">GET only; every file still needs its own token. Then click 📷 again.</div>
+        </div>
       </div>
 
       <!-- Full JSON Backup -->
