@@ -898,6 +898,7 @@
   .card-open.closed { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
   .hours-list li.today { color: var(--text); font-weight: 500; }
   .detail-map-msg { display: flex; align-items: center; justify-content: center; height: 100%; padding: 12px; text-align: center; font-size: 12px; color: var(--text-muted); line-height: 1.5; }
+  .muted-hint { font-size: 11px; color: var(--text-muted); }
   .detail-notes {
     background: var(--surface2);
     border: 1px solid var(--border-amber);
@@ -943,7 +944,9 @@
     position: fixed;
     bottom: 24px;
     left: 50%;
-    transform: translateX(-50%) translateY(100px);
+    transform: translateX(-50%) translateY(calc(100% + 40px)); /* relative to own height: multi-line toasts fully hide */
+    max-width: min(92vw, 520px);
+    text-align: center;
     background: var(--surface2);
     border: 1px solid var(--amber);
     color: var(--text);
@@ -1419,7 +1422,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.28">
+<meta name="app-rev" content="11.29">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -1610,6 +1613,11 @@
       <option value="Boise">Boise</option>
     </select>
     <span class="results-count" id="resultsCount"></span>
+    <select id="originSelect" onchange="setOriginMode(this.value)" title="Where distances and drive times are measured from" style="background:var(--surface2);border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none">
+      <option value="gps">📡 From my location</option>
+      <option value="home">🏠 From home</option>
+      <option value="sethome">✏️ Set home address…</option>
+    </select>
     <select id="withinSelect" onchange="setWithinFilter(this.value)" title="Straight-line distance from your location" style="background:var(--surface2);border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none">
       <option value="0">📍 Any distance</option>
       <option value="1">📍 Within 1 mi</option>
@@ -1938,7 +1946,15 @@ let currentCat = 'All';
 let showToTryOnly = false;
 let starFilter = 0;
 let withinMiles = 0;      // 📍 Within radius filter; 0 = Any (Rev 11.23)
-let userLocation = null;  // { lat, lng } from the browser, requested lazily
+let userLocation = null;  // ACTIVE origin for distances: GPS fix or saved home (Rev 11.29)
+let gpsLocation = null;   // last GPS fix
+let homeLocation = null;  // { address, lat, lng } saved on this device
+let originMode = 'gps';   // 'gps' | 'home'
+try {
+  const h = JSON.parse(localStorage.getItem('eats_home') || 'null');
+  if (h && Number.isFinite(Number(h.lat)) && Number.isFinite(Number(h.lng))) homeLocation = { address: String(h.address || ''), lat: Number(h.lat), lng: Number(h.lng) };
+  if (localStorage.getItem('eats_origin') === 'home' && homeLocation) { originMode = 'home'; userLocation = { lat: homeLocation.lat, lng: homeLocation.lng }; }
+} catch (e) {}
 let editingId = null;
 let currentRating = 0;
 let currentDetailId = null;
@@ -1995,15 +2011,19 @@ function setLocStatus(text, kind) {
   el.textContent = text || '';
   el.className = 'loc-status' + (kind ? ' ' + kind : '');
 }
+function hideToast() { const t = document.getElementById('toast'); if (t) t.classList.remove('show'); }
 function requestUserLocation() {
+  // In home mode the origin is already known — no GPS prompt needed.
+  if (originMode === 'home' && homeLocation) { userLocation = { lat: homeLocation.lat, lng: homeLocation.lng }; setLocStatus('🏠 from home', 'ok'); return Promise.resolve(userLocation); }
   return new Promise((resolve, reject) => {
     if (!navigator.geolocation) { setLocStatus('📍 no location support', 'err'); reject(new Error('unsupported')); return; }
     setLocStatus('📍 getting location…');
-    // Chrome tucks the permission prompt into the address bar; nudge if it's taking a moment.
-    const nudge = setTimeout(() => showToast('📍 Waiting for your location — if your browser is asking, allow it (look near the address bar)'), 1500);
+    // Chrome tucks the permission prompt into the address bar; nudge only if it's taking a while (GPS on phones can take a few seconds).
+    let nudged = false;
+    const nudge = setTimeout(() => { nudged = true; showToast('📍 Allow location if your browser asks'); }, 3000);
     navigator.geolocation.getCurrentPosition(
-      pos => { clearTimeout(nudge); userLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; setLocStatus('📍 located', 'ok'); resolve(userLocation); },
-      err => { clearTimeout(nudge); const code = err && err.code; setLocStatus(code === 1 ? '📍 location blocked' : code === 3 ? '📍 location timed out' : '📍 location unavailable', 'err'); reject(err); },
+      pos => { clearTimeout(nudge); if (nudged) hideToast(); gpsLocation = { lat: pos.coords.latitude, lng: pos.coords.longitude }; if (originMode !== 'home') userLocation = gpsLocation; setLocStatus('📍 located', 'ok'); resolve(userLocation); },
+      err => { clearTimeout(nudge); if (nudged) hideToast(); const code = err && err.code; setLocStatus(code === 1 ? '📍 location blocked' : code === 3 ? '📍 location timed out' : '📍 location unavailable', 'err'); reject(err); },
       { enableHighAccuracy: false, timeout: 10000, maximumAge: 300000 }
     );
   });
@@ -2905,7 +2925,7 @@ function openDetail(id) {
       </div>
       <span style="font-size:11px;color:var(--text-muted)">click to rate</span>
       ${renderVisitHistoryTrigger(r)}
-      ${getMapsKey() ? `<button type="button" class="info-btn" onclick="fetchPlaceInfo('${escapeAttr(r.id)}')" title="Pull the latest phone, address, website and hours for this place from Google">ℹ️ Update info</button>` : ''}
+      ${getMapsKey() ? `<button type="button" class="info-btn" onclick="fetchPlaceInfo('${escapeAttr(r.id)}')" title="Pull the latest phone, address, website and hours for this place from Google">ℹ️ Update info</button>` : (isAdmin() ? `<span class="muted-hint" title="ℹ️ Update info, the map and drive times need the Google key on this device or saved for everyone">ℹ️ Google features need the key — Data Manager → Enable maps &amp; drive time for everyone</span>` : '')}
     </div>
     ${renderVisitHistoryBody(r)}
     <div id="detailInfoPanel" class="detail-info-panel"></div>
@@ -5164,7 +5184,7 @@ async function applyContactScanFixes() {
     if (c.phone)   updates[`${EATS_PATH}/${c.id}/phone`] = c.phone;
     if (c.address) updates[`${EATS_PATH}/${c.id}/address`] = c.address;
     if (removeFromNotes) updates[`${EATS_PATH}/${c.id}/notes`] = c.notesAfter;
-    updates[`${EATS_PATH}/${c.id}/lastUpdated`] = Date.now();
+    updates[`${EATS_PATH}/${c.id}/infoUpdatedAt`] = Date.now(); // never lastUpdated (visit badge / Recently Updated)
   });
   try {
     await dbUpdate(updates);
@@ -5218,7 +5238,7 @@ function buildPlacesUpdates(entry, match, base) {
   const empty = v => !(v && String(v).trim());
   if (match.phone && empty(entry.phone))     u[`${base}/${entry.id}/phone`] = match.phone;
   if (match.address && empty(entry.address)) u[`${base}/${entry.id}/address`] = match.address;
-  if (Object.keys(u).length) u[`${base}/${entry.id}/lastUpdated`] = Date.now();
+  if (Object.keys(u).length) u[`${base}/${entry.id}/infoUpdatedAt`] = Date.now(); // never lastUpdated (visit badge / Recently Updated)
   return u;
 }
 
@@ -5426,7 +5446,7 @@ function buildGeoUpdates(entry, match, base) {
   if (match && match.lat != null && match.lng != null && !hasCoords(entry)) {
     u[`${base}/${entry.id}/lat`] = match.lat;
     u[`${base}/${entry.id}/lng`] = match.lng;
-    u[`${base}/${entry.id}/lastUpdated`] = Date.now();
+    u[`${base}/${entry.id}/geocodedAt`] = Date.now(); // never lastUpdated: that drives the visit badge + Recently Updated sort
   }
   return u;
 }
@@ -5680,7 +5700,7 @@ async function renderDriveTime(r) {
     }
     if (!document.body.contains(el)) return; // detail re-rendered while loading
   }
-  el.innerHTML = `<a class="contact-chip" href="${escapeAttr(dirHref)}" target="_blank" rel="noopener" title="Drive time with current traffic — tap for directions">🚗 ${escapeHTML(fmtDriveDuration(result.seconds))} drive · ${escapeHTML(fmtDriveMiles(result.meters))}</a>`;
+  el.innerHTML = `<a class="contact-chip" href="${escapeAttr(dirHref)}" target="_blank" rel="noopener" title="Drive time with current traffic — tap for directions">🚗 ${escapeHTML(fmtDriveDuration(result.seconds))} drive${originMode === 'home' ? ' from home' : ''} · ${escapeHTML(fmtDriveMiles(result.meters))}</a>`;
 }
 
 function requestDriveTime(id) {
@@ -5766,7 +5786,7 @@ function buildInfoUpdates(entry, info, base) {
   if (info.website) u[`${base}/${entry.id}/website`] = info.website;
   if (info.hours) u[`${base}/${entry.id}/hours`] = info.hours;
   if (info.placeId) u[`${base}/${entry.id}/placeId`] = info.placeId;
-  if (Object.keys(u).length) { u[`${base}/${entry.id}/infoUpdatedAt`] = Date.now(); u[`${base}/${entry.id}/lastUpdated`] = Date.now(); }
+  if (Object.keys(u).length) u[`${base}/${entry.id}/infoUpdatedAt`] = Date.now(); // never lastUpdated (visit badge / Recently Updated)
   return u;
 }
 
@@ -5855,6 +5875,140 @@ function cancelPlaceInfo() {
   pendingPlaceInfo = null;
   const panel = document.getElementById('detailInfoPanel'); if (panel) panel.innerHTML = '';
 }
+
+// ── 📡/🏠 ORIGIN: measure distances from GPS or a saved home address (Rev 11.29) ──
+// Desktop IP-based location can be wildly off (Starlink -> "Utah"); a saved home address
+// gives a reliable origin. Saved on this device only (localStorage); phones keep using GPS.
+function persistOrigin() {
+  try { localStorage.setItem('eats_origin', originMode); if (homeLocation) localStorage.setItem('eats_home', JSON.stringify(homeLocation)); else localStorage.removeItem('eats_home'); } catch (e) {}
+}
+function syncOrigin() {
+  const sel = document.getElementById('originSelect'); if (sel) sel.value = originMode;
+  if (originMode === 'home' && homeLocation) { userLocation = { lat: homeLocation.lat, lng: homeLocation.lng }; setLocStatus('🏠 from home', 'ok'); }
+  else { userLocation = gpsLocation; if (gpsLocation) setLocStatus('📍 located', 'ok'); else setLocStatus(''); }
+  applyFilters();
+  // Drive-time cache is keyed by origin, so a mode switch simply re-fetches on the next detail open.
+}
+function setOriginMode(val) {
+  const sel = document.getElementById('originSelect');
+  if (val === 'sethome') { if (sel) sel.value = originMode; openHomeModal(); return; }
+  if (val === 'home' && !homeLocation) { if (sel) sel.value = originMode; openHomeModal(); return; }
+  originMode = val === 'home' ? 'home' : 'gps';
+  persistOrigin();
+  if (originMode === 'gps' && !gpsLocation) {
+    requestUserLocation().then(syncOrigin).catch(err => { showToast(locationErrorMessage(err)); syncOrigin(); });
+    return;
+  }
+  syncOrigin();
+}
+function openHomeModal() {
+  const inp = document.getElementById('homeAddressInput'); if (inp) inp.value = homeLocation ? homeLocation.address : '';
+  const st = document.getElementById('homeStatus'); if (st) st.textContent = homeLocation ? `Saved: ${homeLocation.lat.toFixed(4)}, ${homeLocation.lng.toFixed(4)}` : '';
+  const clr = document.getElementById('homeClearBtn'); if (clr) clr.style.display = homeLocation ? '' : 'none';
+  document.getElementById('homeModal').classList.add('open');
+  setTimeout(() => inp && inp.focus(), 50);
+}
+function closeHomeModal() { document.getElementById('homeModal').classList.remove('open'); }
+async function saveHomeAddress() {
+  const inp = document.getElementById('homeAddressInput'), st = document.getElementById('homeStatus');
+  const addr = (inp && inp.value || '').trim();
+  if (!addr) { if (st) st.textContent = '⚠ Enter an address.'; return; }
+  const key = getMapsKey();
+  if (!key) { if (st) st.textContent = '⚠ Needs the Google key (Data Manager → Enable maps & drive time for everyone).'; return; }
+  if (st) st.textContent = '⏳ Looking up that address…';
+  try {
+    const results = await geoPlacesSearch(addr, key);
+    const best = results[0];
+    if (!best) { if (st) st.textContent = '❌ Google couldn’t locate that address — try adding the city and state.'; return; }
+    homeLocation = { address: best.address || addr, lat: best.lat, lng: best.lng };
+    originMode = 'home';
+    persistOrigin();
+    closeHomeModal();
+    syncOrigin();
+    showToast('🏠 Home saved — distances now measured from home');
+  } catch (e) { if (st) st.textContent = '❌ ' + (e && e.message ? e.message : e); }
+}
+function clearHomeAddress() {
+  homeLocation = null; originMode = 'gps'; persistOrigin(); closeHomeModal(); syncOrigin(); showToast('🏠 Home cleared — using your location');
+}
+
+// ── 🗓 RESTORE "LAST UPDATED" DATES FROM A BACKUP (Rev 11.29) ──
+// Bulk tools on 2026-09-30 stamped lastUpdated on every entry they touched. Propose restoring
+// each entry's lastUpdated from a backup when the backup value is older than the current one.
+const DATE_RESTORE_CUTOFF_MS = Date.UTC(2026, 8, 29, 0, 0, 0); // 2026-09-29 00:00 UTC (covers all US zones for 9/30)
+function buildDateRestoreCandidates(current, backup, cutoffMs) {
+  const out = [];
+  if (!backup || typeof backup !== 'object') return out;
+  for (const r of current || []) {
+    if (!r || !r.id || r.id.startsWith('_')) continue;
+    const b = backup[r.id];
+    if (!b || typeof b !== 'object') continue;
+    const cur = Number(r.lastUpdated) || 0, old = Number(b.lastUpdated) || 0;
+    if (!old || old >= cur) continue;                          // nothing older to restore
+    const bulkDay = cur >= cutoffMs && old < cutoffMs;          // the typical "stamped by a tool" case
+    out.push({ id: r.id, name: r.name || r.id, current: cur, restore: old, apply: bulkDay });
+  }
+  return out.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+}
+function buildDateRestoreUpdates(candidates, base) {
+  const u = {};
+  for (const c of candidates || []) if (c && c.apply && c.restore) u[`${base}/${c.id}/lastUpdated`] = c.restore;
+  return u;
+}
+
+let dateRestoreCandidates = [];
+function restoreDatesFromBackup(event) {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const file = event && event.target && event.target.files && event.target.files[0];
+  if (!file) return;
+  const fnEl = document.getElementById('dateRestoreFilename'); if (fnEl) fnEl.textContent = file.name;
+  const status = document.getElementById('data-modal-status');
+  if (status) status.innerHTML = '<span style="color:var(--amber)">⏳ Reading backup…</span>';
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const backup = (data && data.eats && typeof data.eats === 'object') ? data.eats : data; // accept a whole-DB export too
+      dateRestoreCandidates = buildDateRestoreCandidates(allRestaurants, backup, DATE_RESTORE_CUTOFF_MS);
+      if (!dateRestoreCandidates.length) { if (status) status.innerHTML = '<span style="color:var(--green)">✅ Nothing to restore — no entry has an older date in that backup.</span>'; return; }
+      if (status) status.innerHTML = '';
+      renderDateRestore();
+      document.getElementById('dateRestoreModal').classList.add('open');
+    } catch (err) { if (status) status.innerHTML = '<span style="color:var(--red)">❌ ' + escapeHTML(err.message) + '</span>'; }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+function renderDateRestore() {
+  const wrap = document.getElementById('dateRestoreResults');
+  const fmt = ms => { const d = new Date(ms); return (d.getMonth() + 1) + '/' + d.getDate() + '/' + String(d.getFullYear()).slice(-2); };
+  wrap.innerHTML = dateRestoreCandidates.map((c, i) => `
+    <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;margin-bottom:8px;opacity:${c.apply ? 1 : 0.6}">
+      <label style="display:flex;align-items:center;gap:10px;cursor:pointer">
+        <input type="checkbox" ${c.apply ? 'checked' : ''} onchange="toggleDateRow(${i}, this.checked)">
+        <div style="flex:1;min-width:0;font-size:14px;color:var(--text)">${escapeHTML(c.name)}</div>
+        <div style="font-size:12px;color:var(--text-muted);font-family:'DM Mono',monospace;white-space:nowrap">${fmt(c.current)} → <span style="color:var(--amber-light)">${fmt(c.restore)}</span></div>
+      </label>
+    </div>`).join('');
+  const n = dateRestoreCandidates.filter(c => c.apply).length;
+  document.getElementById('dateRestoreSummary').textContent = `${n} of ${dateRestoreCandidates.length} selected`;
+  document.getElementById('dateRestoreApplyBtn').disabled = n === 0;
+}
+function toggleDateRow(i, on) { if (dateRestoreCandidates[i]) dateRestoreCandidates[i].apply = !!on; renderDateRestore(); }
+async function applyDateRestore() {
+  if (!isAdmin()) { showToast('Admins only'); return; }
+  const updates = buildDateRestoreUpdates(dateRestoreCandidates, EATS_PATH);
+  const n = Object.keys(updates).length;
+  if (!n) return;
+  try {
+    await dbUpdate(updates);
+    closeDateRestoreModal();
+    showToast(`✅ Restored dates for ${n} entr${n === 1 ? 'y' : 'ies'}`);
+    const status = document.getElementById('data-modal-status');
+    if (status) status.innerHTML = `<span style="color:var(--green)">✅ Restored “last updated” for ${n} entr${n === 1 ? 'y' : 'ies'}. Badges and the Recently Updated sort now reflect the real dates.</span>`;
+  } catch (e) { console.error('[Eats] date restore failed:', e); showToast('❌ ' + (e && e.message ? e.message : e)); }
+}
+function closeDateRestoreModal() { document.getElementById('dateRestoreModal').classList.remove('open'); }
 
 // ── DATA MANAGER ─────────────────────────────────────────
 function openDataModal() {
@@ -6265,6 +6419,17 @@ window.requestDriveTime = requestDriveTime;
 window.fetchPlaceInfo = fetchPlaceInfo;
 window.applyPlaceInfo = applyPlaceInfo;
 window.cancelPlaceInfo = cancelPlaceInfo;
+window.setOriginMode = setOriginMode;
+window.openHomeModal = openHomeModal;
+window.closeHomeModal = closeHomeModal;
+window.saveHomeAddress = saveHomeAddress;
+window.clearHomeAddress = clearHomeAddress;
+window.restoreDatesFromBackup = restoreDatesFromBackup;
+window.applyDateRestore = applyDateRestore;
+window.toggleDateRow = toggleDateRow;
+window.closeDateRestoreModal = closeDateRestoreModal;
+// Reflect the saved origin mode in the header controls on load (Rev 11.29)
+{ const sel = document.getElementById('originSelect'); if (sel) sel.value = originMode; if (originMode === 'home' && homeLocation) setLocStatus('🏠 from home', 'ok'); }
 window.setWithinFilter = setWithinFilter;
 window.geocodeMissingCoords = geocodeMissingCoords;
 window.applyGeoScanFixes = applyGeoScanFixes;
@@ -6722,6 +6887,19 @@ function sortRestaurants(arr) {
         <button onclick="geocodeMissingCoords()" class="btn btn-amber" style="font-size:12px;padding:7px 16px">🗺 Find coordinates</button>
       </div>
 
+      <!-- Restore dates from a backup (Rev 11.29) -->
+      <div style="background:var(--surface2);border:1px solid var(--border-amber);border-radius:10px;padding:16px">
+        <div style="font-size:0.88rem;font-weight:500;color:var(--text);margin-bottom:3px">🗓 Restore “last updated” dates from a backup</div>
+        <div style="font-size:0.72rem;color:var(--text-dim);margin-bottom:10px">The bulk tools on 9/30 stamped every entry they touched as updated that day (which also sets the visit badge for entries with no logged visits). Pick a backup JSON from before then and this restores each entry’s real date — review first, only dates change, nothing else is touched. Maintenance tools no longer bump this date.</div>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+          <label class="btn btn-amber" style="cursor:pointer;font-size:12px;padding:7px 16px">
+            🗓 Choose backup file
+            <input type="file" accept=".json" style="display:none" onchange="restoreDatesFromBackup(event)">
+          </label>
+          <span id="dateRestoreFilename" style="font-size:0.68rem;color:var(--text-muted);font-family:monospace">No file selected</span>
+        </div>
+      </div>
+
     </div>
 
     <div id="data-modal-status" style="margin-top:14px;font-size:0.72rem;color:var(--text-muted);line-height:1.8;font-family:monospace"></div>
@@ -6762,6 +6940,43 @@ function sortRestaurants(arr) {
 
     <div style="display:flex;justify-content:flex-end;margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
       <button class="btn btn-ghost" onclick="closeAccessModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- HOME ADDRESS MODAL (Rev 11.29) -->
+<div class="modal-overlay" id="homeModal" onclick="if(event.target===this) closeHomeModal()">
+  <div class="modal" style="max-width:460px">
+    <button class="modal-close" onclick="closeHomeModal()">✕</button>
+    <div class="modal-title">🏠 Home address</div>
+    <div class="modal-subtitle">Used as the starting point for “Within”, “Nearest” and drive times when you pick <b>From home</b> — handy when your computer’s location guess is wrong. Saved on this device only.</div>
+    <label style="font-size:11px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);display:block;margin:16px 0 6px">Address</label>
+    <input type="text" id="homeAddressInput" placeholder="123 Main St, Boise, ID 83702" autocomplete="street-address" style="width:100%;box-sizing:border-box;background:var(--surface2);border:1px solid var(--border-amber);color:var(--text);padding:10px 12px;border-radius:8px;font-size:14px;font-family:'DM Sans',sans-serif;outline:none" onkeydown="if(event.key==='Enter') saveHomeAddress()">
+    <div id="homeStatus" style="font-size:12px;color:var(--amber);margin-top:8px;min-height:16px"></div>
+    <div class="modal-actions" style="margin-top:16px;display:flex;gap:8px;justify-content:space-between">
+      <button class="btn btn-ghost" id="homeClearBtn" onclick="clearHomeAddress()" style="display:none">Clear home</button>
+      <div style="display:flex;gap:8px;margin-left:auto">
+        <button class="btn btn-ghost" onclick="closeHomeModal()">Cancel</button>
+        <button class="btn btn-amber" onclick="saveHomeAddress()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DATE RESTORE REVIEW MODAL (Rev 11.29) -->
+<div class="modal-overlay" id="dateRestoreModal" onclick="if(event.target===this) closeDateRestoreModal()">
+  <div class="modal" style="max-width:720px">
+    <button class="modal-close" onclick="closeDateRestoreModal()">✕</button>
+    <div class="modal-title">🗓 Restore “last updated” dates</div>
+    <div class="modal-subtitle" style="margin-bottom:12px">Entries whose date in the backup is older than today’s. Rows stamped by the bulk tools are pre-checked; anything else is listed but unchecked. Nothing changes until you click Apply.</div>
+    <div id="dateRestoreResults" style="max-height:55vh;overflow-y:auto;padding-right:4px"></div>
+    <div style="display:flex;justify-content:space-between;margin-top:16px;padding-top:12px;border-top:1px solid var(--border);gap:8px">
+      <div id="dateRestoreSummary" style="font-size:11px;color:var(--text-dim);align-self:center"></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost" onclick="closeDateRestoreModal()">Cancel</button>
+        <button id="dateRestoreApplyBtn" class="btn btn-amber" onclick="applyDateRestore()">Apply</button>
+      </div>
     </div>
   </div>
 </div>
