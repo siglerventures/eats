@@ -486,6 +486,11 @@
     color: var(--text-muted);
     margin-bottom: 16px;
   }
+  /* Results header row (Rev 11.26) */
+  .results-bar { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; margin-bottom: 16px; }
+  .results-bar .results-count { margin: 0; }
+  .results-bar .city-select { font-family: 'Playfair Display', serif; font-size: 20px; color: var(--gold); background: var(--surface); border: 1px solid var(--border-amber); border-radius: 10px; padding: 4px 12px; min-height: 42px; max-width: none; letter-spacing: 0.3px; }
+  .main.single-city .city-header { display: none; } /* one city selected: the header row already names it */
 
   .city-section { margin-bottom: 32px; }
 
@@ -1394,7 +1399,7 @@
   };
 </script>
 <!-- ── VERSION: single source of truth ─────────────────────── -->
-<meta name="app-rev" content="11.25">
+<meta name="app-rev" content="11.26">
 <script>
 // Cache-bust bootstrap + version injection (reads the app-rev meta above).
 (function(){
@@ -1544,11 +1549,6 @@
 <!-- FILTERS -->
 <div class="filters">
   <div class="filters-inner">
-    <span class="filter-label">🌆 City</span>
-    <select id="citySelectBar" onchange="setCityFromSelect(this.value)" class="city-select" style="max-width:140px;padding:4px 10px;font-size:12px;min-height:32px;">
-      <option value="Boise">Boise</option>
-    </select>
-    <div class="filter-sep"></div>
     <span class="filter-label">Type</span>
     <button class="chip active cat-chip" onclick="setCat('All', this)">All</button>
     <div id="catChips" style="display:contents">
@@ -1574,16 +1574,6 @@
       <option value="1">⭐ 1 Star only</option>
     </select>
     <div class="filter-sep"></div>
-    <select id="withinSelect" onchange="setWithinFilter(this.value)" title="Straight-line distance from your location" style="background:var(--surface2);border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none">
-      <option value="0">📍 Any distance</option>
-      <option value="1">📍 Within 1 mi</option>
-      <option value="2">📍 Within 2 mi</option>
-      <option value="3">📍 Within 3 mi</option>
-      <option value="5">📍 Within 5 mi</option>
-      <option value="10">📍 Within 10 mi</option>
-      <option value="15">📍 Within 15 mi</option>
-    </select>
-    <div class="filter-sep"></div>
     <button class="chip status-chip" id="toTryChip" onclick="toggleToTry()">🔖 To Try</button>
     <!-- Entry-type shortcuts (v10.94) — moved to end, synced with sort panel Type buttons -->
     <button class="chip entry-type-chip" id="etype-recipe" onclick="setEntryType('recipe')">📖 Recipes</button>
@@ -1594,7 +1584,22 @@
 
 <!-- MAIN -->
 <div class="main">
-  <div class="results-count" id="resultsCount"></div>
+  <!-- Results header (Rev 11.26): the city heading IS the dropdown; distance filter beside it -->
+  <div class="results-bar">
+    <select id="citySelectBar" onchange="setCityFromSelect(this.value)" class="city-select" title="Choose a city">
+      <option value="Boise">Boise</option>
+    </select>
+    <span class="results-count" id="resultsCount"></span>
+    <select id="withinSelect" onchange="setWithinFilter(this.value)" title="Straight-line distance from your location" style="background:var(--surface2);border:1px solid var(--border-amber);color:var(--text-dim);padding:5px 10px;border-radius:20px;font-size:12px;font-family:'DM Sans',sans-serif;cursor:pointer;outline:none">
+      <option value="0">📍 Any distance</option>
+      <option value="1">📍 Within 1 mi</option>
+      <option value="2">📍 Within 2 mi</option>
+      <option value="3">📍 Within 3 mi</option>
+      <option value="5">📍 Within 5 mi</option>
+      <option value="10">📍 Within 10 mi</option>
+      <option value="15">📍 Within 15 mi</option>
+    </select>
+  </div>
   <div id="content"></div>
 </div>
 
@@ -1969,13 +1974,21 @@ function requestUserLocation() {
     );
   });
 }
+// Say WHICH location problem it was — blocked is the common desktop case and has a fix.
+function locationErrorMessage(err) {
+  const code = err && err.code;
+  if (code === 1) return '📍 Location is blocked for this site — click the lock icon in the address bar, allow Location, then try again.';
+  if (code === 2) return '📍 Location unavailable — turn on location services for your device/browser and try again.';
+  if (code === 3) return '📍 Location request timed out — try again.';
+  return '📍 This browser can\'t share your location.';
+}
 function setWithinFilter(val) {
   withinMiles = parseInt(val) || 0;
   if (withinMiles > 0 && !userLocation) {
-    requestUserLocation().then(applyFilters).catch(() => {
+    requestUserLocation().then(applyFilters).catch(err => {
       withinMiles = 0;
       const sel = document.getElementById('withinSelect'); if (sel) sel.value = '0';
-      showToast('📍 Location unavailable — allow location access to filter by distance');
+      showToast(locationErrorMessage(err));
       applyFilters();
     });
     return;
@@ -2057,6 +2070,7 @@ function renderContent(restaurants) {
   const container = document.getElementById('content');
   document.getElementById('resultsCount').textContent = `${restaurants.length} place${restaurants.length !== 1 ? 's' : ''}`;
   buildCityDropdown();
+  document.querySelector('.main').classList.toggle('single-city', currentCity !== 'All');
 
   if (restaurants.length === 0) {
     container.innerHTML = `<div class="empty-state"><div class="icon">🍽</div><h3>No results found</h3><p>Try adjusting your filters or search</p></div>`;
@@ -5609,7 +5623,7 @@ function requestDriveTime(id) {
   if (!r) return;
   requestUserLocation()
     .then(() => { renderDriveTime(r); applyFilters(); /* cards can now show distance pills too */ })
-    .catch(() => showToast('📍 Location unavailable — allow location access to see drive time'));
+    .catch(err => showToast(locationErrorMessage(err)));
 }
 
 // ── DATA MANAGER ─────────────────────────────────────────
@@ -6249,7 +6263,7 @@ function setSort(mode) {
   const panel = document.getElementById('sortPanel');
   if (panel) panel.style.display = 'none';
   if (mode === 'nearest' && !userLocation) {
-    requestUserLocation().then(applyFilters).catch(() => showToast('📍 Location unavailable — allow location access to sort by distance'));
+    requestUserLocation().then(applyFilters).catch(err => showToast(locationErrorMessage(err)));
   }
   applyFilters();
 }
